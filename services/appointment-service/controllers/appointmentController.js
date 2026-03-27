@@ -1,9 +1,7 @@
 import Appointment from "../models/appointmentModel.js";
 import { generateSlots } from "../service/slotService.js";
 
-/*
-SEARCH DOCTORS (filters)
-*/
+/* SEARCH */
 export async function searchAppointments(req, res) {
   const { doctorName, specialization, hospital, type } = req.query;
 
@@ -19,17 +17,15 @@ export async function searchAppointments(req, res) {
   res.json(results);
 }
 
-/*
-GET AVAILABLE SLOTS
-*/
+/* SLOTS */
 export async function getSlots(req, res) {
   const { doctorId, date } = req.query;
 
-  const today = new Date().setHours(0, 0, 0, 0);
-  const selected = new Date(date).setHours(0, 0, 0, 0);
+  const today = new Date().setHours(0,0,0,0);
+  const selected = new Date(date).setHours(0,0,0,0);
 
   if (selected < today) {
-    return res.status(400).json({ message: "Cannot book past dates" });
+    return res.status(400).json({ message: "Past date not allowed" });
   }
 
   const slots = await generateSlots(doctorId, date);
@@ -37,95 +33,109 @@ export async function getSlots(req, res) {
   res.json(slots);
 }
 
-/*
-CREATE APPOINTMENT
-*/
+/* CREATE */
 export async function createAppointment(req, res) {
-  try {
-    const {
-      patientId,
-      doctorId,
-      doctorName,
-      specialization,
-      hospital,
-      appointmentType,
-      appointmentDate,
-      startTime,
-    } = req.body;
 
-    // prevent double booking
-    const exists = await Appointment.findOne({
-      doctorId,
-      appointmentDate,
-      startTime,
-      status: { $ne: "CANCELLED" },
+  try {
+
+    const data = req.body;
+
+    // calculate end time
+    const [h,m] = data.startTime.split(":");
+    const start = parseInt(h) * 60 + parseInt(m);
+    const end = start + data.duration;
+
+    const endHour = Math.floor(end / 60);
+    const endMin = end % 60;
+
+    data.endTime = `${endHour}:${endMin === 0 ? "00" : "30"}`;
+
+    // overlap check
+    const booked = await Appointment.find({
+      doctorId: data.doctorId,
+      appointmentDate: data.appointmentDate,
+      status: { $ne: "CANCELLED" }
     });
 
-    if (exists) {
-      return res.status(400).json({ message: "Slot already booked" });
+    for (let b of booked) {
+
+      const [bh,bm] = b.startTime.split(":");
+      const bStart = parseInt(bh)*60 + parseInt(bm);
+      const bEnd = bStart + b.duration;
+
+      if (start < bEnd && end > bStart) {
+        return res.status(400).json({ message: "Time overlap" });
+      }
     }
 
-    const appointment = await Appointment.create({
-      patientId,
-      doctorId,
-      doctorName,
-      specialization,
-      hospital,
-      appointmentType,
-      appointmentDate,
-      startTime,
-    });
+    const appointment = await Appointment.create(data);
 
     res.status(201).json(appointment);
+
   } catch (err) {
     res.status(500).json(err);
   }
 }
 
-/*
-PAYMENT SUCCESS
-*/
-export async function paymentSuccess(req, res) {
+/* PAYMENT */
+export async function paymentSuccess(req,res){
+
   const { id } = req.params;
 
   const updated = await Appointment.findByIdAndUpdate(
     id,
     {
-      paymentStatus: "PAID",
-      status: "PENDING_DOCTOR_APPROVAL",
+      paymentStatus:"PAID",
+      status:"PENDING_DOCTOR_APPROVAL"
     },
-    { new: true }
+    { new:true }
   );
 
   res.json(updated);
 }
 
-/*
-DOCTOR APPROVE
-*/
-export async function approveAppointment(req, res) {
+/* APPROVE */
+export async function approveAppointment(req,res){
+
   const { id } = req.params;
 
   const updated = await Appointment.findByIdAndUpdate(
     id,
-    { status: "CONFIRMED" },
-    { new: true }
+    { status:"CONFIRMED" },
+    { new:true }
   );
 
   res.json(updated);
 }
 
-/*
-DOCTOR REJECT
-*/
-export async function rejectAppointment(req, res) {
+/* REJECT */
+export async function rejectAppointment(req,res){
+
   const { id } = req.params;
 
   const updated = await Appointment.findByIdAndUpdate(
     id,
-    { status: "REJECTED" },
-    { new: true }
+    { status:"REJECTED" },
+    { new:true }
   );
 
   res.json(updated);
+}
+
+/* CANCEL */
+export async function cancelAppointment(req,res){
+
+  const { id } = req.params;
+
+  const appointment = await Appointment.findById(id);
+
+  if(!appointment){
+    return res.status(404).json({message:"Not found"})
+  }
+
+  appointment.status = "CANCELLED";
+
+  await appointment.save();
+
+  res.json({ message:"Appointment cancelled" });
 }

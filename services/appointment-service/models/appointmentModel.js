@@ -1,33 +1,64 @@
 import mongoose from "mongoose";
 
 const appointmentSchema = new mongoose.Schema(
-  {
-    patientId: String,
-    doctorId: String,
+{
+  patientId: { type: String, required: true },
 
-    doctorName: String,
-    specialization: String,
-    hospital: String,
+  doctorId: { type: String, required: true },
 
-    appointmentType: {
-      type: String,
-      enum: ["ONLINE", "PHYSICAL"],
-    },
+  doctorName: { type: String, required: true },
 
-    appointmentDate: Date,
-    startTime: String,
+  specialization: { type: String, required: true },
 
-    status: {
-      type: String,
-      default: "PENDING_PAYMENT",
-    },
+  hospital: { type: String, required: true },
 
-    paymentStatus: {
-      type: String,
-      default: "PENDING",
-    },
+  appointmentType: {
+    type: String,
+    enum: ["ONLINE", "PHYSICAL"],
+    required: true
   },
-  { timestamps: true }
+
+  appointmentDate: {
+    type: Date,
+    required: true
+  },
+
+  startTime: {
+    type: String,
+    required: true
+  },
+
+  duration: {
+    type: Number,
+    enum: [60, 120],
+    required: true
+  },
+
+  endTime: {
+    type: String,
+    required: true
+  },
+
+  status: {
+    type: String,
+    enum: [
+      "PENDING_PAYMENT",
+      "PENDING_DOCTOR_APPROVAL",
+      "CONFIRMED",
+      "REJECTED",
+      "CANCELLED"
+    ],
+    default: "PENDING_PAYMENT"
+  },
+
+  paymentStatus: {
+    type: String,
+    enum: ["PENDING", "PAID"],
+    default: "PENDING"
+  }
+
+},
+{ timestamps: true }
 );
 
 export default mongoose.model("Appointment", appointmentSchema);
