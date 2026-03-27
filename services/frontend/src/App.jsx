@@ -6,7 +6,8 @@ function App() {
 
   return (
     <>
-        
+      <h1 className='text-4xl font-bold text-amber-700'>Welcome to MediSphere</h1>
+      <p className='mt-4'>Your one-stop solution for managing medical appointments.</p>
     </>
   )
 }
