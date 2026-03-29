@@ -54,3 +54,324 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Progress bar */
+.progress-bar-container{
+  --step-size: 34px;
+  position: relative;
+  display: flex;
+  align-items: flex-start; /* align to top so line can be placed at circle center */
+  padding: 0; /* remove extra vertical padding that shifted the center */
+  min-width: 220px;
+}
+.progress-line{
+  position: absolute;
+  /* stop the line at the centers of the first and last circles */
+  left: calc(var(--step-size) / 2);
+  right: calc(var(--step-size) / 2);
+  height: 4px;
+  background: linear-gradient(90deg, rgba(0,0,0,0.06), rgba(0,0,0,0.04));
+  top: calc(var(--step-size) / 2);
+  transform: translateY(-50%);
+  border-radius: 9999px;
+  z-index: 1;
+}
+.progress-steps{
+  display: flex;
+  gap: 1.25rem;
+  position: relative;
+  z-index: 2;
+  align-items: center; /* vertically center circles on the line */
+}
+
+.progress-step{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.progress-step .step-circle{
+  width: var(--step-size);
+  height: var(--step-size);
+  border-radius: 9999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:600;
+  color: var(--ms-dark);
+  background: var(--ms-accent);
+  border: 2px solid rgba(0,0,0,0.06);
+  z-index: 3; /* ensure circle sits above the progress line */
+}
+.progress-step.completed .step-circle{
+  background: var(--ms-mid);
+  color: var(--ms-accent);
+}
+.progress-step.active .step-circle{
+  background: var(--ms-dark);
+  color: var(--ms-accent);
+}
+.progress-step.upcoming .step-circle{
+  background: var(--ms-accent);
+  color: var(--ms-mid);
+}
+
+.progress-step.rejected .step-circle{
+  background: #ff4d4f; /* red */
+  color: white;
+  border-color: #ff4d4f;
+}
+
+.progress-step .step-label{
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ms-mid);
+  text-align: center;
+  max-width: 100px;
+}
+
+/* Make labels hidden on very small screens to save space */
+@media (max-width: 480px){
+  .progress-step .step-label{ display:none; }
+  .progress-bar-container{ min-width: 160px; }
+}
+
+/* =========================
+   Booking page styles
+   ========================= */
+
+.booking-doctor-card{
+  display:flex;
+  gap:1rem;
+  align-items:center;
+  background: var(--ms-card, #fff);
+  padding:1rem 1.25rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(13,20,33,0.06);
+}
+.booking-doctor-img{
+  width:96px;
+  height:96px;
+  border-radius:12px;
+  object-fit:cover;
+  flex-shrink:0;
+}
+.booking-doctor-details{
+  flex:1;
+}
+.booking-doctor-header{
+  display:flex;
+  gap:0.75rem;
+  align-items:center;
+}
+.booking-doctor-header h2{
+  font-size:1.125rem;
+  margin:0;
+  color:var(--ms-dark);
+}
+.doctor-tag{
+  background: var(--ms-light);
+  color:var(--ms-dark);
+  padding:0.25rem 0.5rem;
+  border-radius:8px;
+  font-size:0.75rem;
+}
+.doctor-description{
+  margin-top:0.5rem;
+  color: rgba(33,37,41,0.7);
+  font-size:0.95rem;
+}
+.doctor-meta{
+  margin-top:0.75rem;
+  color: var(--ms-mid);
+  font-size:0.9rem;
+}
+
+.consultation-wrapper h3{
+  margin-bottom:0.75rem;
+  color: var(--ms-mid);
+}
+.consultation-box{
+  background: var(--ms-card);
+  border: 1px solid var(--ms-border, #e6eef6);
+  padding:1rem;
+  border-radius:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  cursor:pointer;
+  transition:all 0.15s ease;
+}
+.consultation-box + .consultation-box{ margin-top:0.75rem; }
+.consultation-box.active{
+  border-color: var(--ms-dark);
+  box-shadow: 0 6px 20px rgba(13,20,33,0.06);
+}
+.consultation-box h4{ margin:0; }
+.consultation-box p{ margin:0; color:var(--ms-mid); font-size:0.9rem; }
+
+.timeslot-wrapper h3{ margin-bottom:0.75rem; color:var(--ms-mid); }
+.timeslot-grid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap:1rem;
+}
+.timeslot-btn{
+  background: var(--ms-card);
+  border: 1px solid var(--ms-border, #e6eef6);
+  padding:1.25rem;
+  border-radius:12px;
+  text-align:center;
+  cursor:pointer;
+  transition: all 0.12s ease;
+}
+.timeslot-btn.selected{
+  background: rgba(29,45,68,0.08);
+  border-color: var(--ms-dark);
+  box-shadow: inset 0 0 0 2px rgba(29,45,68,0.04);
+}
+
+.confirm-booking-wrapper{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:1rem;
+}
+.insurance-info{
+  background: var(--ms-card);
+  padding:0.75rem 1rem;
+  border-radius:12px;
+  color:var(--ms-mid);
+  width:100%;
+  text-align:center;
+  box-shadow: 0 6px 20px rgba(13,20,33,0.03);
+}
+.confirm-booking-btn{
+  background: var(--ms-dark);
+  color: var(--ms-accent);
+  padding:0.9rem 2rem;
+  border-radius:9999px;
+  border:none;
+  cursor:pointer;
+  font-weight:600;
+}
+
+/* small responsive tweaks */
+@media (max-width: 768px){
+  .booking-doctor-card{ flex-direction:column; align-items:flex-start; }
+  .booking-doctor-img{ width:76px; height:76px }
+  .timeslot-grid{ grid-template-columns: 1fr; }
+}
+
+/* Top area layout for title, progress bar and search */
+.top-area{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:1rem;
+}
+.left-top{
+  display:flex;
+  align-items:center;
+  gap:1.25rem;
+}
+
+/* Centered page card wrapper */
+.page-card{
+  background: transparent;
+  padding: 24px;
+}
+
+.booking-layout{
+  display:flex;
+  gap:24px;
+  margin-top:20px;
+  align-items:flex-start;
+}
+
+.booking-doctor-card{
+display:flex;
+gap:20px;
+background:white;
+padding:20px;
+border-radius:12px;
+margin-top:20px;
+border:1px solid #ddd;
+}
+
+.booking-doctor-img{
+width:120px;
+height:120px;
+border-radius:12px;
+object-fit:cover;
+}
+
+.doctor-tag{
+background:#e6f0ff;
+padding:4px 10px;
+border-radius:8px;
+font-size:12px;
+margin-left:10px;
+}
+
+.booking-layout{
+display:flex;
+gap:40px;
+margin-top:30px;
+}
+
+.consultation-wrapper{
+width:320px;
+}
+
+.consultation-box{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:15px;
+background:white;
+border-radius:10px;
+border:2px solid transparent;
+margin-top:15px;
+cursor:pointer;
+}
+
+.consultation-box.active{
+border:2px solid #4a6cf7;
+}
+
+.timeslot-grid{
+display:grid;
+grid-template-columns:repeat(2,1fr);
+gap:15px;
+margin-top:15px;
+}
+
+.timeslot-btn{
+padding:15px;
+border-radius:10px;
+border:1px solid #ddd;
+background:white;
+cursor:pointer;
+}
+
+.timeslot-btn.selected{
+background:#ccced0d8;
+color:rgb(11, 35, 70);
+}
+
+.confirm-booking-wrapper{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-top:30px;
+}
+
+.confirm-booking-btn{
+background:#0d2b4e;
+color:white;
+padding:15px 30px;
+border:none;
+border-radius:10px;
+font-size:16px;
+cursor:pointer;
+}
