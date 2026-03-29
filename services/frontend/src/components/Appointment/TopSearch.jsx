@@ -2,7 +2,7 @@ import React from "react";
 
 const TopSearch = ({search,setSearch}) => {
 return (
-<div className="shadow-sm p-4 rounded-xl mb-4 flex justify-between items-center" style={{ backgroundColor: 'var(--ms-accent)' }}>
+<div className="shadow-sm p-4 rounded-xl mb-4 flex justify-between items-center" style={{ backgroundColor: 'var(--ms-primary)' }}>
 <h2 className="text-2xl font-semibold text-gray-800">
 Expert Specialists
 </h2>
