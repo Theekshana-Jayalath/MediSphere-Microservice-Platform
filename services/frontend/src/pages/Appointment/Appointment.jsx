@@ -24,11 +24,19 @@ return (
 		<FilterSidebar />
 	</div>
 
-	<div className="md:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-		{filtered.map((doc) => (
-			<DoctorCard key={doc.id} doctor={doc} />
-		))}
-	</div>
+	{filtered.length === 0 ? (
+		<div className="md:col-span-4 flex items-center justify-center">
+			<div className="text-center text-4xl" style={{ color: 'var(--ms-mid)' }}>
+				No matching doctors found
+			</div>
+		</div>
+	) : (
+		<div className="md:col-span-4 grid items-stretch grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+			{filtered.map((doc) => (
+				<DoctorCard key={doc.id} doctor={doc} />
+			))}
+		</div>
+	)}
 
 </div>
 
