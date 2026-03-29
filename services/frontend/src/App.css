@@ -1,8 +1,22 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+
+:root{
+  --ms-dark: #1D2D44;     
+  --ms-mid: #344966; 
+  --ms-light: #C7D9E5;    
+  --ms-accent: #F5EFEB; 
+  --ms-primary: #ffffff;  
+}
+
+/* Primary themed button */
+.ms-btn-primary{
+  background-color: var(--ms-dark);
+  color: var(--ms-accent);
+  border: none;
+  cursor: pointer;
+  transition: background-color 200ms ease;
+}
+.ms-btn-primary:hover{
+  background-color: var(--ms-dark);
 }
 
 .logo {
