@@ -1,10 +1,11 @@
+import axios from "axios";
 import Session from "../models/sessionModel.js";
 import {
   generateRoomName,
   generateMeetingLink,
   calculateSessionCounts,
 } from "../services/telemedicineService.js";
-import axios from "axios";
+
 export const createSession = async (req, res) => {
   try {
     const {
@@ -171,8 +172,6 @@ export const updateSession = async (req, res) => {
     });
   }
 };
-
-import axios from "axios"; // 👈 make sure this is at the top
 
 export const confirmSessionByDoctor = async (req, res) => {
   try {
