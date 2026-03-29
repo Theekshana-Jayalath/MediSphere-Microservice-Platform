@@ -10,6 +10,7 @@ import BookingConfirm from "../../components/Appointment/BookingConfirm";
 const BookingPage = () => {
   const location = useLocation();
   const doctor = location.state?.doctor;
+  const selectedDate = location.state?.selectedDate || '';
   const navigate = useNavigate();
 
   const BackButton = () => (
@@ -28,7 +29,7 @@ const BookingPage = () => {
       className="min-h-screen p-6"
       style={{ backgroundColor: "#f5f3ef" }}
     >
-      <div style={{ maxWidth: "950px" }} className="mx-auto">
+  <div style={{ maxWidth: "1250px" }} className="mx-auto booking-card-large">
         
         {/* Progress Bar */}
         <div className="pt-6 flex items-center gap-4">
@@ -43,12 +44,12 @@ const BookingPage = () => {
           </h1>
 
           <p className="text-sm text-gray-500 mt-2">
-            Scheduled for October 12, 2023
+            {selectedDate ? `Scheduled for ${selectedDate}` : 'Select a date and time for your consultation'}
           </p>
 
           <div className="inline-flex items-center gap-2 mt-3 bg-white py-1 px-3 rounded-full text-sm shadow-sm">
             <span>📅</span>
-            <span>Oct 12, 2023</span>
+            <span>{selectedDate ? selectedDate : 'No date selected'}</span>
           </div>
         </header>
 

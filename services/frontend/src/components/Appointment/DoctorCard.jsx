@@ -2,11 +2,11 @@
 import React from "react";
 import { useNavigate } from 'react-router-dom';
 
-const DoctorCard = ({doctor}) => {
+const DoctorCard = ({doctor, selectedDate}) => {
 	const navigate = useNavigate();
 
 	const handleBook = () => {
-		navigate('/booking', { state: { doctor } });
+	navigate('/booking', { state: { doctor, selectedDate } });
 	};
 
 	return (

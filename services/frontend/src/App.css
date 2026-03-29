@@ -76,6 +76,17 @@
   border-radius: 9999px;
   z-index: 1;
 }
+/* colored portion of the progress line (indicates completed segment) */
+.progress-line-fill{
+  position: absolute;
+  left: calc(var(--step-size) / 2);
+  height: 4px;
+  background: linear-gradient(90deg, var(--ms-mid), var(--ms-dark));
+  top: calc(var(--step-size) / 2);
+  transform: translateY(-50%);
+  border-radius: 9999px;
+  z-index: 2; /* above the base line but below the circles (circles have z-index:3) */
+}
 .progress-steps{
   display: flex;
   gap: 1.25rem;
@@ -279,6 +290,19 @@
 .page-card{
   background: transparent;
   padding: 24px;
+}
+
+/* Large shadowed booking card used to contain the full booking content */
+.booking-card-large{
+  background: #ffffff;
+  padding: 32px;
+  border-radius: 18px;
+  box-shadow: 0 30px 60px rgba(13,20,33,0.12), 0 8px 20px rgba(13,20,33,0.06);
+  border: 1px solid rgba(13,20,33,0.04);
+}
+
+@media (max-width: 768px){
+  .booking-card-large{ padding: 20px; border-radius: 12px; }
 }
 
 .booking-layout{
