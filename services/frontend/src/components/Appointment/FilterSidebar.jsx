@@ -1,49 +1,63 @@
 import React from "react";
 
-const FilterSidebar = () => {
-return (
-<div className="bg-white p-6 rounded-xl shadow-sm">
-<h3 className="text-lg font-semibold mb-4">Filters</h3>
+const specialtyOptions = ["Cardiology", "Neurology", "Pediatrics", "Dermatology"];
 
-<div className="mb-6">
-<p className="text-sm text-gray-500 mb-2">SPECIALTY</p>
+const FilterSidebar = ({ selectedSpecialties = [], setSelectedSpecialties, selectedHospital = 'All Hospitals', setSelectedHospital, selectedDate = '', setSelectedDate, onClear }) => {
 
-<div className="space-y-2">
-<label className="flex gap-2">
-<input type="checkbox"/> Cardiology
-</label>
+	const toggleSpecialty = (spec) => {
+		if (selectedSpecialties.includes(spec)) {
+			setSelectedSpecialties(selectedSpecialties.filter(s => s !== spec));
+		} else {
+			setSelectedSpecialties([...selectedSpecialties, spec]);
+		}
+	}
 
-<label className="flex gap-2">
-<input type="checkbox"/> Neurology
-</label>
+	const today = new Date().toISOString().split('T')[0];
 
-<label className="flex gap-2">
-<input type="checkbox"/> Pediatrics
-</label>
+	return (
+		<div className="bg-white p-6 rounded-xl shadow-sm">
+			<div className="flex items-center justify-between mb-4">
+				<h3 className="text-lg font-semibold">Filters</h3>
+				{onClear && (
+					<button onClick={onClear} className="text-sm text-blue-600">Clear</button>
+				)}
+			</div>
 
-<label className="flex gap-2">
-<input type="checkbox"/> Dermatology
-</label>
-</div>
-</div>
+			<div className="mb-6">
+				<p className="text-sm text-gray-500 mb-2">SPECIALTY</p>
 
-<div className="mb-6">
-<p className="text-sm text-gray-500 mb-2">HOSPITAL</p>
+				<div className="space-y-2">
+					{specialtyOptions.map(s => (
+						<label key={s} className="flex gap-2 items-center">
+							<input type="checkbox" checked={selectedSpecialties.includes(s)} onChange={() => toggleSpecialty(s)} />
+							<span>{s}</span>
+						</label>
+					))}
+				</div>
+			</div>
 
-<select className="w-full border rounded-lg p-2">
-<option>All Hospitals</option>
-<option>Central Health Hub</option>
-<option>Skyline Medical Center</option>
-</select>
-</div>
+			<div className="mb-6">
+				<p className="text-sm text-gray-500 mb-2">HOSPITAL</p>
 
-<div>
-<p className="text-sm text-gray-500 mb-2">DATE</p>
-<input type="date" className="w-full border p-2 rounded-lg"/>
-</div>
+				<select value={selectedHospital} onChange={(e) => setSelectedHospital(e.target.value)} className="w-full border rounded-lg p-2">
+					<option>All Hospitals</option>
+					<option>Central Health Hub</option>
+					<option>Skyline Medical Center</option>
+					<option>Oakwood Children's Clinic</option>
+					<option>Eastside Medical Hub</option>
+				</select>
+			</div>
 
-</div>
-);
+			<div>
+				<p className="text-sm text-gray-500 mb-2">Appointment Date</p>
+				<input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={today} className="w-full border p-2 rounded-lg" />
+				{selectedDate && (
+					<div className="mt-2 text-xs text-gray-600">Selected: {selectedDate}</div>
+				)}
+			</div>
+
+		</div>
+	);
 };
 
 export default FilterSidebar;

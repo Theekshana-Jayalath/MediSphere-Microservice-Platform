@@ -11,7 +11,7 @@ const STATUS_MAP = {
 
 const DEFAULT_LABELS = ["Find Doctor", "Booked", "Paid", "Approved"];
 
-const ProgressBar = ({ appointmentStatus = 'booked', labels = DEFAULT_LABELS }) => {
+const ProgressBar = ({ appointmentStatus = 'booked', labels = DEFAULT_LABELS, highlightUpTo }) => {
   const currentStep = STATUS_MAP[appointmentStatus] || 1;
   const steps = labels.length;
 
@@ -19,9 +19,26 @@ const ProgressBar = ({ appointmentStatus = 'booked', labels = DEFAULT_LABELS }) 
     <div className="progress-bar-container">
       <div className="progress-steps">
         <div className="progress-line" aria-hidden></div>
+        {/* colored fill that shows progress up to the desired step */}
+        <div
+          className="progress-line-fill"
+          aria-hidden
+          style={{ width: (() => {
+            const useStep = typeof highlightUpTo === 'number' ? Math.min(highlightUpTo, steps) : currentStep;
+            if (steps <= 1) return '0%';
+            const pct = ((Math.max(0, useStep - 1)) / (steps - 1)) * 100;
+            return `${pct}%`;
+          })() }}
+        ></div>
   {labels.map((label, idx) => {
           const step = idx + 1;
-          let status = step < currentStep ? 'completed' : step === currentStep ? 'active' : 'upcoming';
+          let status;
+          if (typeof highlightUpTo === 'number') {
+            // mark everything up to highlightUpTo as completed
+            status = step <= highlightUpTo ? 'completed' : 'upcoming';
+          } else {
+            status = step < currentStep ? 'completed' : step === currentStep ? 'active' : 'upcoming';
+          }
           // if appointment is rejected, mark final step as rejected
           if (appointmentStatus === 'rejected' && step === steps) status = 'rejected';
 
