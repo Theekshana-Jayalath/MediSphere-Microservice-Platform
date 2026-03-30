@@ -1,5 +1,5 @@
 import express from "express";
-import { sendTelemedicineConfirmation } from "../controllers/notificationController.js";
+import { sendAppointmentConfirmedNotification } from "../controllers/notificationController.js";
 
 const router = express.Router();
 
@@ -10,6 +10,6 @@ router.get("/health", (req, res) => {
   });
 });
 
-router.post("/telemedicine-confirmation", sendTelemedicineConfirmation);
+router.post("/appointment-confirmed", sendAppointmentConfirmedNotification);
 
 export default router;
