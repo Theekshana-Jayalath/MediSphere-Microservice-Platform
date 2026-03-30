@@ -1,8 +1,16 @@
-import React from "react";
 
-const DoctorCard = ({doctor}) => {
-return (
-<div className="rounded-2xl shadow-sm p-5 flex gap-5 hover:shadow-md transition h-50 w-full" style={{ backgroundColor: 'var(--ms-primary)' }}>
+import React from "react";
+import { useNavigate } from 'react-router-dom';
+
+const DoctorCard = ({doctor, selectedDate}) => {
+	const navigate = useNavigate();
+
+	const handleBook = () => {
+	navigate('/booking', { state: { doctor, selectedDate } });
+	};
+
+	return (
+		<div className="rounded-2xl shadow-sm p-5 flex gap-5 hover:shadow-md transition h-50 w-full" style={{ backgroundColor: 'var(--ms-primary)' }}>
 
 <img
 src={doctor.image}
@@ -34,7 +42,7 @@ className="w-20 h-20 rounded-xl object-cover"
 {doctor.experience}
 </span>
 
-<button className="ms-btn-primary px-4 py-1 rounded-lg">
+<button type="button" onClick={handleBook} className="ms-btn-primary px-4 py-1 rounded-lg">
 	Book Now
 </button>
 
