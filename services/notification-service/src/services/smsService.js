@@ -1,20 +1,28 @@
+import dotenv from "dotenv";
 import twilio from "twilio";
+
+dotenv.config();
 
 const client = twilio(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN
 );
 
-export const sendSMS = async ({ to, message }) => {
-  if (!to || !message) {
-    throw new Error("Phone number and message are required");
-  }
-
-  const response = await client.messages.create({
-    body: message,
+export const sendAppointmentConfirmationSms = async ({
+  phoneNumber,
+  patientName,
+  doctorName,
+  scheduledTime,
+}) => {
+  const message = await client.messages.create({
+    body: `Hello ${patientName}, your appointment with Dr. ${doctorName} has been confirmed for ${scheduledTime}.`,
     from: process.env.TWILIO_PHONE_NUMBER,
-    to,
+    to: phoneNumber,
   });
 
-  return response;
+  return {
+    sid: message.sid,
+    status: message.status,
+    to: message.to,
+  };
 };

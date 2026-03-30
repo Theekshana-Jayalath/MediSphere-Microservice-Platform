@@ -1,39 +1,41 @@
 import { sendTelemedicineConfirmationEmail } from "../services/emailService.js";
-import { sendSMS } from "../services/smsService.js";
+import { sendAppointmentConfirmationSms } from "../services/smsService.js";
 
-  export const sendAppointmentConfirmedNotification = async (req, res) => {
+export const sendAppointmentConfirmedNotification = async (req, res) => {
   try {
     const {
       patientEmail,
-      patientPhone,
+      phoneNumber,
       patientName,
-      doctorEmail,
-      doctorPhone,
       doctorName,
       specialty,
       scheduledTime,
       meetingLink,
+      status,
     } = req.body;
 
-    // ✅ validation
     if (
       !patientEmail ||
-      !patientPhone ||
+      !phoneNumber ||
       !patientName ||
-      !doctorEmail ||
-      !doctorPhone ||
       !doctorName ||
-      !scheduledTime ||
-      !meetingLink
+      !scheduledTime
     ) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields",
+        message:
+          "patientEmail, phoneNumber, patientName, doctorName, and scheduledTime are required",
       });
     }
 
-    // ✅ 1. Send EMAILS (you already have this)
-    await sendTelemedicineConfirmationEmail({
+    if (status !== "Confirmed") {
+      return res.status(400).json({
+        success: false,
+        message: "Notifications are sent only when appointment is Confirmed",
+      });
+    }
+
+    const emailResult = await sendTelemedicineConfirmationEmail({
       patientEmail,
       patientName,
       doctorName,
@@ -42,38 +44,25 @@ import { sendSMS } from "../services/smsService.js";
       meetingLink,
     });
 
-    await sendTelemedicineConfirmationEmail({
-      patientEmail: doctorEmail,
-      patientName: `Dr. ${doctorName}`,
+    const smsResult = await sendAppointmentConfirmationSms({
+      phoneNumber,
+      patientName,
       doctorName,
-      specialty,
       scheduledTime,
-      meetingLink,
-    });
-
-    // ✅ 2. Send SMS (TEST NOW — immediate send)
-    const patientMessage = `Hello ${patientName}, your appointment with Dr. ${doctorName} is confirmed for ${scheduledTime}. Link: ${meetingLink}`;
-
-    const doctorMessage = `Hello Dr. ${doctorName}, appointment with ${patientName} confirmed at ${scheduledTime}.`;
-
-    await sendSMS({
-      to: patientPhone,
-      message: patientMessage,
-    });
-
-    await sendSMS({
-      to: doctorPhone,
-      message: doctorMessage,
     });
 
     return res.status(200).json({
       success: true,
-      message: "Emails and SMS sent successfully",
+      message: "Email and SMS sent successfully",
+      results: {
+        email: emailResult.response || "Email sent",
+        sms: smsResult,
+      },
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Notification failed",
+      message: "Failed to send notifications",
       error: error.message,
     });
   }
