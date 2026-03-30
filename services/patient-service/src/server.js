@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
-import authRoutes from "./routes/authRoutes.js";
 import patientRoutes from "./routes/patientRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 
@@ -20,7 +19,6 @@ app.get("/", (req, res) => {
   res.send("Patient Service is running 🚀");
 });
 
-app.use("/api/auth", authRoutes);
 app.use("/api/patients", patientRoutes);
 app.use("/api/reports", reportRoutes);
 

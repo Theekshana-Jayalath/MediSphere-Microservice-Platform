@@ -1,14 +1,48 @@
 import Patient from "../models/Patient.js";
-import User from "../models/User.js";
 import Prescription from "../models/Prescription.js";
 import MedicalHistory from "../models/MedicalHistory.js";
 
+export const createPatientProfile = async (req, res) => {
+  try {
+    const {
+      dateOfBirth,
+      gender,
+      bloodGroup,
+      phone,
+      address,
+      emergencyContact,
+      allergies,
+    } = req.body;
+
+    const existingProfile = await Patient.findOne({ userId: req.user.id });
+
+    if (existingProfile) {
+      return res.status(400).json({ message: "Patient profile already exists" });
+    }
+
+    const patient = await Patient.create({
+      userId: req.user.id,
+      dateOfBirth,
+      gender,
+      bloodGroup,
+      phone,
+      address,
+      emergencyContact,
+      allergies,
+    });
+
+    return res.status(201).json({
+      message: "Patient profile created successfully",
+      patient,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 export const getMyProfile = async (req, res) => {
   try {
-    const patient = await Patient.findOne({ userId: req.user.id }).populate(
-      "userId",
-      "name email role"
-    );
+    const patient = await Patient.findOne({ userId: req.user.id });
 
     if (!patient) {
       return res.status(404).json({ message: "Patient profile not found" });
@@ -30,17 +64,12 @@ export const updateMyProfile = async (req, res) => {
       address,
       emergencyContact,
       allergies,
-      name,
     } = req.body;
 
     const patient = await Patient.findOne({ userId: req.user.id });
 
     if (!patient) {
       return res.status(404).json({ message: "Patient profile not found" });
-    }
-
-    if (name) {
-      await User.findByIdAndUpdate(req.user.id, { name });
     }
 
     if (dateOfBirth !== undefined) patient.dateOfBirth = dateOfBirth;
@@ -53,14 +82,9 @@ export const updateMyProfile = async (req, res) => {
 
     await patient.save();
 
-    const updatedPatient = await Patient.findOne({ userId: req.user.id }).populate(
-      "userId",
-      "name email role"
-    );
-
     return res.status(200).json({
       message: "Patient profile updated successfully",
-      patient: updatedPatient,
+      patient,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
