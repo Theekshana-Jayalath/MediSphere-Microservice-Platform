@@ -6,6 +6,7 @@ specialty:"Cardiology",
 hospital:"Central Health Hub",
 experience:"15+ Years",
 rating:4.9,
+consultationFee: 4000.00,
 image:"https://randomuser.me/api/portraits/women/44.jpg"
 },
 {
@@ -15,6 +16,7 @@ specialty:"Neurology",
 hospital:"Skyline Medical Center",
 experience:"20+ Years",
 rating:5.0,
+consultationFee: 5000.00,
 image:"https://randomuser.me/api/portraits/men/32.jpg"
 },
 {
@@ -24,6 +26,7 @@ specialty:"Pediatrics",
 hospital:"Oakwood Children's Clinic",
 experience:"12 Years",
 rating:4.8,
+consultationFee: 3000.00,
 image:"https://randomuser.me/api/portraits/women/68.jpg"
 },
 {
@@ -33,6 +36,7 @@ specialty:"Dermatology",
 hospital:"Eastside Medical Hub",
 experience:"8 Years",
 rating:4.7,
+consultationFee: 3500.00,
 image:"https://randomuser.me/api/portraits/men/75.jpg"
 },
 {
@@ -42,6 +46,7 @@ specialty:"Cardiology",
 hospital:"Central Health Hub",
 experience:"15+ Years",
 rating:4.9,
+consultationFee: 4000.00,
 image:"https://randomuser.me/api/portraits/women/44.jpg"
 },
 {
@@ -51,6 +56,7 @@ specialty:"Neurology",
 hospital:"Skyline Medical Center",
 experience:"20+ Years",
 rating:5.0,
+consultationFee: 5000.00,
 image:"https://randomuser.me/api/portraits/men/32.jpg"
 },
 {
@@ -60,6 +66,7 @@ specialty:"Pediatrics",
 hospital:"Oakwood Children's Clinic",
 experience:"12 Years",
 rating:4.8,
+consultationFee: 3000.00,
 image:"https://randomuser.me/api/portraits/women/68.jpg"
 },
 {
@@ -69,6 +76,7 @@ specialty:"Dermatology",
 hospital:"Eastside Medical Hub",
 experience:"8 Years",
 rating:4.7,
+consultationFee: 3500.00,
 image:"https://randomuser.me/api/portraits/men/75.jpg"
 },
 {
@@ -78,6 +86,7 @@ specialty:"Cardiology",
 hospital:"Central Health Hub",
 experience:"15+ Years",
 rating:4.9,
+consultationFee: 4000.00,
 image:"https://randomuser.me/api/portraits/women/44.jpg"
 },
 {
@@ -87,6 +96,7 @@ specialty:"Neurology",
 hospital:"Skyline Medical Center",
 experience:"20+ Years",
 rating:5.0,
+consultationFee: 5000.00,
 image:"https://randomuser.me/api/portraits/men/32.jpg"
 },
 {
@@ -96,6 +106,7 @@ specialty:"Pediatrics",
 hospital:"Oakwood Children's Clinic",
 experience:"12 Years",
 rating:4.8,
+consultationFee: 3000.00,
 image:"https://randomuser.me/api/portraits/women/68.jpg"
 },
 {
@@ -105,6 +116,7 @@ specialty:"Dermatology",
 hospital:"Eastside Medical Hub",
 experience:"8 Years",
 rating:4.7,
+consultationFee: 3500.00,
 image:"https://randomuser.me/api/portraits/men/75.jpg"
 }
 ]
