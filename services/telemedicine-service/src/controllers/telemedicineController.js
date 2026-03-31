@@ -1,4 +1,3 @@
-import axios from "axios";
 import Session from "../models/sessionModel.js";
 import {
   generateRoomName,
@@ -176,19 +175,12 @@ export const updateSession = async (req, res) => {
 export const confirmSessionByDoctor = async (req, res) => {
   try {
     const { id } = req.params;
-    const { doctorId, patientEmail } = req.body;
+    const { doctorId } = req.body;
 
     if (!doctorId) {
       return res.status(400).json({
         success: false,
         message: "doctorId is required",
-      });
-    }
-
-    if (!patientEmail) {
-      return res.status(400).json({
-        success: false,
-        message: "patientEmail is required",
       });
     }
 
@@ -208,35 +200,14 @@ export const confirmSessionByDoctor = async (req, res) => {
       });
     }
 
-    // ✅ Update status
     session.status = "confirmed";
     await session.save();
-
-    // ✅ Send notification immediately
-    try {
-      await axios.post(
-        `${process.env.NOTIFICATION_SERVICE_URL}/api/notifications/telemedicine-confirmation`,
-        {
-          patientEmail,
-          patientName: session.patientName,
-          doctorName: session.doctorName,
-          specialty: session.specialty,
-          scheduledTime: session.scheduledTime,
-          meetingLink: session.meetingLink,
-        }
-      );
-
-      console.log("📩 Notification sent");
-    } catch (err) {
-      console.error("❌ Notification failed:", err.message);
-    }
 
     return res.status(200).json({
       success: true,
       message: "Session confirmed successfully",
       session,
     });
-
   } catch (error) {
     return res.status(500).json({
       success: false,
