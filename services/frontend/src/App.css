@@ -1168,3 +1168,256 @@ border-radius:10px;
 font-size:16px;
 cursor:pointer;
 }
+
+
+/* ===== PAYMENT FINAL UI ===== */
+
+.pm-page{
+  min-height:100vh;
+  background: var(--ms-accent);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding-top:60px;
+}
+
+.pm-header{
+  text-align:center;
+  margin-bottom:20px;
+}
+.pm-header h1{
+  font-size:32px;
+  font-weight:700;
+  color:var(--ms-dark);
+}
+.pm-header p{
+  color:var(--ms-mid);
+}
+
+/* wrapper */
+.pm-wrapper{
+  width:100%;
+  max-width:460px;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+
+/* summary card */
+.pm-summary-card{
+  background:white;
+  border-radius:16px;
+  padding:22px;
+  box-shadow:0 20px 50px rgba(0,0,0,0.08);
+}
+
+.pm-summary-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.pm-label{
+  font-size:11px;
+  color:gray;
+}
+
+.pm-summary-card h2{
+  font-size:30px;
+  font-weight:700;
+  color:var(--ms-dark);
+}
+
+.pm-verified{
+  background:#e6f0ff;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+}
+
+.pm-divider{
+  height:1px;
+  background:#eee;
+  margin:15px 0;
+}
+
+.pm-row{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:6px;
+}
+
+/* payhere card */
+.pm-payhere-card{
+  background:white;
+  border-radius:16px;
+  padding:22px;
+  box-shadow:0 20px 50px rgba(0,0,0,0.08);
+}
+
+.pm-payhere-header{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:15px;
+}
+
+.pm-logo{
+  background:black;
+  color:white;
+  padding:2px 6px;
+  border-radius:4px;
+  font-size:12px;
+  margin-right:6px;
+}
+
+.pm-secure{
+  background:#d1fae5;
+  color:#065f46;
+  font-size:12px;
+  padding:4px 10px;
+  border-radius:999px;
+}
+
+/* input */
+.pm-input-label{
+  font-size:12px;
+  color:gray;
+}
+
+.pm-input-wrap{
+  margin-top:5px;
+  position:relative;
+}
+.pm-input-wrap input{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #ddd;
+}
+.pm-input-wrap span{
+  position:absolute;
+  right:10px;
+  top:50%;
+  transform:translateY(-50%);
+}
+
+/* methods */
+.pm-methods{
+  margin-top:15px;
+}
+.pm-methods p{
+  font-size:12px;
+  color:gray;
+  margin-bottom:6px;
+}
+
+.pm-method-icons{
+  display:flex;
+  gap:8px;
+}
+.pm-method-icons span{
+  background:#f3f4f6;
+  padding:6px 10px;
+  border-radius:6px;
+  font-size:12px;
+}
+
+/* toggle */
+.pm-toggle-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-top:18px;
+}
+
+.pm-toggle{
+  width:40px;
+  height:22px;
+  background:#ddd;
+  border-radius:999px;
+  position:relative;
+  cursor:pointer;
+}
+.pm-toggle div{
+  width:18px;
+  height:18px;
+  background:white;
+  border-radius:50%;
+  position:absolute;
+  top:2px;
+  left:2px;
+  transition:0.2s;
+}
+.pm-toggle.active{
+  background:var(--ms-dark);
+}
+.pm-toggle.active div{
+  left:20px;
+}
+
+.pm-lightning{
+  margin-left:auto;
+  color:#aaa;
+}
+
+/* button */
+.pm-main-btn{
+  padding:14px;
+  border-radius:12px;
+  font-weight:600;
+}
+
+/* terms */
+.pm-terms{
+  font-size:12px;
+  text-align:center;
+  color:gray;
+}
+
+.pm-method-icons span{
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.pm-method-icons span:hover{
+  background: var(--ms-light);
+  transform: scale(1.05);
+}
+
+/* ===== PAYMENT POPUP / MODAL ===== */
+.pm-modal-overlay{
+  position: fixed;
+  inset: 0; /* top:0; right:0; bottom:0; left:0; */
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+.pm-modal{
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 20px 50px rgba(13,20,33,0.18);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+.pm-modal h2{ margin:0 0 12px 0; color:var(--ms-dark); }
+
+/* generic input used inside popups */
+.pm-input{
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #e6e6e6;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+}
+.pm-row{ display:flex; gap:8px; }
+.pm-row .pm-input{ flex:1; }
+
+/* make small text buttons inside modal look subdued */
+.pm-modal .text-sm{ font-size:0.85rem; }
+.pm-modal .ms-btn-primary{ border-radius:10px; }3
