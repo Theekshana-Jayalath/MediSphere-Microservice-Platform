@@ -7,38 +7,39 @@ import DoctorTelemedicine from "./pages/doctor/DoctorTelemedicine";
 import DoctorCreatePrescription from "./pages/doctor/DoctorCreatePrescription";
 import DoctorPrescriptions from "./pages/doctor/DoctorPrescriptions";
 import MySchedule from "./pages/doctor/MySchedule";
+
+import Appointment from "./pages/Appointment/Appointment.jsx";
+import BookingPage from "./pages/Appointment/BookingPage.jsx";
+import PaymentPage from "./pages/Payment/PaymentPage.jsx";
+
 import "./App.css";
 
 function App() {
   return (
     <Router>
       <Routes>
+        {/* default route */}
         <Route path="/" element={<Navigate to="/doctor/dashboard" replace />} />
+
+        {/* doctor routes */}
         <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
         <Route path="/doctor/schedule" element={<MySchedule />} />
         <Route path="/doctor/appointments" element={<DoctorAppointments />} />
         <Route path="/doctor/availability" element={<DoctorAvailability />} />
         <Route path="/doctor/reports" element={<DoctorReports />} />
         <Route path="/doctor/telemedicine" element={<DoctorTelemedicine />} />
-        <Route path="/doctor/create-prescription" element={<DoctorCreatePrescription />} />
+        <Route
+          path="/doctor/create-prescription"
+          element={<DoctorCreatePrescription />}
+        />
         <Route path="/doctor/prescriptions" element={<DoctorPrescriptions />} />
-      </Routes>
-    </Router>
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Appointment from "./pages/Appointment/Appointment.jsx";
-import BookingPage from "./pages/Appointment/BookingPage.jsx";
-import PaymentPage from './pages/Payment/PaymentPage.jsx';
-import './App.css';
 
-function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Appointment />} />
+        {/* appointment routes */}
+        <Route path="/appointment" element={<Appointment />} />
         <Route path="/booking" element={<BookingPage />} />
         <Route path="/payment" element={<PaymentPage />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
 
