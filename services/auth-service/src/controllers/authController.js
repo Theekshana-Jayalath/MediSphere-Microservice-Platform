@@ -1,30 +1,22 @@
 import User from "../models/User.js";
-import Patient from "../models/Patient.js";
 import generateToken from "../utils/generateToken.js";
 
-export const registerPatient = async (req, res) => {
+export const registerUser = async (req, res) => {
   try {
-    const {
-      name,
-      email,
-      password,
-      dateOfBirth,
-      gender,
-      bloodGroup,
-      phone,
-      address,
-      emergencyContact,
-      allergies,
-    } = req.body;
+    const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email and password are required" });
+      return res.status(400).json({
+        message: "Name, email and password are required",
+      });
     }
 
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists with this email" });
+      return res.status(400).json({
+        message: "User already exists with this email",
+      });
     }
 
     const user = await User.create({
@@ -32,17 +24,6 @@ export const registerPatient = async (req, res) => {
       email,
       password,
       role: "PATIENT",
-    });
-
-    const patient = await Patient.create({
-      userId: user._id,
-      dateOfBirth,
-      gender,
-      bloodGroup,
-      phone,
-      address,
-      emergencyContact,
-      allergies,
     });
 
     return res.status(201).json({
@@ -54,7 +35,6 @@ export const registerPatient = async (req, res) => {
         email: user.email,
         role: user.role,
       },
-      patient,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -66,23 +46,26 @@ export const loginUser = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+      return res.status(400).json({
+        message: "Email and password are required",
+      });
     }
 
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
     }
 
-    const isMatch = await user.comparePassword(password);
+    const isMatch = await user.matchPassword(password);
 
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({
+        message: "Invalid email or password",
+      });
     }
-
-    const patientProfile =
-      user.role === "PATIENT" ? await Patient.findOne({ userId: user._id }) : null;
 
     return res.status(200).json({
       message: "Login successful",
@@ -93,7 +76,6 @@ export const loginUser = async (req, res) => {
         email: user.email,
         role: user.role,
       },
-      patientProfile,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message });
