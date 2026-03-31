@@ -50,9 +50,7 @@ export const getMyReports = async (req, res) => {
       return res.status(404).json({ message: "Patient profile not found" });
     }
 
-    const reports = await Report.find({ patientId: patient._id })
-      .populate("uploadedBy", "name email role")
-      .sort({ createdAt: -1 });
+    const reports = await Report.find({ patientId: patient._id }).sort({ createdAt: -1 });
 
     return res.status(200).json(reports);
   } catch (error) {
@@ -71,7 +69,7 @@ export const getReportById = async (req, res) => {
     const report = await Report.findOne({
       _id: req.params.id,
       patientId: patient._id,
-    }).populate("uploadedBy", "name email role");
+    });
 
     if (!report) {
       return res.status(404).json({ message: "Report not found" });
