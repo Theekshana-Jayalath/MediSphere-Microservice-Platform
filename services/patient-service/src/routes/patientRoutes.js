@@ -1,6 +1,7 @@
 import express from "express";
 import authMiddleware from "../middleware/authMiddleware.js";
 import {
+  createPatientProfileForRegistration,
   createPatientProfile,
   getMyProfile,
   updateMyProfile,
@@ -13,6 +14,9 @@ import {
 } from "../controllers/patientController.js";
 
 const router = express.Router();
+
+// Public registration route
+router.post("/", createPatientProfileForRegistration);
 
 // Admin/general routes
 router.get("/", getAllPatients);
