@@ -2,6 +2,53 @@ import Patient from "../models/Patient.js";
 import Prescription from "../models/Prescription.js";
 import MedicalHistory from "../models/MedicalHistory.js";
 
+export const createPatientProfileForRegistration = async (req, res) => {
+  try {
+    const {
+      userId,
+      name,
+      email,
+      dateOfBirth,
+      gender,
+      bloodGroup,
+      phone,
+      address,
+      emergencyContact,
+      allergies,
+    } = req.body;
+
+    if (!userId || !name || !email) {
+      return res.status(400).json({ message: "userId, name and email are required" });
+    }
+
+    const existingProfile = await Patient.findOne({ userId });
+
+    if (existingProfile) {
+      return res.status(400).json({ message: "Patient profile already exists" });
+    }
+
+    const patient = await Patient.create({
+      userId,
+      name,
+      email,
+      dateOfBirth,
+      gender,
+      bloodGroup,
+      phone,
+      address,
+      emergencyContact,
+      allergies,
+    });
+
+    return res.status(201).json({
+      message: "Patient profile created successfully",
+      patient,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 export const createPatientProfile = async (req, res) => {
   try {
     const {
