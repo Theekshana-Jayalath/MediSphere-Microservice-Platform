@@ -1,0 +1,367 @@
+* {
+  box-sizing: border-box;
+}
+
+.register-page {
+  min-height: 100vh;
+  background: #fef8f4;
+  color: #1d1b19;
+  font-family: "Inter", sans-serif;
+}
+
+.register-main {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: row;
+}
+
+.register-left {
+  position: relative;
+  width: 60%;
+  background: #1d2d44;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 32px 48px;
+}
+
+.register-left-glow {
+  position: absolute;
+  top: -280px;
+  right: -160px;
+  width: 800px;
+  height: 800px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(79, 95, 121, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.register-brand {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.register-brand-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.register-brand-icon-box .filled {
+  color: #1d2d44;
+  font-variation-settings: "FILL" 1;
+}
+
+.register-brand h1 {
+  margin: 0;
+  font-size: 22px;
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.register-hero {
+  position: relative;
+  z-index: 2;
+  max-width: 620px;
+}
+
+.register-badge {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #c6dbff;
+  color: #031c37;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 28px;
+}
+
+.register-hero h2 {
+  margin: 0 0 28px;
+  font-size: 68px;
+  line-height: 1.05;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.04em;
+}
+
+.register-hero h2 span {
+  color: #b7c9d5;
+  font-style: italic;
+}
+
+.register-hero p {
+  margin: 0 0 36px;
+  max-width: 640px;
+  color: #9fb0c7;
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.register-feature {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding-top: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.register-feature-avatars {
+  display: flex;
+  margin-left: 0;
+}
+
+.register-feature-avatars img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #1d2d44;
+  margin-left: -10px;
+}
+
+.register-feature-avatars img:first-child {
+  margin-left: 0;
+}
+
+.register-feature-title {
+  margin: 0;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.register-feature-sub {
+  margin: 4px 0 0;
+  color: #9fb0c7;
+  font-size: 13px;
+}
+
+.register-preview-card {
+  position: relative;
+  z-index: 2;
+  max-width: 390px;
+  padding: 24px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(197, 198, 205, 0.2);
+}
+
+.register-preview-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.register-preview-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: #c6dbff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.register-preview-icon span {
+  color: #031c37;
+}
+
+.register-preview-title {
+  margin: 0 0 4px;
+  color: #07182e;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.register-preview-text {
+  margin: 0;
+  color: #4b5f7e;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.register-preview-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: #e7e1dd;
+  overflow: hidden;
+}
+
+.register-preview-progress {
+  width: 67%;
+  height: 100%;
+  background: #07182e;
+  border-radius: 999px;
+}
+
+.register-bg-image {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  opacity: 0.1;
+  background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCCvXefKUwyovMGpmi4dW4U49eSYEaTwKBPrLJgDfBMt8HOw5cD06sX4oa-PzSCsWbmGRYyQB2yPC7FpCyjlu_yN7bFdeCC8AsgHm5ysEnooA0kJ6acGhFO494hAAQ_W1ZDvUUQKSi_9uqtiSj29gT4neJR3OtXgGeih6_9wQuYzSe6BYMU4siy5bFwWTEPxKfz-jfQoYAdSBCJ9LtEoS2nH4bVH74TFpHIia3kWpVwp8c5P7mhFQj2EzxPJqa6oLDLV4uBM3yL8VU");
+  background-size: cover;
+  background-position: center;
+  filter: grayscale(100%);
+  pointer-events: none;
+}
+
+.register-right {
+  width: 40%;
+  background: #fef8f4;
+  padding: 32px 40px;
+  overflow-y: auto;
+  max-height: 100vh;
+}
+
+.register-right-inner {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.register-header {
+  margin-bottom: 32px;
+}
+
+.register-header h3 {
+  margin: 0 0 10px;
+  color: #07182e;
+  font-size: 48px;
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.register-header p {
+  margin: 0;
+  color: #44474d;
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.register-role-list {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 36px;
+}
+
+.register-role-card {
+  width: 100%;
+  border: 1px solid rgba(197, 198, 205, 0.3);
+  border-radius: 24px;
+  background: #ffffff;
+  padding: 22px 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.register-role-card:hover {
+  border-color: rgba(7, 24, 46, 0.25);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+}
+
+.register-role-icon {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: rgba(183, 199, 229, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.register-role-icon span {
+  font-size: 28px;
+  color: #1d1b19;
+}
+
+.register-role-card h4 {
+  margin: 0 0 6px;
+  color: #07182e;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.register-role-card p {
+  margin: 0;
+  color: #44474d;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.register-login-text {
+  text-align: center;
+  color: #44474d;
+  font-size: 15px;
+}
+
+.register-login-text button {
+  margin-left: 8px;
+  background: transparent;
+  border: none;
+  color: #07182e;
+  font-weight: 800;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+@media (max-width: 1100px) {
+  .register-main {
+    flex-direction: column;
+  }
+
+  .register-left,
+  .register-right {
+    width: 100%;
+    max-height: none;
+  }
+
+  .register-hero h2 {
+    font-size: 50px;
+  }
+}
+
+@media (max-width: 768px) {
+  .register-left {
+    padding: 24px;
+  }
+
+  .register-right {
+    padding: 24px;
+  }
+
+  .register-hero h2 {
+    font-size: 40px;
+  }
+
+  .register-header h3 {
+    font-size: 34px;
+  }
+
+  .register-role-card {
+    padding: 18px;
+  }
+}
