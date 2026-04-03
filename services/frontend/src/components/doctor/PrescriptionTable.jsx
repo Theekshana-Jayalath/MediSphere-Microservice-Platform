@@ -1,4 +1,4 @@
-const PrescriptionTable = ({ prescriptions, onDelete }) => {
+const PrescriptionTable = ({ prescriptions, onDelete, onDownload }) => {
   return (
     <div className="bg-white rounded-xl shadow-md p-6 overflow-x-auto">
       <h2 className="text-2xl font-bold mb-4 text-teal-900">
@@ -30,12 +30,22 @@ const PrescriptionTable = ({ prescriptions, onDelete }) => {
                   {new Date(prescription.issuedDate).toLocaleDateString()}
                 </td>
                 <td className="p-3 border">
-                  <button
-                    onClick={() => onDelete(prescription._id)}
-                    className="bg-red-500 text-white px-3 py-1 rounded"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onDownload?.(prescription)}
+                      className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1 rounded"
+                    >
+                      Download PDF
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDelete(prescription._id)}
+                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))

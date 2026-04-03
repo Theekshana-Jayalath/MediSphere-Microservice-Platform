@@ -1,89 +1,57 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createPrescription } from "../../services/doctor/prescriptionApi";
 import "../../styles/prescriptionForm.css";
 
-const PrescriptionForm = () => {
-  const [formData, setFormData] = useState({
-    doctorId: "",
-    doctorName: "",
-    patientId: "",
-    patientName: "",
-    appointmentId: "",
-    diagnosis: "",
-    notes: "",
-    status: "active",
-  });
+const createEmptyMedicine = () => ({
+  medicineName: "",
+  dosage: "",
+  frequency: "",
+  duration: "",
+  instructions: "",
+});
 
-  const [medicines, setMedicines] = useState([
-    {
-      medicineName: "",
-      dosage: "",
-      frequency: "",
-      duration: "",
-      instructions: "",
-    },
-  ]);
+const createUniqueId = (prefix) => {
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, "0");
+
+  return `${prefix}${timestamp}${random}`;
+};
+
+const createInitialFormData = () => ({
+  doctorId: createUniqueId("DOC"),
+  doctorName: "Dr. Julian Vance",
+  patientId: createUniqueId("PAT"),
+  patientName: "",
+  appointmentId: createUniqueId("APT"),
+  diagnosis: "",
+  notes: "",
+  status: "active",
+});
+
+const PrescriptionForm = () => {
+  const [formData, setFormData] = useState(createInitialFormData);
+  const [medicines, setMedicines] = useState([createEmptyMedicine()]);
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Auto-generate IDs on component mount
-  useEffect(() => {
-    const generatedIds = {
-      doctorId: generateDoctorId(),
-      patientId: generatePatientId(),
-      appointmentId: generateAppointmentId(),
-    };
-
-    setFormData((prev) => ({
-      ...prev,
-      ...generatedIds,
-      doctorName: "Dr. Vane Julian", // Default doctor name, can be pulled from auth context
-    }));
-  }, []);
-
-  // Generate unique Doctor ID
-  const generateDoctorId = () => {
-    const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `DOC${timestamp}${random}`;
-  };
-
-  // Generate unique Patient ID
-  const generatePatientId = () => {
-    const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `PAT${timestamp}${random}`;
-  };
-
-  // Generate unique Appointment ID
-  const generateAppointmentId = () => {
-    const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `APT${timestamp}${random}`;
-  };
-
   // Regenerate individual IDs on demand
   const regenerateId = (idType) => {
-    let newId = "";
-    switch (idType) {
-      case "doctorId":
-        newId = generateDoctorId();
-        break;
-      case "patientId":
-        newId = generatePatientId();
-        break;
-      case "appointmentId":
-        newId = generateAppointmentId();
-        break;
-      default:
-        return;
-    }
+    const idPrefixes = {
+      doctorId: "DOC",
+      patientId: "PAT",
+      appointmentId: "APT",
+    };
+
+    const prefix = idPrefixes[idType];
+    if (!prefix) return;
 
     setFormData((prev) => ({
       ...prev,
-      [idType]: newId,
+      [idType]: createUniqueId(prefix),
     }));
   };
 
@@ -101,16 +69,7 @@ const PrescriptionForm = () => {
   };
 
   const addMedicineRow = () => {
-    setMedicines([
-      ...medicines,
-      {
-        medicineName: "",
-        dosage: "",
-        frequency: "",
-        duration: "",
-        instructions: "",
-      },
-    ]);
+    setMedicines([...medicines, createEmptyMedicine()]);
   };
 
   const removeMedicineRow = (index) => {
@@ -124,37 +83,62 @@ const PrescriptionForm = () => {
     setError("");
     setIsSubmitting(true);
 
+    const cleanedFormData = Object.fromEntries(
+      Object.entries(formData).map(([key, value]) => [
+        key,
+        typeof value === "string" ? value.trim() : value,
+      ])
+    );
+
+    const cleanedMedicines = medicines
+      .map((medicine) => ({
+        medicineName: medicine.medicineName.trim(),
+        dosage: medicine.dosage.trim(),
+        frequency: medicine.frequency.trim(),
+        duration: medicine.duration.trim(),
+        instructions: medicine.instructions.trim(),
+      }))
+      .filter(
+        (medicine) =>
+          medicine.medicineName ||
+          medicine.dosage ||
+          medicine.frequency ||
+          medicine.duration ||
+          medicine.instructions
+      );
+
+    if (cleanedMedicines.length === 0) {
+      setError("Please add at least one medicine before submitting.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const hasIncompleteMedicine = cleanedMedicines.some(
+      (medicine) =>
+        !medicine.medicineName ||
+        !medicine.dosage ||
+        !medicine.frequency ||
+        !medicine.duration
+    );
+
+    if (hasIncompleteMedicine) {
+      setError("Please complete all required medicine details before submitting.");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const payload = {
-        ...formData,
-        medicines,
+        ...cleanedFormData,
+        medicines: cleanedMedicines,
       };
 
       const response = await createPrescription(payload);
       setMessage(response.message || "Prescription created successfully");
-
-      setFormData({
-        doctorId: "",
-        doctorName: "",
-        patientId: "",
-        patientName: "",
-        appointmentId: "",
-        diagnosis: "",
-        notes: "",
-        status: "active",
-      });
-
-      setMedicines([
-        {
-          medicineName: "",
-          dosage: "",
-          frequency: "",
-          duration: "",
-          instructions: "",
-        },
-      ]);
+      setFormData(createInitialFormData());
+      setMedicines([createEmptyMedicine()]);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to create prescription");
+      setError(err.response?.data?.message || err.message || "Failed to create prescription");
     } finally {
       setIsSubmitting(false);
     }

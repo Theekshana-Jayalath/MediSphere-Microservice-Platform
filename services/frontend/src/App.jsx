@@ -40,7 +40,10 @@ function App() {
         <Route path="/doctor/availability" element={<DoctorAvailability />} />
         <Route path="/doctor/reports" element={<DoctorReports />} />
         <Route path="/doctor/telemedicine" element={<DoctorTelemedicine />} />
-        <Route path="/doctor/create-prescription" element={<DoctorCreatePrescription />} />
+        <Route
+          path="/doctor/create-prescription"
+          element={<DoctorCreatePrescription />}
+        />
         <Route path="/doctor/prescriptions" element={<DoctorPrescriptions />} />
 
         {/* Appointment / Payment Routes */}
