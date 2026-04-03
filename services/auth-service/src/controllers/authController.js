@@ -3,7 +3,7 @@ import generateToken from "../utils/generateToken.js";
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -19,15 +19,18 @@ export const registerUser = async (req, res) => {
       });
     }
 
+    const allowedRoles = ["PATIENT", "DOCTOR", "ADMIN"];
+    const userRole = allowedRoles.includes(role) ? role : "PATIENT";
+
     const user = await User.create({
       name,
       email,
       password,
-      role: "PATIENT",
+      role: userRole,
     });
 
     return res.status(201).json({
-      message: "Patient registered successfully",
+      message: `${user.role} registered successfully`,
       token: generateToken(user),
       user: {
         id: user._id,

@@ -11,6 +11,11 @@ import MySchedule from "./pages/doctor/MySchedule";
 import Appointment from "./pages/Appointment/Appointment.jsx";
 import BookingPage from "./pages/Appointment/BookingPage.jsx";
 import PaymentPage from "./pages/Payment/PaymentPage.jsx";
+import Home from "./pages/Home/Home";
+import Login from "./pages/Auth/Login";
+import Register from "./pages/Auth/Register";
+import PatientRegister from "./pages/Auth/PatientRegister";
+import PatientDashboard from "./pages/Patient/PatientDashboard";
 
 import "./App.css";
 
@@ -18,10 +23,17 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* default route */}
+        {/* Home Page */}
+        <Route path="/home" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/register/patient" element={<PatientRegister />} />
+        <Route path="/patient/dashboard" element={<PatientDashboard />} />
+
+        {/* Existing root redirect logic */}
         <Route path="/" element={<Navigate to="/doctor/dashboard" replace />} />
 
-        {/* doctor routes */}
+        {/* Doctor Routes */}
         <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
         <Route path="/doctor/schedule" element={<MySchedule />} />
         <Route path="/doctor/appointments" element={<DoctorAppointments />} />
@@ -34,7 +46,7 @@ function App() {
         />
         <Route path="/doctor/prescriptions" element={<DoctorPrescriptions />} />
 
-        {/* appointment routes */}
+        {/* Appointment / Payment Routes */}
         <Route path="/appointment" element={<Appointment />} />
         <Route path="/booking" element={<BookingPage />} />
         <Route path="/payment" element={<PaymentPage />} />

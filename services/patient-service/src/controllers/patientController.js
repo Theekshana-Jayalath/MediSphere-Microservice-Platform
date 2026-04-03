@@ -124,3 +124,49 @@ export const getMyMedicalHistory = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
+
+// Admin/general routes
+export const getAllPatients = async (req, res) => {
+  try {
+    const patients = await Patient.find().sort({ createdAt: -1 });
+    return res.status(200).json(patients);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getPatientById = async (req, res) => {
+  try {
+    const patient = await Patient.findById(req.params.id);
+
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    return res.status(200).json(patient);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getPatientPrescriptionsById = async (req, res) => {
+  try {
+    const prescriptions = await Prescription.find({ patientId: req.params.id })
+      .populate("doctorId", "name email")
+      .sort({ issuedDate: -1 });
+
+    return res.status(200).json(prescriptions);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getPatientHistoryById = async (req, res) => {
+  try {
+    const history = await MedicalHistory.find({ patientId: req.params.id }).sort({ date: -1 });
+
+    return res.status(200).json(history);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
