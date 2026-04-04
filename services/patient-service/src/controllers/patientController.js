@@ -18,13 +18,17 @@ export const createPatientProfileForRegistration = async (req, res) => {
     } = req.body;
 
     if (!userId || !name || !email) {
-      return res.status(400).json({ message: "userId, name and email are required" });
+      return res
+        .status(400)
+        .json({ message: "userId, name and email are required" });
     }
 
     const existingProfile = await Patient.findOne({ userId });
 
     if (existingProfile) {
-      return res.status(400).json({ message: "Patient profile already exists" });
+      return res
+        .status(400)
+        .json({ message: "Patient profile already exists" });
     }
 
     const patient = await Patient.create({
@@ -52,6 +56,8 @@ export const createPatientProfileForRegistration = async (req, res) => {
 export const createPatientProfile = async (req, res) => {
   try {
     const {
+      name,
+      email,
       dateOfBirth,
       gender,
       bloodGroup,
@@ -64,11 +70,15 @@ export const createPatientProfile = async (req, res) => {
     const existingProfile = await Patient.findOne({ userId: req.user.id });
 
     if (existingProfile) {
-      return res.status(400).json({ message: "Patient profile already exists" });
+      return res
+        .status(400)
+        .json({ message: "Patient profile already exists" });
     }
 
     const patient = await Patient.create({
       userId: req.user.id,
+      name,
+      email,
       dateOfBirth,
       gender,
       bloodGroup,
@@ -104,6 +114,8 @@ export const getMyProfile = async (req, res) => {
 export const updateMyProfile = async (req, res) => {
   try {
     const {
+      name,
+      email,
       dateOfBirth,
       gender,
       bloodGroup,
@@ -119,12 +131,34 @@ export const updateMyProfile = async (req, res) => {
       return res.status(404).json({ message: "Patient profile not found" });
     }
 
+    if (name !== undefined) patient.name = name;
+    if (email !== undefined) patient.email = email;
     if (dateOfBirth !== undefined) patient.dateOfBirth = dateOfBirth;
     if (gender !== undefined) patient.gender = gender;
     if (bloodGroup !== undefined) patient.bloodGroup = bloodGroup;
     if (phone !== undefined) patient.phone = phone;
-    if (address !== undefined) patient.address = address;
-    if (emergencyContact !== undefined) patient.emergencyContact = emergencyContact;
+
+    if (address !== undefined) {
+      patient.address = {
+        street: address.street ?? patient.address?.street ?? "",
+        city: address.city ?? patient.address?.city ?? "",
+        state: address.state ?? patient.address?.state ?? "",
+        zipCode: address.zipCode ?? patient.address?.zipCode ?? "",
+        country: address.country ?? patient.address?.country ?? "",
+      };
+    }
+
+    if (emergencyContact !== undefined) {
+      patient.emergencyContact = {
+        name: emergencyContact.name ?? patient.emergencyContact?.name ?? "",
+        relationship:
+          emergencyContact.relationship ??
+          patient.emergencyContact?.relationship ??
+          "",
+        phone: emergencyContact.phone ?? patient.emergencyContact?.phone ?? "",
+      };
+    }
+
     if (allergies !== undefined) patient.allergies = allergies;
 
     await patient.save();
@@ -164,7 +198,9 @@ export const getMyMedicalHistory = async (req, res) => {
       return res.status(404).json({ message: "Patient profile not found" });
     }
 
-    const history = await MedicalHistory.find({ patientId: patient._id }).sort({ date: -1 });
+    const history = await MedicalHistory.find({ patientId: patient._id }).sort({
+      date: -1,
+    });
 
     return res.status(200).json(history);
   } catch (error) {
@@ -172,7 +208,6 @@ export const getMyMedicalHistory = async (req, res) => {
   }
 };
 
-// Admin/general routes
 export const getAllPatients = async (req, res) => {
   try {
     const patients = await Patient.find().sort({ createdAt: -1 });
@@ -210,7 +245,9 @@ export const getPatientPrescriptionsById = async (req, res) => {
 
 export const getPatientHistoryById = async (req, res) => {
   try {
-    const history = await MedicalHistory.find({ patientId: req.params.id }).sort({ date: -1 });
+    const history = await MedicalHistory.find({ patientId: req.params.id }).sort(
+      { date: -1 }
+    );
 
     return res.status(200).json(history);
   } catch (error) {
