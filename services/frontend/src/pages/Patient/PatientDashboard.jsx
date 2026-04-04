@@ -1,7 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import PatientSidebar from "../../components/Patient/PatientSidebar";
 import "../../styles/Patient/PatientDashboard.css";
 
 export default function PatientDashboard() {
+  const navigate = useNavigate();
+
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
 
@@ -10,7 +14,8 @@ export default function PatientDashboard() {
     ? JSON.parse(storedPatientProfile)
     : null;
 
-  const patientName = user?.name || "Patient";
+  const patientName =
+    patientProfile?.name || patientProfile?.fullName || user?.name || "Patient";
   const patientEmail = user?.email || "No email";
   const patientId = user?.id ? user.id.slice(-6).toUpperCase() : "------";
 
@@ -40,6 +45,13 @@ export default function PatientDashboard() {
     alert("Vitals saved successfully");
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("patientProfile");
+    localStorage.removeItem("patientVitals");
+    navigate("/login");
+  };
+
   const calculateAge = (dob) => {
     if (!dob) return null;
     const birthDate = new Date(dob);
@@ -65,7 +77,6 @@ export default function PatientDashboard() {
     const hr = Number(value);
     if (!hr) return "Check";
 
-    // adult default
     let low = 60;
     let high = 100;
     let criticalLow = 40;
@@ -167,57 +178,12 @@ export default function PatientDashboard() {
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
       />
 
-      <aside className="patient-sidebar">
-        <div className="patient-sidebar-profile">
-          <span className="material-symbols-outlined">shield_person</span>
-          <div>
-            <h3>{patientName}</h3>
-            <p>Patient ID: #{patientId}</p>
-          </div>
-        </div>
-
-        <nav className="patient-sidebar-nav">
-          <a href="#" className="active">
-            <span className="material-symbols-outlined">grid_view</span>
-            Dashboard
-          </a>
-          <a href="#">
-            <span className="material-symbols-outlined">calendar_today</span>
-            Appointments
-          </a>
-          <a href="#">
-            <span className="material-symbols-outlined">description</span>
-            Medical Reports
-          </a>
-          <a href="#">
-            <span className="material-symbols-outlined">medication</span>
-            Prescriptions
-          </a>
-          <a href="#">
-            <span className="material-symbols-outlined">history</span>
-            Medical History
-          </a>
-          <a href="#">
-            <span className="material-symbols-outlined">videocam</span>
-            Video Consultations
-          </a>
-          <a href="#">
-            <span className="material-symbols-outlined">payments</span>
-            Payments
-          </a>
-          <a href="#">
-            <span className="material-symbols-outlined">notifications</span>
-            Notifications
-          </a>
-        </nav>
-
-        <div className="patient-sidebar-bottom">
-          <a href="#">
-            <span className="material-symbols-outlined">settings</span>
-            Settings
-          </a>
-        </div>
-      </aside>
+      <PatientSidebar
+        patientName={patientName}
+        patientId={patientId}
+        activeItem="dashboard"
+        onLogout={handleLogout}
+      />
 
       <main className="patient-main">
         <header className="patient-topbar">
@@ -235,7 +201,11 @@ export default function PatientDashboard() {
               <span className="patient-notification-dot"></span>
             </button>
 
-            <div className="patient-user-box">
+            <div
+              className="patient-user-box"
+              onClick={() => navigate("/patient/profile")}
+              style={{ cursor: "pointer" }}
+            >
               <img
                 src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrN1LqW-RHmFFNnzzLRJ7P6x0ftJXxcbutPSdcT4NSDdd-JsFNhpz1lczyA_SdmmLQAYJHFDBpRNrfbaB5GdldP2carSUNQ_h8-OqHXyZpC7K1nYi-qhcqbD-GQNMrOwwIEMjnJBl05VTjLVFEafQwmKaPyTNwIcUbWnfrjDnrqG1RLo1zXLDvAbibBvRr-s38ws1atQOvuYZWvzOCEzle4TjBAfYooLOqzy8AdZ5JCG5uAlXzKNnbzVln4WxnXNpRbJhqj-LpgBo"
                 alt="patient"
@@ -258,7 +228,9 @@ export default function PatientDashboard() {
 
               <div className="patient-hero-actions">
                 <button className="join-btn">
-                  <span className="material-symbols-outlined filled">videocam</span>
+                  <span className="material-symbols-outlined filled">
+                    videocam
+                  </span>
                   Join Video Call
                 </button>
                 <button className="reschedule-btn">Reschedule</button>
@@ -522,4 +494,4 @@ export default function PatientDashboard() {
       </main>
     </div>
   );
-}                                   
+}

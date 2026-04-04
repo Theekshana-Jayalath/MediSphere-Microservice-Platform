@@ -17,59 +17,74 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 240px;
+  width: 250px;
   height: 100vh;
-  background: #1d2d44;
-  padding: 24px 18px;
+  background: #16293d;
+  padding: 30px 20px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  overflow-y: auto;
   z-index: 100;
+}
+
+.patient-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.patient-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
 }
 
 .patient-sidebar-profile {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 32px;
-  padding: 4px 8px;
+  gap: 10px;
+  margin-bottom: 30px;
+  padding: 0;
 }
 
 .patient-sidebar-profile .material-symbols-outlined {
   color: white;
-  font-size: 22px;
+  font-size: 32px;
+  line-height: 1;
 }
 
 .patient-sidebar-profile h3 {
   color: white;
-  font-size: 14px;
-  margin: 0 0 4px;
-  font-weight: 700;
+  font-size: 2rem;
+  margin: 0 0 10px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .patient-sidebar-profile p {
-  color: #94a3b8;
-  font-size: 11px;
+  color: #aab4c3;
+  font-size: 0.95rem;
   margin: 0;
 }
 
 .patient-sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
   flex: 1;
+  margin-top: 20px;
 }
 
 .patient-sidebar-nav a,
 .patient-sidebar-bottom a {
   display: flex;
   align-items: center;
-  gap: 12px;
-  color: rgba(255, 255, 255, 0.72);
-  padding: 12px 14px;
+  gap: 14px;
+  color: #d7dfeb;
+  padding: 16px 14px;
   border-radius: 18px;
   font-size: 14px;
   font-weight: 500;
-  transition: 0.2s;
+  transition: 0.25s;
+  min-height: 56px;
 }
 
 .patient-sidebar-nav a:hover,
@@ -84,12 +99,15 @@
 }
 
 .patient-sidebar-bottom {
-  padding-top: 16px;
+  margin-top: 30px;
+  padding-top: 20px;
+  padding-bottom: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
 }
 
 .patient-main {
-  margin-left: 240px;
+  margin-left: 250px;
   min-height: 100vh;
 }
 
@@ -97,7 +115,7 @@
   position: fixed;
   top: 0;
   right: 0;
-  width: calc(100% - 240px);
+  width: calc(100% - 250px);
   height: 68px;
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(14px);
@@ -330,6 +348,11 @@
 .status.amber {
   background: #fef3c7;
   color: #d97706;
+}
+
+.status.red {
+  background: #fee2e2;
+  color: #dc2626;
 }
 
 .vital-input-wrap {
@@ -598,6 +621,14 @@
   font-size: 14px;
   line-height: 1.7;
   margin: 0 0 24px;
+}
+
+.logout-btn {
+  width: 100%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
 }
 
 .ai-checker-card button {
