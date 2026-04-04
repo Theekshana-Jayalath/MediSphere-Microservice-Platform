@@ -16,6 +16,7 @@ import Login from "./pages/Auth/Login";
 import Register from "./pages/Auth/Register";
 import PatientRegister from "./pages/Auth/PatientRegister";
 import PatientDashboard from "./pages/Patient/PatientDashboard";
+import PatientProfile from "./pages/Patient/PatientProfile";
 
 import "./App.css";
 
@@ -29,6 +30,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/register/patient" element={<PatientRegister />} />
         <Route path="/patient/dashboard" element={<PatientDashboard />} />
+        <Route path="/patient/profile" element={<PatientProfile />} />
 
         {/* Existing root redirect logic */}
         <Route path="/" element={<Navigate to="/doctor/dashboard" replace />} />
