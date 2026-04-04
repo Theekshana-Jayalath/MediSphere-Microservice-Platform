@@ -404,6 +404,11 @@
   padding: 14px 20px;
 }
 
+.health-card select option {
+  color: #07182e;
+  background: #ffffff;
+}
+
 .logout-btn {
   width: 100%;
   border: none;

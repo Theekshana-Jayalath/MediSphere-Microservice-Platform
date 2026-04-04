@@ -37,7 +37,16 @@ export default function PatientSidebar({
           <span>Appointments</span>
         </a>
 
-        <a href="#" className="nav-item">
+        <a
+          href="/patient/medical-reports"
+          className={`nav-item ${
+            activeItem === "medicalReports" ? "active" : ""
+          }`}
+          onClick={(e) => {
+            e.preventDefault();
+            navigate("/patient/medical-reports");
+          }}
+        >
           <span className="material-symbols-outlined">description</span>
           <span>Medical Reports</span>
         </a>
