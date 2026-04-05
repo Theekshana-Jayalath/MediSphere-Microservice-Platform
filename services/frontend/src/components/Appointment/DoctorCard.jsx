@@ -2,11 +2,16 @@
 import React from "react";
 import { useNavigate } from 'react-router-dom';
 
-const DoctorCard = ({doctor, selectedDate}) => {
+const DoctorCard = ({ doctor, selectedDate, setDateError }) => {
 	const navigate = useNavigate();
 
 	const handleBook = () => {
-	navigate('/booking', { state: { doctor, selectedDate } });
+		if (!selectedDate) {
+			// inform the filter to show the required-date note
+			if (setDateError) setDateError(true);
+			return;
+		}
+		navigate('/booking', { state: { doctor, selectedDate } });
 	};
 
 	return (
