@@ -3,7 +3,14 @@ import mongoose from "mongoose";
 const connectDB = async () => {
   try {
 
-    await mongoose.connect(process.env.MONGODB_URI);
+    if (!process.env.MONGODB_URI) {
+      console.warn("⚠️  MONGODB_URI not set — skipping DB connection (development). Set MONGODB_URI in .env to enable MongoDB.");
+      return;
+    }
+
+    await mongoose.connect(process.env.MONGODB_URI, {
+      // use default options; customize if needed
+    });
 
     console.log("✅ MongoDB Connected Successfully");
 

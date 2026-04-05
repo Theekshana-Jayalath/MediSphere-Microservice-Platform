@@ -4,6 +4,7 @@ import TopSearch from "../../components/Appointment/TopSearch.jsx";
 import ProgressBar from "../../components/Appointment/ProgressBar.jsx";
 import DoctorCard from "../../components/Appointment/DoctorCard.jsx";
 import { doctors } from "../../data/doctors";
+import "../../styles/appointment.css";
 
 
 const Appointment = () => {
@@ -13,6 +14,8 @@ const [search,setSearch] = useState("");
 const [selectedSpecialties, setSelectedSpecialties] = useState([]);
 const [selectedHospital, setSelectedHospital] = useState('All Hospitals');
 const [selectedDate, setSelectedDate] = useState('');
+// flag to show required-date error in filter when user tries booking without a date
+const [dateError, setDateError] = useState(false);
 // sample appointment status - in real app this would come from data
 const [appointmentStatus] = useState('booked');
 
@@ -46,8 +49,10 @@ return (
 					setSelectedSpecialties={setSelectedSpecialties}
 					selectedHospital={selectedHospital}
 					setSelectedHospital={setSelectedHospital}
-					selectedDate={selectedDate}
-					setSelectedDate={setSelectedDate}
+						selectedDate={selectedDate}
+						setSelectedDate={setSelectedDate}
+						dateError={dateError}
+						setDateError={setDateError}
 					onClear={() => { setSelectedSpecialties([]); setSelectedHospital('All Hospitals'); setSelectedDate(''); }}
 				/>
 		</div>
@@ -63,9 +68,9 @@ return (
 		</div>
 	) : (
 		<div className="md:col-span-4 grid items-stretch grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-			{filtered.map((doc) => (
-				<DoctorCard key={doc.id} doctor={doc} selectedDate={selectedDate} />
-			))}
+				{filtered.map((doc) => (
+					<DoctorCard key={doc.id} doctor={doc} selectedDate={selectedDate} setDateError={setDateError} />
+				))}
 		</div>
 	)}
 
