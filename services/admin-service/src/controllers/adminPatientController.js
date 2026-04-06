@@ -91,3 +91,43 @@ export const getPatientPrescriptions = async (req, res) => {
     });
   }
 };
+
+export const updatePatient = async (req, res) => {
+  try {
+    const response = await axios.put(
+      `${API_GATEWAY_URL}/api/patients/${req.params.id}`,
+      req.body,
+      {
+        headers: {
+          ...forwardAuthHeader(req),
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    return res.status(200).json(response.data);
+  } catch (error) {
+    return res.status(error.response?.status || 500).json({
+      message: "Failed to update patient",
+      error: error.response?.data || error.message,
+    });
+  }
+};
+
+export const deletePatient = async (req, res) => {
+  try {
+    const response = await axios.delete(
+      `${API_GATEWAY_URL}/api/patients/${req.params.id}`,
+      {
+        headers: forwardAuthHeader(req),
+      }
+    );
+
+    return res.status(200).json(response.data);
+  } catch (error) {
+    return res.status(error.response?.status || 500).json({
+      message: "Failed to delete patient",
+      error: error.response?.data || error.message,
+    });
+  }
+};
