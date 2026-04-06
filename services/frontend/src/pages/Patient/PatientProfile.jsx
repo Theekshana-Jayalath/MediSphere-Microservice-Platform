@@ -4,7 +4,7 @@ import PatientSidebar from "../../components/Patient/PatientSidebar";
 import {
   getMyPatientProfile,
   updateMyPatientProfile,
-} from "../../services/doctor/patientApi";
+} from "../../services/patientApi";
 import "./../../styles/Patient/PatientProfile.css";
 
 export default function PatientProfile() {
@@ -14,9 +14,14 @@ export default function PatientProfile() {
 
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
-  const patientId = user?.id ? user.id.slice(-6).toUpperCase() : "------";
+
+  const storedPatientProfile = localStorage.getItem("patientProfile");
+  const savedPatientProfile = storedPatientProfile
+    ? JSON.parse(storedPatientProfile)
+    : null;
 
   const [profile, setProfile] = useState({
+    patientId: savedPatientProfile?.patientId || "",
     fullName: "",
     email: "",
     phone: "",
@@ -32,6 +37,7 @@ export default function PatientProfile() {
   });
 
   const [originalProfile, setOriginalProfile] = useState({
+    patientId: savedPatientProfile?.patientId || "",
     fullName: "",
     email: "",
     phone: "",
@@ -55,6 +61,7 @@ export default function PatientProfile() {
         const data = response.data;
 
         const formattedProfile = {
+          patientId: data?.patientId || savedPatientProfile?.patientId || "",
           fullName: data?.name || "",
           email: data?.email || "",
           phone: data?.phone || "",
@@ -73,9 +80,28 @@ export default function PatientProfile() {
 
         setProfile(formattedProfile);
         setOriginalProfile(formattedProfile);
+
+        localStorage.setItem(
+          "patientProfile",
+          JSON.stringify({
+            ...savedPatientProfile,
+            patientId: data?.patientId || savedPatientProfile?.patientId || "",
+            name: data?.name || "",
+            fullName: data?.name || "",
+            email: data?.email || "",
+            phone: data?.phone || "",
+            dateOfBirth: data?.dateOfBirth || "",
+            bloodGroup: data?.bloodGroup || "",
+            gender: data?.gender || "",
+            address: data?.address || {},
+            emergencyContact: data?.emergencyContact || {},
+          })
+        );
       } catch (error) {
         console.error("Failed to fetch patient profile:", error);
-        alert("Failed to load patient profile");
+        alert(
+          error?.response?.data?.message || "Failed to load patient profile"
+        );
       } finally {
         setLoading(false);
       }
@@ -135,6 +161,7 @@ export default function PatientProfile() {
       const updated = response.data?.patient;
 
       const updatedProfile = {
+        patientId: updated?.patientId || profile.patientId,
         fullName: updated?.name || profile.fullName,
         email: updated?.email || profile.email,
         phone: updated?.phone || profile.phone,
@@ -158,10 +185,35 @@ export default function PatientProfile() {
       setOriginalProfile(updatedProfile);
       setIsEditing(false);
 
+      localStorage.setItem(
+        "patientProfile",
+        JSON.stringify({
+          ...savedPatientProfile,
+          patientId: updated?.patientId || profile.patientId,
+          name: updated?.name || profile.fullName,
+          fullName: updated?.name || profile.fullName,
+          email: updated?.email || profile.email,
+          phone: updated?.phone || profile.phone,
+          dateOfBirth: updated?.dateOfBirth || profile.dob,
+          bloodGroup: updated?.bloodGroup || profile.bloodGroup,
+          gender: updated?.gender || profile.gender,
+          address: updated?.address || {
+            street: profile.street,
+            city: profile.city,
+            zipCode: profile.postalCode,
+          },
+          emergencyContact: updated?.emergencyContact || {
+            name: profile.emergencyName,
+            relationship: profile.relationship,
+            phone: profile.emergencyPhone,
+          },
+        })
+      );
+
       alert("Profile updated successfully");
     } catch (error) {
       console.error("Failed to update profile:", error);
-      alert("Failed to update profile");
+      alert(error?.response?.data?.message || "Failed to update profile");
     }
   };
 
@@ -177,11 +229,14 @@ export default function PatientProfile() {
     );
   }
 
+  const displayPatientId =
+    profile.patientId || savedPatientProfile?.patientId || "------";
+
   return (
     <div className="patient-profile-page">
       <PatientSidebar
         patientName={profile.fullName || user?.name || "Patient"}
-        patientId={patientId}
+        patientId={displayPatientId}
         activeItem="profile"
         onLogout={handleLogout}
       />
@@ -201,7 +256,7 @@ export default function PatientProfile() {
             <div className="top-user-info">
               <div>
                 <h4>{profile.fullName || user?.name || "Patient"}</h4>
-                <p>Patient ID: #{patientId}</p>
+                <p>Patient ID: #{displayPatientId}</p>
               </div>
               <img
                 src="https://i.pravatar.cc/100?img=12"
