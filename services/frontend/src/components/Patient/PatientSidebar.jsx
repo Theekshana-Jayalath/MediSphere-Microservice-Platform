@@ -9,6 +9,16 @@ export default function PatientSidebar({
 }) {
   const navigate = useNavigate();
 
+  const storedPatientProfile = localStorage.getItem("patientProfile");
+  const patientProfile = storedPatientProfile
+    ? JSON.parse(storedPatientProfile)
+    : null;
+
+  const realPatientId =
+    patientProfile?.patientId ||
+    patientId ||
+    "------";
+
   return (
     <aside className="patient-sidebar">
       <div className="sidebar-brand">
@@ -16,7 +26,7 @@ export default function PatientSidebar({
           <span className="material-symbols-outlined">shield_person</span>
           <h1>{patientName || "Patient"}</h1>
         </div>
-        <p>Patient ID: #{patientId}</p>
+        <p>Patient ID: {realPatientId}</p>
       </div>
 
       <nav className="sidebar-nav">
