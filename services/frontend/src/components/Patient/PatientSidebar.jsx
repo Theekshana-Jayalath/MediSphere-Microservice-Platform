@@ -14,10 +14,7 @@ export default function PatientSidebar({
     ? JSON.parse(storedPatientProfile)
     : null;
 
-  const realPatientId =
-    patientProfile?.patientId ||
-    patientId ||
-    "------";
+  const realPatientId = patientProfile?.patientId || patientId || "------";
 
   return (
     <aside className="patient-sidebar">
@@ -42,7 +39,14 @@ export default function PatientSidebar({
           <span>Dashboard</span>
         </a>
 
-        <a href="#" className="nav-item">
+        <a
+          href="/appointment"
+          className={`nav-item ${activeItem === "appointments" ? "active" : ""}`}
+          onClick={(e) => {
+            e.preventDefault();
+            navigate("/appointment");
+          }}
+        >
           <span className="material-symbols-outlined">calendar_today</span>
           <span>Appointments</span>
         </a>
