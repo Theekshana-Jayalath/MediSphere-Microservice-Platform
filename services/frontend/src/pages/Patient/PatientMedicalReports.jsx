@@ -16,7 +16,8 @@ export default function PatientMedicalReports() {
 
   const patientName =
     patientProfile?.name || patientProfile?.fullName || user?.name || "Patient";
-  const patientId = user?.id ? user.id.slice(-6).toUpperCase() : "------";
+  const patientId =
+    patientProfile?.patientId || user?.patientId || "------";
 
   const REPORTS_BASE_URL = import.meta.env.VITE_PATIENT_SERVICE_URL
     ? `${import.meta.env.VITE_PATIENT_SERVICE_URL}/api/reports`
