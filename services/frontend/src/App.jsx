@@ -1,4 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Appointment from "./pages/Appointment/Appointment.jsx";
+import BookingPage from "./pages/Appointment/BookingPage.jsx";
+import PaymentPage from "./pages/Payment/PaymentPage.jsx";
 import DoctorDashboard from "./pages/doctor/DoctorDashboard";
 import DoctorAppointments from "./pages/doctor/DoctorAppointments";
 import DoctorAvailability from "./pages/doctor/DoctorAvailability";
@@ -13,7 +16,11 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Navigate to="/doctor/dashboard" replace />} />
+        <Route path="/" element={<Appointment />} />
+        <Route path="/booking" element={<BookingPage />} />
+        <Route path="/payment" element={<PaymentPage />} />
+
+        <Route path="/doctor" element={<Navigate to="/doctor/dashboard" replace />} />
         <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
         <Route path="/doctor/schedule" element={<MySchedule />} />
         <Route path="/doctor/appointments" element={<DoctorAppointments />} />
@@ -22,23 +29,10 @@ function App() {
         <Route path="/doctor/telemedicine" element={<DoctorTelemedicine />} />
         <Route path="/doctor/create-prescription" element={<DoctorCreatePrescription />} />
         <Route path="/doctor/prescriptions" element={<DoctorPrescriptions />} />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Appointment from "./pages/Appointment/Appointment.jsx";
-import BookingPage from "./pages/Appointment/BookingPage.jsx";
-import PaymentPage from './pages/Payment/PaymentPage.jsx';
-import './App.css';
-
-function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Appointment />} />
-        <Route path="/booking" element={<BookingPage />} />
-        <Route path="/payment" element={<PaymentPage />} />
-      </Routes>
-    </BrowserRouter>
   );
 }
 

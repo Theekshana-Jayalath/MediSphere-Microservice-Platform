@@ -4,6 +4,7 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import prescriptionRoutes from "./routes/prescriptionRoutes.js";
 import errorHandler from "./middlewares/errorMiddleware.js";
+import doctorRoutes from "./routes/doctorRoutes.js";
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/prescriptions", prescriptionRoutes);
+app.use("/api/doctors", doctorRoutes);
 
 //app.use(errorHandler);
 
