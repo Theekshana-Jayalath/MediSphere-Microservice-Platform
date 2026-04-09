@@ -1,36 +1,22 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import Appointment from "./pages/Appointment/Appointment.jsx";
-import BookingPage from "./pages/Appointment/BookingPage.jsx";
-import PaymentPage from "./pages/Payment/PaymentPage.jsx";
-import DoctorDashboard from "./pages/doctor/DoctorDashboard";
-import DoctorAppointments from "./pages/doctor/DoctorAppointments";
-import DoctorAvailability from "./pages/doctor/DoctorAvailability";
-import DoctorReports from "./pages/doctor/DoctorReports";
-import DoctorTelemedicine from "./pages/doctor/DoctorTelemedicine";
-import DoctorCreatePrescription from "./pages/doctor/DoctorCreatePrescription";
-import DoctorPrescriptions from "./pages/doctor/DoctorPrescriptions";
-import MySchedule from "./pages/doctor/MySchedule";
-import "./App.css";
+import { BrowserRouter as Router, Routes } from "react-router-dom";
+import appointmentRoutes from "./routes/AppointmentRoutes.jsx";
+import authRoutes from "./routes/AuthRoutes.jsx";
+import patientRoutes from "./routes/PatientRoutes.jsx";
+import adminRoutes from "./routes/AdminRoutes.jsx";
+import doctorRoutes from "./routes/DoctorRoutes.jsx";
+
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Appointment />} />
-        <Route path="/booking" element={<BookingPage />} />
-        <Route path="/payment" element={<PaymentPage />} />
 
-        <Route path="/doctor" element={<Navigate to="/doctor/dashboard" replace />} />
-        <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
-        <Route path="/doctor/schedule" element={<MySchedule />} />
-        <Route path="/doctor/appointments" element={<DoctorAppointments />} />
-        <Route path="/doctor/availability" element={<DoctorAvailability />} />
-        <Route path="/doctor/reports" element={<DoctorReports />} />
-        <Route path="/doctor/telemedicine" element={<DoctorTelemedicine />} />
-        <Route path="/doctor/create-prescription" element={<DoctorCreatePrescription />} />
-        <Route path="/doctor/prescriptions" element={<DoctorPrescriptions />} />
-
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {authRoutes}
+        {patientRoutes}
+        {doctorRoutes}
+        {adminRoutes}
+        {appointmentRoutes}
+>>>>>>> 755ea2fc2158e21e29974fce679bc46e2d38e72b
       </Routes>
     </Router>
   );

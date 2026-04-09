@@ -4,6 +4,7 @@ import {
   deletePrescription,
   getAllPrescriptions,
 } from "../../services/doctor/prescriptionApi";
+import { downloadPrescriptionPdf } from "../../utils/prescriptionPdf";
 
 const DoctorPrescriptions = () => {
   const [prescriptions, setPrescriptions] = useState([]);
@@ -13,6 +14,7 @@ const DoctorPrescriptions = () => {
     try {
       const response = await getAllPrescriptions();
       setPrescriptions(response.data || []);
+      setError("");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load prescriptions");
     }
@@ -31,12 +33,25 @@ const DoctorPrescriptions = () => {
     }
   };
 
+  const handleDownload = (prescription) => {
+    try {
+      setError("");
+      downloadPrescriptionPdf(prescription);
+    } catch (err) {
+      setError(err.message || "Failed to generate prescription PDF");
+    }
+  };
+
   return (
     <div className="p-6">
       {error && (
         <div className="mb-4 p-3 rounded bg-red-100 text-red-700">{error}</div>
       )}
-      <PrescriptionTable prescriptions={prescriptions} onDelete={handleDelete} />
+      <PrescriptionTable
+        prescriptions={prescriptions}
+        onDelete={handleDelete}
+        onDownload={handleDownload}
+      />
     </div>
   );
 };

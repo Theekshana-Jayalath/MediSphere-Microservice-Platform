@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import ProgressBar from "../../components/Appointment/ProgressBar";
@@ -6,12 +6,14 @@ import BookingDoctorInfo from "../../components/Appointment/BookingDoctorInfo";
 import ConsultationType from "../../components/Appointment/ConsultationType";
 import TimeSlots from "../../components/Appointment/TimeSlots";
 import BookingConfirm from "../../components/Appointment/BookingConfirm";
+import "../../styles/appointment.css";
 
 const BookingPage = () => {
   const location = useLocation();
   const doctor = location.state?.doctor;
   const selectedDate = location.state?.selectedDate || '';
   const navigate = useNavigate();
+  const [selectedTime, setSelectedTime] = useState('');
 
   const BackButton = () => (
     <button
@@ -77,14 +79,14 @@ const BookingPage = () => {
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
               Available Time Slots
             </h3>
-            <TimeSlots />
+            <TimeSlots selectedDate={selectedDate} selectedTime={selectedTime} setSelectedTime={setSelectedTime} />
           </div>
 
         </section>
 
         {/* Confirm Section */}
         <div className="mt-5">
-          <BookingConfirm doctor={doctor} />
+          <BookingConfirm doctor={doctor} selectedTime={selectedTime} />
         </div>
 
       </div>
