@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import DoctorSidebar from "../../components/doctor/DoctorSidebar";
 import {
   doctorProfile,
@@ -10,6 +11,7 @@ import {
 } from "../../data/doctorDashboardData";
 
 const DoctorDashboard = () => {
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date().getDate());
   const [calendarDays, setCalendarDays] = useState([]);
@@ -183,7 +185,10 @@ const DoctorDashboard = () => {
             </p>
           </div>
 
-          <button className="ms-btn-primary start-session-btn">
+          <button
+            className="ms-btn-primary start-session-btn"
+            onClick={() => navigate("/doctor/telemedicine")}
+          >
             Start Video Session
           </button>
         </div>
@@ -193,7 +198,13 @@ const DoctorDashboard = () => {
             <div className="dashboard-card">
               <div className="card-header">
                 <h2>Today's Appointments</h2>
-                <span className="card-link">View All Schedule</span>
+                <button
+                  type="button"
+                  className="card-link"
+                  onClick={() => navigate("/doctor/appointments")}
+                >
+                  View All Schedule
+                </button>
               </div>
 
               <div className="appointment-list">
