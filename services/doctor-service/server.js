@@ -25,7 +25,7 @@ app.get("/", (req, res) => {
 app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/doctors", doctorRoutes);
 
-//app.use(errorHandler);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 6010;
 
