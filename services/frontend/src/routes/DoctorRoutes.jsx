@@ -1,6 +1,6 @@
-// DoctorRoutes.jsx
 import React from "react";
 import { Route } from "react-router-dom";
+import DoctorRegisterPage from "../pages/doctor/DoctorRegisterPage.jsx";
 import DoctorDashboard from "../pages/doctor/DoctorDashboard";
 import MySchedule from "../pages/doctor/MySchedule";
 import DoctorAppointments from "../pages/doctor/DoctorAppointments";
@@ -10,19 +10,52 @@ import DoctorTelemedicine from "../pages/doctor/DoctorTelemedicine";
 import DoctorCreatePrescription from "../pages/doctor/DoctorCreatePrescription";
 import DoctorPrescriptions from "../pages/doctor/DoctorPrescriptions";
 
-const DoctorRoutes = () => {
-  return (
-    <>
-      <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
-      <Route path="/doctor/schedule" element={<MySchedule />} />
-      <Route path="/doctor/appointments" element={<DoctorAppointments />} />
-      <Route path="/doctor/availability" element={<DoctorAvailability />} />
-      <Route path="/doctor/reports" element={<DoctorReports />} />
-      <Route path="/doctor/telemedicine" element={<DoctorTelemedicine />} />
-      <Route path="/doctor/create-prescription" element={<DoctorCreatePrescription />} />
-      <Route path="/doctor/prescriptions" element={<DoctorPrescriptions />} />
-    </>
-  );
-};
+let doctorRoutes = [
+  <Route
+    key="doctor-register"
+    path="/doctor/register"
+    element={<DoctorRegisterPage />}
+  />,
+  <Route
+    key="doctor-dashboard"
+    path="/doctor/dashboard"
+    element={<DoctorDashboard />}
+  />,
+  <Route
+    key="doctor-schedule"
+    path="/doctor/schedule"
+    element={<MySchedule />}
+  />,
+  <Route
+    key="doctor-appointments"
+    path="/doctor/appointments"
+    element={<DoctorAppointments />}
+  />,
+  <Route
+    key="doctor-availability"
+    path="/doctor/availability"
+    element={<DoctorAvailability />}
+  />,
+  <Route
+    key="doctor-reports"
+    path="/doctor/reports"
+    element={<DoctorReports />}
+  />,
+  <Route
+    key="doctor-telemedicine"
+    path="/doctor/telemedicine"
+    element={<DoctorTelemedicine />}
+  />,
+  <Route
+    key="doctor-create-prescription"
+    path="/doctor/create-prescription"
+    element={<DoctorCreatePrescription />}
+  />,
+  <Route
+    key="doctor-prescriptions"
+    path="/doctor/prescriptions"
+    element={<DoctorPrescriptions />}
+  />,
+];
 
-export default DoctorRoutes;
+export default doctorRoutes;
