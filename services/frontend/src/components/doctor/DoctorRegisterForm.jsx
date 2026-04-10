@@ -199,9 +199,7 @@ let DoctorRegisterForm = () => {
       let response = await registerDoctor(payload);
 
       if (response.success) {
-        setSuccessMessage(
-          "Doctor registration submitted successfully and pending admin approval."
-        );
+        setSuccessMessage(response.message || "Doctor registration submitted successfully and pending admin approval.");
 
         setFormData({
           fullName: "",
@@ -229,9 +227,9 @@ let DoctorRegisterForm = () => {
         setErrors({});
       }
     } catch (error) {
-      setServerError(
-        error.response?.data?.message || "Registration failed. Please try again."
-      );
+      console.error("Registration error:", error);
+      const errorMsg = error.response?.data?.message || error.message || "Registration failed. Please try again.";
+      setServerError(errorMsg);
     } finally {
       setIsSubmitting(false);
     }

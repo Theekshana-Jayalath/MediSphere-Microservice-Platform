@@ -1,6 +1,6 @@
 import axios from "axios";
 
-let API_BASE_URL = "http://localhost:5002/api/doctors";
+let API_BASE_URL = "http://localhost:6010/api/doctors";
 
 let registerDoctor = async (doctorData) => {
   let response = await axios.post(`${API_BASE_URL}/register`, doctorData);
