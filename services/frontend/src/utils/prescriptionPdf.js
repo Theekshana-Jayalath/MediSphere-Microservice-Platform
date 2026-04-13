@@ -1,222 +1,169 @@
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
+import jsPDF from "jspdf";
 
-const safeValue = (value, fallback = "N/A") => {
-  if (value === null || value === undefined) {
-    return fallback;
+const getDoctorName = (prescription) => {
+  if (typeof prescription?.doctorId === "object" && prescription?.doctorId?.fullName) {
+    return prescription.doctorId.fullName;
   }
 
-  const text = String(value).trim();
-  return text || fallback;
+  return prescription?.doctorName || "Dr. Unknown";
 };
 
-const formatDate = (value) => {
-  if (!value) {
-    return "N/A";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "N/A";
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
+const getPatientName = (prescription) => {
+  return prescription?.patientName || "Unknown Patient";
 };
 
-const formatStatus = (value) =>
-  safeValue(value, "Pending")
-    .replace(/[-_]/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-
-const drawLabelValue = (doc, label, value, x, y, width) => {
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(95, 111, 124);
-  doc.text(label, x, y);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(12);
-  doc.setTextColor(32, 48, 64);
-
-  const wrappedValue = doc.splitTextToSize(safeValue(value), width);
-  doc.text(wrappedValue, x, y + 14);
-};
-
-const openGeneratedPdf = (doc, fileName) => {
-  const blobUrl = doc.output("bloburl");
-  const preview = window.open(blobUrl, "_blank");
-
-  if (!preview) {
-    doc.save(fileName);
+const getAppointmentId = (prescription) => {
+  if (typeof prescription?.appointmentId === "object" && prescription?.appointmentId?._id) {
+    return prescription.appointmentId._id;
   }
 
-  window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+  return prescription?.appointmentId || "N/A";
 };
 
-export const downloadPrescriptionPdf = (prescription) => {
-  if (!prescription || typeof window === "undefined") {
-    return;
+const getIssuedDate = (prescription) => {
+  const rawDate = prescription?.issuedDate || prescription?.createdAt;
+
+  if (!rawDate) return "N/A";
+
+  const parsedDate = new Date(rawDate);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return rawDate;
   }
 
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 28;
-  const contentWidth = pageWidth - margin * 2;
+  return parsedDate.toLocaleDateString("en-CA");
+};
 
-  const fileStem = safeValue(
-    prescription.appointmentId,
-    prescription._id || prescription.patientName || "prescription"
-  ).replace(/[^a-z0-9-_]+/gi, "-");
-  const fileName = `prescription-${fileStem}.pdf`;
+const addWrappedText = (doc, text, x, y, maxWidth, lineHeight = 7) => {
+  const lines = doc.splitTextToSize(text || "", maxWidth);
+  doc.text(lines, x, y);
+  return y + lines.length * lineHeight;
+};
 
-  const hospitalName = safeValue(
-    prescription.hospitalName,
-    "MediSphere General Hospital"
-  );
-  const doctorTitle = safeValue(
-    prescription.doctorTitle,
-    "Consultant Physician"
-  );
-  const notes = safeValue(
-    prescription.notes,
-    "Continue as advised by the doctor"
-  );
+const downloadPrescriptionPdf = (prescription) => {
+  const doc = new jsPDF();
 
-  doc.setDrawColor(127, 147, 167);
-  doc.setLineWidth(1.3);
-  doc.roundedRect(margin - 8, margin - 8, contentWidth + 16, pageHeight - margin * 2 + 16, 10, 10);
-
-  doc.setFillColor(15, 39, 64);
-  doc.rect(margin - 8, margin - 8, contentWidth + 16, 52, "F");
+  doc.setFillColor(29, 45, 68);
+  doc.rect(0, 0, 210, 30, "F");
 
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
-  doc.text("MEDISPHERE", margin + 12, margin + 22);
+  doc.text("MEDISPHERE PRESCRIPTION REPORT", 14, 18);
+
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.text("Professional Digital Prescription Summary", 14, 24);
+
+  doc.setTextColor(29, 45, 68);
+  doc.setDrawColor(199, 217, 229);
+  doc.setLineWidth(0.5);
+
+  doc.roundedRect(14, 38, 182, 30, 4, 4);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("Prescription Overview", 18, 46);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(hospitalName, pageWidth - margin - doc.getTextWidth(hospitalName), margin + 22);
+  doc.text(`Doctor: ${getDoctorName(prescription)}`, 18, 54);
+  doc.text(`Patient: ${getPatientName(prescription)}`, 110, 54);
+  doc.text(`Appointment ID: ${String(getAppointmentId(prescription))}`, 18, 61);
+  doc.text(`Issued Date: ${getIssuedDate(prescription)}`, 110, 61);
 
-  doc.setTextColor(21, 36, 52);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(24);
-  doc.text("Doctor Prescription", margin + 10, 102);
+  let currentY = 80;
 
-  const cardTop = 120;
-  const cardGap = 12;
-  const cardWidth = (contentWidth - cardGap) / 2;
-  const cardHeight = 70;
-
-  doc.setDrawColor(207, 216, 227);
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(margin, cardTop, cardWidth, cardHeight, 8, 8, "FD");
-  doc.roundedRect(margin + cardWidth + cardGap, cardTop, cardWidth, cardHeight, 8, 8, "FD");
-
+  doc.roundedRect(14, currentY, 182, 28, 4, 4);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  doc.setTextColor(32, 48, 64);
-  doc.text("Patient Details", margin + 12, cardTop + 18);
-  doc.text("Consultation Details", margin + cardWidth + cardGap + 12, cardTop + 18);
+  doc.text("Diagnosis", 18, currentY + 8);
 
-  drawLabelValue(doc, "Patient Name", prescription.patientName, margin + 12, cardTop + 34, 140);
-  drawLabelValue(doc, "Patient ID", prescription.patientId, margin + 160, cardTop + 34, 110);
-  drawLabelValue(doc, "Appointment ID", prescription.appointmentId, margin + cardWidth + cardGap + 12, cardTop + 34, 120);
-  drawLabelValue(doc, "Issued Date", formatDate(prescription.issuedDate), margin + cardWidth + cardGap + 160, cardTop + 34, 120);
-
-  const diagnosisTop = cardTop + cardHeight + 14;
-  doc.roundedRect(margin, diagnosisTop, contentWidth, 78, 8, 8, "FD");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.setTextColor(32, 48, 64);
-  doc.text("Diagnosis", margin + 12, diagnosisTop + 18);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
-  const diagnosisLines = doc.splitTextToSize(safeValue(prescription.diagnosis), contentWidth - 24);
-  doc.text(diagnosisLines, margin + 12, diagnosisTop + 38);
+  doc.setFontSize(10);
+  currentY = addWrappedText(
+    doc,
+    prescription?.diagnosis || "No diagnosis available",
+    18,
+    currentY + 16,
+    172
+  ) + 8;
 
-  const tableStartY = diagnosisTop + 96;
-  autoTable(doc, {
-    startY: tableStartY,
-    margin: { left: margin, right: margin },
-    head: [["Medicine Name", "Dosage", "Frequency", "Duration", "Instructions", "Notes", "Status"]],
-    body: (Array.isArray(prescription.medicines) && prescription.medicines.length
-      ? prescription.medicines
-      : [{ medicineName: "-", dosage: "-", frequency: "-", duration: "-", instructions: "-" }]
-    ).map((medicine) => [
-      safeValue(medicine.medicineName),
-      safeValue(medicine.dosage),
-      safeValue(medicine.frequency),
-      safeValue(medicine.duration),
-      safeValue(medicine.instructions, "Take as directed"),
-      notes,
-      formatStatus(prescription.status),
-    ]),
-    headStyles: {
-      fillColor: [237, 244, 248],
-      textColor: [32, 48, 64],
-      lineColor: [207, 216, 227],
-      lineWidth: 0.6,
-      fontStyle: "bold",
-    },
-    bodyStyles: {
-      textColor: [32, 48, 64],
-      lineColor: [207, 216, 227],
-      lineWidth: 0.5,
-      fontSize: 9,
-      cellPadding: 6,
-    },
-    columnStyles: {
-      0: { cellWidth: 78 },
-      1: { cellWidth: 52 },
-      2: { cellWidth: 60 },
-      3: { cellWidth: 52 },
-      4: { cellWidth: 86 },
-      5: { cellWidth: 70 },
-      6: { cellWidth: 58 },
-    },
-    styles: {
-      overflow: "linebreak",
-      valign: "middle",
-    },
-    didDrawPage: () => {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.setTextColor(32, 48, 64);
-      doc.text("Medicines", margin + 12, tableStartY - 10);
-    },
-  });
-
-  const finalY = doc.lastAutoTable.finalY + 18;
-  const footerCardWidth = (contentWidth - 12) / 2;
-  const footerHeight = 92;
-
-  doc.roundedRect(margin, finalY, footerCardWidth, footerHeight, 8, 8, "FD");
-  doc.roundedRect(margin + footerCardWidth + 12, finalY, footerCardWidth, footerHeight, 8, 8, "FD");
-
+  doc.roundedRect(14, currentY, 182, 28, 4, 4);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  doc.text("Doctor Detail", margin + 12, finalY + 18);
-  doc.text("Doctor Signature", margin + footerCardWidth + 24, finalY + 18);
+  doc.text("Clinical Notes", 18, currentY + 8);
 
-  drawLabelValue(doc, "Doctor Name", prescription.doctorName, margin + 12, finalY + 36, 150);
-  drawLabelValue(doc, "Title", doctorTitle, margin + 165, finalY + 36, 110);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  currentY = addWrappedText(
+    doc,
+    prescription?.notes || "No additional notes available",
+    18,
+    currentY + 16,
+    172
+  ) + 8;
+
+  doc.roundedRect(14, currentY, 182, 14, 4, 4);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("Prescribed Medicines", 18, currentY + 9);
+
+  currentY += 20;
+
+  const medicines = prescription?.medicines || [];
+
+  if (medicines.length === 0) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text("No medicine records available.", 18, currentY);
+    currentY += 10;
+  } else {
+    medicines.forEach((medicine, index) => {
+      if (currentY > 250) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.setDrawColor(220, 225, 230);
+      doc.roundedRect(14, currentY, 182, 28, 4, 4);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(`${index + 1}. ${medicine.medicineName || "Medicine"}`, 18, currentY + 8);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text(`Dosage: ${medicine.dosage || "N/A"}`, 18, currentY + 15);
+      doc.text(`Frequency: ${medicine.frequency || "N/A"}`, 80, currentY + 15);
+      doc.text(`Duration: ${medicine.duration || "N/A"}`, 145, currentY + 15);
+
+      const instructions = medicine.instructions || "No special instructions";
+      currentY = addWrappedText(doc, `Instructions: ${instructions}`, 18, currentY + 22, 172, 5) + 6;
+    });
+  }
+
+  if (currentY > 255) {
+    doc.addPage();
+    currentY = 20;
+  }
+
+  doc.setDrawColor(180, 190, 205);
+  doc.line(14, currentY + 8, 196, currentY + 8);
 
   doc.setFont("helvetica", "italic");
-  doc.setFontSize(20);
-  doc.setTextColor(22, 50, 74);
-  doc.text(safeValue(prescription.doctorName, "Authorized Doctor"), margin + footerCardWidth + 40, finalY + 66);
-
-  doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.setTextColor(95, 111, 124);
-  doc.text(`Prescription ID: ${safeValue(prescription._id, "Local record")}`, margin + 12, finalY + 82);
-  doc.text("Digitally prepared by MediSphere", margin + footerCardWidth + 24, finalY + 82);
+  doc.setTextColor(90, 100, 115);
+  doc.text(
+    "This prescription was digitally generated by Medisphere.",
+    14,
+    currentY + 16
+  );
 
-  openGeneratedPdf(doc, fileName);
+  const fileName = `${getPatientName(prescription)
+    .replace(/\s+/g, "_")
+    .toLowerCase()}_prescription_report.pdf`;
+
+  doc.save(fileName);
 };
+
+export { downloadPrescriptionPdf };
