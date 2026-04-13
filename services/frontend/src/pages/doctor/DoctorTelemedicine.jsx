@@ -1,5 +1,6 @@
 ﻿import DoctorSidebar from "../../components/doctor/DoctorSidebar";
 import { todayAppointments } from "../../data/doctorDashboardData";
+//import "../../styles/doctorDashboard.css";
 
 const DoctorTelemedicine = () => {
   const telemedicineAppointments = todayAppointments.filter(

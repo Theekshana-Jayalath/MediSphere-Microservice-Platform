@@ -1,6 +1,8 @@
 ﻿import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DoctorSidebar from "../../components/doctor/DoctorSidebar";
+import "../../styles/Doctor/doctorDashboard.css";
+
 import {
   doctorProfile,
   todayAppointments,
