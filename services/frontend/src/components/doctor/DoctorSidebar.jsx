@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import "../../styles/Doctor/doctorSidebar.css";
 
 const DoctorSidebar = () => {
   const location = useLocation();
@@ -8,10 +9,10 @@ const DoctorSidebar = () => {
     { label: "My Schedule", path: "/doctor/schedule", icon: "🗓️" },
     { label: "Appointment Requests", path: "/doctor/appointments", icon: "📩" },
     { label: "Availability", path: "/doctor/availability", icon: "⏳" },
-    { label: "Video Consultations", path: "/doctor/telemedicine", icon: "🎥" },
     { label: "Patient Reports", path: "/doctor/reports", icon: "📁" },
     { label: "Issue Prescription", path: "/doctor/create-prescription", icon: "💊" },
     { label: "View Prescriptions", path: "/doctor/prescriptions", icon: "📝" },
+    { label: "Video Consultations", path: "/doctor/telemedicine", icon: "🎥" },
   ];
 
   return (
@@ -19,8 +20,8 @@ const DoctorSidebar = () => {
       <div className="brand-box">
         <div className="brand-icon">✚</div>
         <div>
-          <h2 className="brand-title">MEDISPHERE</h2>
-          <p className="brand-subtitle">PREMIUM CONCIERGE</p>
+          <h2 className="brand-title">Medisphere</h2>
+          <p className="brand-subtitle">Premium Concierge</p>
         </div>
       </div>
 
@@ -34,13 +35,14 @@ const DoctorSidebar = () => {
             }`}
           >
             <span className="sidebar-icon">{item.icon}</span>
-            <span>{item.label}</span>
+            <span className="sidebar-label">{item.label}</span>
           </Link>
         ))}
       </nav>
 
       <div className="sidebar-footer">
         <p className="profile-setting">⚙ Profile Settings</p>
+
         <div className="doctor-mini-card">
           <div className="doctor-avatar">👨‍⚕️</div>
           <div>
