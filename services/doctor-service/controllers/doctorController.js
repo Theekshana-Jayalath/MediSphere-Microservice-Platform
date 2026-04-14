@@ -55,7 +55,7 @@ export const registerDoctor = async (req, res, next) => {
 
     const doctor = await Doctor.create({
       fullName,
-      email,
+      email: email.toLowerCase(),
       password: hashedPassword,
       phone,
       photo: photo || "",
@@ -75,6 +75,8 @@ export const registerDoctor = async (req, res, next) => {
       role: "doctor",
     });
 
+    console.log("Doctor registered successfully:", doctor._id);
+
     return res.status(201).json({
       success: true,
       message:
@@ -82,6 +84,7 @@ export const registerDoctor = async (req, res, next) => {
       data: getSafeDoctor(doctor),
     });
   } catch (error) {
+    console.error("Doctor registration error:", error);
     next(error);
   }
 };

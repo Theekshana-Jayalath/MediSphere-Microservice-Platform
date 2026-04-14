@@ -10,13 +10,11 @@ function App() {
   return (
     <Router>
       <Routes>
-
         {authRoutes}
         {patientRoutes}
         {doctorRoutes}
         {adminRoutes}
         {appointmentRoutes}
->>>>>>> 755ea2fc2158e21e29974fce679bc46e2d38e72b
       </Routes>
     </Router>
   );

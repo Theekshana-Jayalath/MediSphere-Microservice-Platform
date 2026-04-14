@@ -115,7 +115,7 @@ export default function Register() {
               <button
                 type="button"
                 className="register-role-card"
-                onClick={() => alert("Doctor registration coming soon")}
+                onClick={() => navigate("/doctor/register")}
               >
                 <div className="register-role-icon">
                   <span className="material-symbols-outlined">medical_information</span>
