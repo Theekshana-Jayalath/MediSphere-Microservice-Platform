@@ -2,7 +2,7 @@ import React from "react";
 
 const specialtyOptions = ["Cardiology", "Neurology", "Pediatrics", "Dermatology"];
 
-const FilterSidebar = ({ selectedSpecialties = [], setSelectedSpecialties, selectedHospital = 'All Hospitals', setSelectedHospital, selectedDate = '', setSelectedDate, onClear }) => {
+const FilterSidebar = ({ selectedSpecialties = [], setSelectedSpecialties, selectedHospital = 'All Hospitals', setSelectedHospital, selectedDate = '', setSelectedDate, onClear, dateError = false, setDateError }) => {
 
 	const toggleSpecialty = (spec) => {
 		if (selectedSpecialties.includes(spec)) {
@@ -19,7 +19,7 @@ const FilterSidebar = ({ selectedSpecialties = [], setSelectedSpecialties, selec
 			<div className="flex items-center justify-between mb-4">
 				<h3 className="text-lg font-semibold">Filters</h3>
 				{onClear && (
-					<button onClick={onClear} className="text-sm text-blue-600">Clear</button>
+					<button onClick={() => { setDateError && setDateError(false); onClear(); }} className="text-sm text-blue-600">Clear</button>
 				)}
 			</div>
 
@@ -50,9 +50,19 @@ const FilterSidebar = ({ selectedSpecialties = [], setSelectedSpecialties, selec
 
 			<div>
 				<p className="text-sm text-gray-500 mb-2">Appointment Date</p>
-				<input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} min={today} className="w-full border p-2 rounded-lg" />
-				{selectedDate && (
-					<div className="mt-2 text-xs text-gray-600">Selected: {selectedDate}</div>
+				<input
+					type="date"
+					value={selectedDate}
+					onChange={(e) => { setSelectedDate(e.target.value); if (dateError && setDateError) setDateError(false); }}
+					min={today}
+					className="w-full border p-2 rounded-lg"
+				/>
+				{dateError ? (
+					<div className="mt-2 text-xs text-red-600">Appointment date is required.</div>
+				) : (
+					selectedDate && (
+						<div className="mt-2 text-xs text-gray-600">Selected: {selectedDate}</div>
+					)
 				)}
 			</div>
 
