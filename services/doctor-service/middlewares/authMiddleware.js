@@ -24,12 +24,16 @@ const protect = (req, res, next) => {
 };
 
 const authorizeRoles = (...roles) => (req, res, next) => {
-  if (!req.user || !roles.includes(req.user.role)) {
+  const userRole = String(req.user?.role || "").toUpperCase();
+  const allowedRoles = roles.map((role) => String(role).toUpperCase());
+
+  if (!req.user || !allowedRoles.includes(userRole)) {
     return res.status(403).json({
       success: false,
       message: "Forbidden: insufficient permissions",
     });
   }
+
   next();
 };
 
