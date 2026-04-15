@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { registerDoctor } from "../../services/doctor/doctorService.js";
-import AvailabilityScheduleInput from "./AvailabilityScheduleInput.jsx";
 import "../../styles/Doctor/doctorRegister.css";
 
 let DoctorRegisterForm = () => {
@@ -17,14 +16,6 @@ let DoctorRegisterForm = () => {
     baseHospital: "",
     channelingHospitals: "",
     consultationFee: "",
-    availabilitySchedules: [
-      {
-        day: "",
-        startTime: "",
-        endTime: "",
-        isAvailable: true,
-      },
-    ],
   });
 
   let [errors, setErrors] = useState({});
@@ -43,42 +34,6 @@ let DoctorRegisterForm = () => {
     setErrors((previousErrors) => ({
       ...previousErrors,
       [name]: "",
-    }));
-  };
-
-  let handleAvailabilityChange = (index, field, value) => {
-    let updatedSchedules = [...formData.availabilitySchedules];
-    updatedSchedules[index][field] = value;
-
-    setFormData((previousData) => ({
-      ...previousData,
-      availabilitySchedules: updatedSchedules,
-    }));
-  };
-
-  let addAvailabilityRow = () => {
-    setFormData((previousData) => ({
-      ...previousData,
-      availabilitySchedules: [
-        ...previousData.availabilitySchedules,
-        {
-          day: "",
-          startTime: "",
-          endTime: "",
-          isAvailable: true,
-        },
-      ],
-    }));
-  };
-
-  let removeAvailabilityRow = (index) => {
-    let updatedSchedules = formData.availabilitySchedules.filter(
-      (_, scheduleIndex) => scheduleIndex !== index
-    );
-
-    setFormData((previousData) => ({
-      ...previousData,
-      availabilitySchedules: updatedSchedules,
     }));
   };
 
@@ -137,29 +92,6 @@ let DoctorRegisterForm = () => {
       newErrors.consultationFee = "Consultation fee cannot be negative";
     }
 
-    formData.availabilitySchedules.forEach((slot, index) => {
-      if (!slot.day) {
-        newErrors[`availability_day_${index}`] = "Day is required";
-      }
-
-      if (!slot.startTime) {
-        newErrors[`availability_startTime_${index}`] = "Start time is required";
-      }
-
-      if (!slot.endTime) {
-        newErrors[`availability_endTime_${index}`] = "End time is required";
-      }
-
-      if (
-        slot.startTime &&
-        slot.endTime &&
-        slot.startTime >= slot.endTime
-      ) {
-        newErrors[`availability_endTime_${index}`] =
-          "End time must be later than start time";
-      }
-    });
-
     setErrors(newErrors);
 
     return Object.keys(newErrors).length === 0;
@@ -193,7 +125,6 @@ let DoctorRegisterForm = () => {
           .map((hospital) => hospital.trim())
           .filter((hospital) => hospital !== ""),
         consultationFee: Number(formData.consultationFee),
-        availabilitySchedules: formData.availabilitySchedules,
       };
 
       let response = await registerDoctor(payload);
@@ -214,14 +145,6 @@ let DoctorRegisterForm = () => {
           baseHospital: "",
           channelingHospitals: "",
           consultationFee: "",
-          availabilitySchedules: [
-            {
-              day: "",
-              startTime: "",
-              endTime: "",
-              isAvailable: true,
-            },
-          ],
         });
 
         setErrors({});
@@ -443,33 +366,6 @@ let DoctorRegisterForm = () => {
                 </div>
               </div>
             </div>
-
-            <AvailabilityScheduleInput
-              availabilitySchedules={formData.availabilitySchedules}
-              handleAvailabilityChange={handleAvailabilityChange}
-              addAvailabilityRow={addAvailabilityRow}
-              removeAvailabilityRow={removeAvailabilityRow}
-            />
-
-            {formData.availabilitySchedules.map((slot, index) => (
-              <div key={index} className="availability-errors">
-                {errors[`availability_day_${index}`] && (
-                  <span className="field-error">
-                    Schedule {index + 1}: {errors[`availability_day_${index}`]}
-                  </span>
-                )}
-                {errors[`availability_startTime_${index}`] && (
-                  <span className="field-error">
-                    Schedule {index + 1}: {errors[`availability_startTime_${index}`]}
-                  </span>
-                )}
-                {errors[`availability_endTime_${index}`] && (
-                  <span className="field-error">
-                    Schedule {index + 1}: {errors[`availability_endTime_${index}`]}
-                  </span>
-                )}
-              </div>
-            ))}
 
             <div className="doctor-register-section">
               <div className="doctor-register-section-header">
