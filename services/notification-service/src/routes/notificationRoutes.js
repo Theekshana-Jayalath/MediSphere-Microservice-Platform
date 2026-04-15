@@ -10,6 +10,6 @@ router.get("/health", (req, res) => {
   });
 });
 
-router.post("/appointment-confirmed", sendAppointmentConfirmedNotification);
+router.post("/telemedicine-confirmation", sendAppointmentConfirmedNotification);
 
 export default router;

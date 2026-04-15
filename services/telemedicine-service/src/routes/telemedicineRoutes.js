@@ -5,6 +5,7 @@ import {
   getSessionById,
   updateSession,
   confirmSessionByDoctor,
+  completeSession,
   deleteSession,
   getSessionSummary,
 } from "../controllers/telemedicineController.js";
@@ -24,6 +25,7 @@ router.get("/sessions/summary", getSessionSummary);
 router.get("/sessions/:id", getSessionById);
 router.put("/sessions/:id", updateSession);
 router.patch("/sessions/:id/confirm", confirmSessionByDoctor);
+router.patch("/sessions/:id/complete", completeSession);
 router.delete("/sessions/:id", deleteSession);
 
 export default router;

@@ -1,9 +1,19 @@
+import mongoose from "mongoose";
+import axios from "axios";
 import Session from "../models/sessionModel.js";
 import {
   generateRoomName,
   generateMeetingLink,
   calculateSessionCounts,
 } from "../services/telemedicineService.js";
+
+const getCleanObjectId = (rawId) => {
+  const cleanedId = String(rawId || "").replace(/['"]/g, "").trim();
+  if (!mongoose.Types.ObjectId.isValid(cleanedId)) {
+    return null;
+  }
+  return cleanedId;
+};
 
 export const createSession = async (req, res) => {
   try {
@@ -13,6 +23,8 @@ export const createSession = async (req, res) => {
       doctorName,
       patientId,
       patientName,
+      patientEmail,
+      phoneNumber,
       specialty,
       scheduledTime,
       notes,
@@ -24,12 +36,14 @@ export const createSession = async (req, res) => {
       !doctorName ||
       !patientId ||
       !patientName ||
+      !patientEmail ||
+      !phoneNumber ||
       !scheduledTime
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "appointmentId, doctorId, doctorName, patientId, patientName, and scheduledTime are required",
+          "appointmentId, doctorId, doctorName, patientId, patientName, patientEmail, phoneNumber, and scheduledTime are required",
       });
     }
 
@@ -51,6 +65,8 @@ export const createSession = async (req, res) => {
       doctorName,
       patientId,
       patientName,
+      patientEmail,
+      phoneNumber,
       specialty,
       roomName,
       meetingLink,
@@ -95,7 +111,14 @@ export const getAllSessions = async (req, res) => {
 
 export const getSessionById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = getCleanObjectId(req.params.id);
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid session id",
+      });
+    }
 
     const session = await Session.findById(id);
 
@@ -122,17 +145,26 @@ export const getSessionById = async (req, res) => {
 
 export const updateSession = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = getCleanObjectId(req.params.id);
     const {
       doctorId,
       doctorName,
       patientId,
       patientName,
+      patientEmail,
+      phoneNumber,
       specialty,
       scheduledTime,
       notes,
       status,
     } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid session id",
+      });
+    }
 
     const session = await Session.findById(id);
 
@@ -143,14 +175,12 @@ export const updateSession = async (req, res) => {
       });
     }
 
-    if (session.status === "scheduled") {
-      session.status = "pending";
-    }
-
     if (doctorId !== undefined) session.doctorId = doctorId;
     if (doctorName !== undefined) session.doctorName = doctorName;
     if (patientId !== undefined) session.patientId = patientId;
     if (patientName !== undefined) session.patientName = patientName;
+    if (patientEmail !== undefined) session.patientEmail = patientEmail;
+    if (phoneNumber !== undefined) session.phoneNumber = phoneNumber;
     if (specialty !== undefined) session.specialty = specialty;
     if (scheduledTime !== undefined) session.scheduledTime = scheduledTime;
     if (notes !== undefined) session.notes = notes;
@@ -174,8 +204,15 @@ export const updateSession = async (req, res) => {
 
 export const confirmSessionByDoctor = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = getCleanObjectId(req.params.id);
     const { doctorId } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid session id",
+      });
+    }
 
     if (!doctorId) {
       return res.status(400).json({
@@ -203,6 +240,37 @@ export const confirmSessionByDoctor = async (req, res) => {
     session.status = "confirmed";
     await session.save();
 
+    try {
+      if (!process.env.NOTIFICATION_SERVICE_URL) {
+        console.warn("NOTIFICATION_SERVICE_URL is not set in .env");
+      } else {
+        const payload = {
+          patientEmail: session.patientEmail,
+          email: session.patientEmail,
+          phoneNumber: session.phoneNumber,
+          patientName: session.patientName,
+          doctorName: session.doctorName,
+          specialty: session.specialty,
+          scheduledTime: session.scheduledTime,
+          meetingLink: session.meetingLink,
+          status: "Confirmed",
+          appointmentStatus: "Confirmed",
+        };
+
+        const response = await axios.post(
+          `${process.env.NOTIFICATION_SERVICE_URL}/api/notifications/telemedicine-confirmation`,
+          payload
+        );
+
+        console.log("Notification sent successfully:", response.data);
+      }
+    } catch (notifyError) {
+      console.error(
+        "Failed to send notification:",
+        notifyError.response?.data || notifyError.message
+      );
+    }
+
     return res.status(200).json({
       success: true,
       message: "Session confirmed successfully",
@@ -217,9 +285,53 @@ export const confirmSessionByDoctor = async (req, res) => {
   }
 };
 
+export const completeSession = async (req, res) => {
+  try {
+    const id = getCleanObjectId(req.params.id);
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid session id",
+      });
+    }
+
+    const session = await Session.findById(id);
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: "Session not found",
+      });
+    }
+
+    session.status = "completed";
+    await session.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Session marked as completed successfully",
+      session,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to complete session",
+      error: error.message,
+    });
+  }
+};
+
 export const deleteSession = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = getCleanObjectId(req.params.id);
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid session id",
+      });
+    }
 
     const session = await Session.findById(id);
 

@@ -28,6 +28,16 @@ const sessionSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    patientEmail: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    phoneNumber: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     specialty: {
       type: String,
       default: "",
@@ -49,7 +59,7 @@ const sessionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "confirmed"],
+      enum: ["pending", "confirmed", "completed"],
       default: "pending",
     },
     notes: {
