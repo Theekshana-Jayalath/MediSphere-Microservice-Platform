@@ -635,4 +635,105 @@ body {
   .stats-row {
     grid-template-columns: 1fr;
   }
+
+  .add-slot-btn {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.two-column-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.details-button-group {
+  margin-top: 15px;
+  display: flex;
+  gap: 10px;
+}
+
+.slot-status-text.status-full {
+  color: #d45b5b;
+}
+
+.slot-status-text.status-available {
+  color: #3aa76d;
+}
+
+.slot-form-card {
+  max-width: 560px;
+  margin: 22px auto 0;
+}
+
+.slot-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.slot-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.slot-form-field label {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--doctor-text);
+}
+
+.slot-form-field input,
+.slot-form-field select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #ddd5ce;
+  background: #fff;
+  font-size: 0.95rem;
+  color: var(--doctor-text);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.slot-form-field input:focus,
+.slot-form-field select:focus {
+  border-color: var(--doctor-primary-light);
+  box-shadow: 0 0 0 4px rgba(29, 51, 84, 0.08);
+}
+
+.slot-form-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.form-action-btn {
+  flex: 1;
+}
+
+.close-btn {
+  cursor: pointer;
+  font-size: 20px;
+  border: none;
+  background: none;
+}
+
+.calendar-date {
+  cursor: pointer;
+}
+
+.slot-chip {
+  cursor: pointer;
+}
+
+@media (max-width: 980px) {
+  .two-column-details {
+    grid-template-columns: 1fr;
+  }
+
+  .slot-form-actions {
+    flex-direction: column;
+  }
+}
 }

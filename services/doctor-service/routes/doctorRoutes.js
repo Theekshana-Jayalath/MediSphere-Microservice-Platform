@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  loginDoctor,
   registerDoctor,
   getDoctorById,
   getDoctorApprovalStatus,
@@ -16,6 +17,7 @@ import { protect, authorizeRoles } from "../middlewares/authMiddleware.js";
 const router = express.Router();
 
 router.post("/register", registerDoctor);
+router.post("/login", loginDoctor);
 
 router.get("/", protect, authorizeRoles("admin", "ADMIN"), getAllDoctors);
 router.get("/pending", protect, authorizeRoles("admin", "ADMIN"), getPendingDoctors);
