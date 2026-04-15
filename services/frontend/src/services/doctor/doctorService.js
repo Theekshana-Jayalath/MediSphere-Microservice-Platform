@@ -1,9 +1,19 @@
 import axios from "axios";
 
-let API_BASE_URL = "http://localhost:6010/api/doctors";
+let fallbackDoctorServiceHost =
+  typeof window !== "undefined"
+    ? `${window.location.protocol}//${window.location.hostname}:6010`
+    : "http://localhost:6010";
+
+let doctorServiceHost =
+  import.meta.env.VITE_DOCTOR_SERVICE_URL || fallbackDoctorServiceHost;
+
+let API_BASE_URL = `${doctorServiceHost}/api/doctors`;
 
 let registerDoctor = async (doctorData) => {
-  let response = await axios.post(`${API_BASE_URL}/register`, doctorData);
+  let response = await axios.post(`${API_BASE_URL}/register`, doctorData, {
+    timeout: 15000,
+  });
   return response.data;
 };
 
