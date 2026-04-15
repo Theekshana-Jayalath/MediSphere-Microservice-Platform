@@ -126,19 +126,7 @@ export default function Register() {
                 </div>
               </button>
 
-              <button
-                type="button"
-                className="register-role-card"
-                onClick={() => alert("Admin registration coming soon")}
-              >
-                <div className="register-role-icon">
-                  <span className="material-symbols-outlined">admin_panel_settings</span>
-                </div>
-                <div>
-                  <h4>Admin</h4>
-                  <p>Oversee clinic operations and system settings.</p>
-                </div>
-              </button>
+              
             </div>
 
             <p className="register-login-text">
