@@ -412,7 +412,9 @@ export default function PatientDashboard() {
               </div>
               <h4>Need care soon?</h4>
               <p>Average wait time: 15 mins</p>
-              <button>Book New Appointment</button>
+              <button onClick={() => navigate("/appointment")}>
+                Book New Appointment
+              </button>
             </div>
           </section>
 
