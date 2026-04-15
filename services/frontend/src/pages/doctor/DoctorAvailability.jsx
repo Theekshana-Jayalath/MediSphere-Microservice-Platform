@@ -74,11 +74,6 @@ const DoctorAvailability = () => {
       return false;
     }
 
-    if (!formData.department.trim()) {
-      setError("Department is required.");
-      return false;
-    }
-
     if (!formData.location.trim()) {
       setError("Location is required.");
       return false;
@@ -201,16 +196,7 @@ const DoctorAvailability = () => {
                   />
                 </div>
 
-                <div className="availability-field">
-                  <label>Department</label>
-                  <input
-                    type="text"
-                    name="department"
-                    value={formData.department}
-                    onChange={handleChange}
-                    placeholder="Cardiology"
-                  />
-                </div>
+                
 
                 <div className="availability-field full-width">
                   <label>Location</label>
@@ -342,7 +328,6 @@ const DoctorAvailability = () => {
                     <div className="availability-item-top">
                       <div>
                         <h3>{slot.hospital}</h3>
-                        <p>{slot.department}</p>
                       </div>
 
                       <span
