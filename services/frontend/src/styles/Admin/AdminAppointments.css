@@ -19,7 +19,7 @@
   background: #fef8f4;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .appointments-search {
@@ -42,62 +42,6 @@
   border-radius: 999px;
   background: #f3ede9;
   font-size: 14px;
-}
-
-.appointments-topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.top-icon-btn {
-  position: relative;
-  border: none;
-  background: transparent;
-  color: #4b5f7e;
-  cursor: pointer;
-}
-
-.notif-dot {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: #ba1a1a;
-  border-radius: 50%;
-  top: 1px;
-  right: 1px;
-}
-
-.admin-user-box {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-left: 16px;
-  border-left: 1px solid rgba(117, 119, 126, 0.2);
-}
-
-.admin-user-text p {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 800;
-  color: #07182e;
-}
-
-.admin-user-text span {
-  font-size: 11px;
-  color: #4b5f7e;
-}
-
-.admin-user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #1d2d44;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
 }
 
 .appointments-summary-grid {
@@ -430,66 +374,6 @@
   border-color: #07182e;
 }
 
-.forecast-card {
-  margin: 32px;
-  padding: 24px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(197, 198, 205, 0.2);
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-}
-
-.forecast-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #07182e 0%, #1d2d44 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.forecast-card h4 {
-  margin: 0 0 8px;
-  font-size: 18px;
-  font-weight: 800;
-  color: #07182e;
-}
-
-.forecast-card p {
-  margin: 0;
-  max-width: 900px;
-  font-size: 14px;
-  line-height: 1.8;
-  color: #4b5f7e;
-}
-
-.forecast-actions {
-  margin-top: 16px;
-  display: flex;
-  gap: 16px;
-}
-
-.forecast-actions button {
-  border: none;
-  background: transparent;
-  font-size: 14px;
-  font-weight: 800;
-  color: #1d2d44;
-  cursor: pointer;
-}
-
-.forecast-actions .muted {
-  color: rgba(75, 95, 126, 0.7);
-}
-
 .state-box {
   padding: 32px;
   font-size: 15px;
@@ -504,54 +388,7 @@
   text-align: right;
 }
 
-@media (max-width: 1100px) {
-  .appointments-summary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .registry-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .table-footer {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 14px;
-  }
-}
-
-@media (max-width: 900px) {
-  .admin-appointments-main {
-    margin-left: 0;
-  }
-
-  .appointments-topbar {
-    padding: 16px 20px;
-    height: auto;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .appointments-search input {
-    width: 100%;
-    min-width: 260px;
-  }
-
-  .appointments-summary-grid,
-  .registry-section,
-  .forecast-card {
-    margin-left: 20px;
-    margin-right: 20px;
-  }
-
-  .appointments-summary-grid {
-    padding-left: 0;
-    padding-right: 0;
-  }
-  .appointment-modal-overlay {
+.appointment-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(7, 24, 46, 0.35);
@@ -631,9 +468,56 @@
   word-break: break-word;
 }
 
+@media (max-width: 1100px) {
+  .appointments-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .registry-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .table-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+}
+
+@media (max-width: 900px) {
+  .admin-appointments-main {
+    margin-left: 0;
+  }
+
+  .appointments-topbar {
+    padding: 16px 20px;
+    height: auto;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .appointments-search input {
+    width: 100%;
+    min-width: 260px;
+  }
+
+  .appointments-summary-grid,
+  .registry-section {
+    margin-left: 20px;
+    margin-right: 20px;
+  }
+
+  .appointments-summary-grid {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
 @media (max-width: 700px) {
   .detail-grid {
     grid-template-columns: 1fr;
   }
-}
 }

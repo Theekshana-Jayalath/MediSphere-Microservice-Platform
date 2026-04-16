@@ -91,46 +91,6 @@ export default function AdminDoctors() {
     fetchDoctors();
   }, []);
 
-  const handleDelete = async () => {
-    if (!doctorToDelete) return;
-
-    try {
-      setDeleting(true);
-
-      const token = getAuthToken();
-      const doctorId = doctorToDelete._id || doctorToDelete.id;
-
-      const response = await fetch(`${API_BASE_URL}/${doctorId}`, {
-        method: "DELETE",
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-
-      const data = await parseResponse(response);
-
-      if (!response.ok) {
-        throw new Error(data?.message || "Failed to delete doctor");
-      }
-
-      if (
-        selectedDoctor &&
-        (selectedDoctor._id || selectedDoctor.id) === doctorId
-      ) {
-        setSelectedDoctor(null);
-      }
-
-      setDoctorToDelete(null);
-      await fetchDoctors();
-      alert("Doctor deleted successfully");
-    } catch (error) {
-      console.error("Failed to delete doctor:", error);
-      alert(error.message || "Failed to delete doctor");
-    } finally {
-      setDeleting(false);
-    }
-  };
-
   const allSpecialties = useMemo(() => {
     const values = doctors
       .map((doctor) => doctor.specialization || doctor.specialty || "")
@@ -187,6 +147,118 @@ export default function AdminDoctors() {
     return "unknown";
   };
 
+  const handleDelete = async () => {
+    if (!doctorToDelete) return;
+
+    try {
+      setDeleting(true);
+
+      const token = getAuthToken();
+      const doctorId = doctorToDelete._id || doctorToDelete.id;
+
+      const response = await fetch(`${API_BASE_URL}/${doctorId}`, {
+        method: "DELETE",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      const data = await parseResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to delete doctor");
+      }
+
+      if (
+        selectedDoctor &&
+        (selectedDoctor._id || selectedDoctor.id) === doctorId
+      ) {
+        setSelectedDoctor(null);
+      }
+
+      setDoctorToDelete(null);
+      await fetchDoctors();
+      alert("Doctor deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete doctor:", error);
+      alert(error.message || "Failed to delete doctor");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleExportCSV = () => {
+    const rows = filteredDoctors.map((doctor) => ({
+      doctorName: doctor.fullName || doctor.name || "",
+      email: doctor.email || "",
+      specialty: doctor.specialization || doctor.specialty || "",
+      licenseNumber: doctor.licenseNumber || "",
+      phone: doctor.phone || "",
+      baseHospital: doctor.baseHospital || "",
+      consultationFee:
+        doctor.consultationFee !== undefined ? doctor.consultationFee : "",
+      status: normalizeDoctorStatus(doctor),
+      createdAt: doctor.createdAt
+        ? new Date(doctor.createdAt).toLocaleString()
+        : "",
+    }));
+
+    const headers = [
+      "Doctor Name",
+      "Email",
+      "Specialty",
+      "License Number",
+      "Phone",
+      "Base Hospital",
+      "Consultation Fee",
+      "Status",
+      "Created At",
+    ];
+
+    const escapeCSV = (value) => {
+      const stringValue = String(value ?? "");
+      if (
+        stringValue.includes(",") ||
+        stringValue.includes('"') ||
+        stringValue.includes("\n")
+      ) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) =>
+        [
+          row.doctorName,
+          row.email,
+          row.specialty,
+          row.licenseNumber,
+          row.phone,
+          row.baseHospital,
+          row.consultationFee,
+          row.status,
+          row.createdAt,
+        ]
+          .map(escapeCSV)
+          .join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const date = new Date().toISOString().split("T")[0];
+
+    link.href = url;
+    link.setAttribute("download", `doctors-registry-${date}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="admin-doctors-layout">
       <link
@@ -211,27 +283,6 @@ export default function AdminDoctors() {
               onChange={(e) => setSearchText(e.target.value)}
             />
           </div>
-
-          <div className="admin-doctors-topbar-right">
-            <button type="button" className="icon-btn">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
-
-            <button type="button" className="icon-btn">
-              <span className="material-symbols-outlined">help_outline</span>
-            </button>
-
-            <div className="admin-doctors-admin-box">
-              <div>
-                <p>Administrator</p>
-                <span>Super Admin Access</span>
-              </div>
-              <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDyRJECO7XNaOKiPBQBG2eQDdoZoG1Ax3xshkjcmVaodppBrLbBTUIYk4dLy_CHMIvdcElWe9szj_8L1kLWuXaa60Ma49_LE8AJVOXO4cuUFepda0XjqhywbHnjV_iGhKEDQOn_OVRGV-ZuShra994kCQBTZLyjFXUPw2wODxe_3xxsdhtB36NyYH34abE_Q0T5ASOSwIdOBBFqR0graU20moohXnzDh-QXB44KRxHN-2KzM7HXvBy6Bx9HMgVGth0q9oXCk9groAM"
-                alt="Administrator"
-              />
-            </div>
-          </div>
         </header>
 
         <main className="admin-doctors-content">
@@ -242,18 +293,6 @@ export default function AdminDoctors() {
                 Manage clinical personnel, verify credentials, and monitor
                 professional availability across the network.
               </p>
-            </div>
-
-            <div className="admin-doctors-header-actions">
-              <button type="button" className="secondary-btn">
-                <span className="material-symbols-outlined">filter_list</span>
-                <span>Advanced Filters</span>
-              </button>
-
-              <button type="button" className="primary-btn">
-                <span className="material-symbols-outlined">person_add</span>
-                <span>Add New Doctor</span>
-              </button>
             </div>
           </section>
 
@@ -299,7 +338,9 @@ export default function AdminDoctors() {
           <section className="admin-doctors-controls">
             <div className="bulk-actions">
               <button type="button">Select All</button>
-              <button type="button">Export CSV</button>
+              <button type="button" onClick={handleExportCSV}>
+                Export CSV
+              </button>
               <button type="button">Bulk Update</button>
             </div>
 
