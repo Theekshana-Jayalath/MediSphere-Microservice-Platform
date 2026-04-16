@@ -1,12 +1,66 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import DoctorSidebar from "../../components/doctor/DoctorSidebar";
 import "../../styles/Doctor/doctorAvailability.css";
 
+const WEEKDAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+const toLocalDateInputValue = (date) => {
+  const offsetInMilliseconds = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - offsetInMilliseconds)
+    .toISOString()
+    .split("T")[0];
+};
+
+const getCurrentWeekBounds = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const weekEnd = new Date(today);
+  weekEnd.setDate(today.getDate() + (6 - today.getDay()));
+  weekEnd.setHours(0, 0, 0, 0);
+
+  return {
+    minDate: toLocalDateInputValue(today),
+    maxDate: toLocalDateInputValue(weekEnd),
+  };
+};
+
+const getDayNameFromDate = (dateValue) => {
+  if (!dateValue) {
+    return "";
+  }
+
+  const [year, month, day] = dateValue.split("-").map(Number);
+
+  if (!year || !month || !day) {
+    return "";
+  }
+
+  const selectedDate = new Date(year, month - 1, day);
+  return WEEKDAY_NAMES[selectedDate.getDay()];
+};
+
+const isDateWithinCurrentWeek = (dateValue, minDate, maxDate) => {
+  if (!dateValue) {
+    return false;
+  }
+
+  return dateValue >= minDate && dateValue <= maxDate;
+};
+
 const createEmptySlot = () => ({
   id: "",
-  hospital: "",
-  department: "",
+  channelingHospital: "",
   location: "",
+  date: "",
   day: "",
   startTime: "",
   endTime: "",
@@ -14,50 +68,175 @@ const createEmptySlot = () => ({
   status: "Available",
 });
 
-const initialAvailability = [
-  {
-    id: "AVL001",
-    hospital: "Nawaloka Hospital",
-    department: "Cardiology",
-    location: "Colombo 02",
-    day: "Monday",
-    startTime: "08:00",
-    endTime: "12:00",
-    type: "In-Person",
-    status: "Available",
-  },
-  {
-    id: "AVL002",
-    hospital: "Asiri Hospital",
-    department: "Cardiology",
-    location: "Colombo 05",
-    day: "Wednesday",
-    startTime: "16:00",
-    endTime: "20:00",
-    type: "In-Person",
-    status: "Available",
-  },
-  {
-    id: "AVL003",
-    hospital: "Medisphere Virtual",
-    department: "Telemedicine",
-    location: "Online",
-    day: "Friday",
-    startTime: "18:00",
-    endTime: "21:00",
-    type: "Video Call",
-    status: "Available",
-  },
-];
+const DOCTOR_SERVICE_URL =
+  import.meta.env.VITE_DOCTOR_SERVICE_URL || "http://localhost:6010";
+
+const safeParseJSON = (value) => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
 
 const DoctorAvailability = () => {
-  const [availabilityList, setAvailabilityList] = useState(initialAvailability);
+  const { minDate, maxDate } = useMemo(() => getCurrentWeekBounds(), []);
+  const [availabilityList, setAvailabilityList] = useState([]);
+  const [doctorProfile, setDoctorProfile] = useState(null);
   const [formData, setFormData] = useState(createEmptySlot());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [filterDay, setFilterDay] = useState("All");
   const [filterType, setFilterType] = useState("All");
+
+  const getStoredDoctor = () => {
+    const userData = safeParseJSON(localStorage.getItem("user") || "");
+    return userData;
+  };
+
+  const getToken = () => {
+    return (
+      localStorage.getItem("token") ||
+      localStorage.getItem("authToken") ||
+      ""
+    );
+  };
+
+  const mapScheduleToSlot = (schedule, index, profile) => ({
+    id: schedule?._id || `AVL${String(index + 1).padStart(3, "0")}`,
+    channelingHospital:
+      schedule?.channelingHospital ||
+      profile?.channelingHospitals?.[0] ||
+      profile?.baseHospital ||
+      "Not specified",
+    location: schedule?.location || profile?.baseHospital || "Not specified",
+    date: schedule?.date || "",
+    day: schedule?.day || "",
+    startTime: schedule?.startTime || "",
+    endTime: schedule?.endTime || "",
+    type: schedule?.type || "In-Person",
+    status: schedule?.isAvailable === false ? "Unavailable" : "Available",
+  });
+
+  const mapSlotToSchedule = (slot) => ({
+    channelingHospital: slot.channelingHospital,
+    location: slot.location,
+    date: slot.date,
+    day: slot.day,
+    startTime: slot.startTime,
+    endTime: slot.endTime,
+    type: slot.type,
+    isAvailable: slot.status === "Available",
+  });
+
+  const applyDoctorData = (doctor) => {
+    setDoctorProfile(doctor);
+    const schedules = Array.isArray(doctor?.availabilitySchedules)
+      ? doctor.availabilitySchedules
+      : [];
+
+    setAvailabilityList(
+      schedules.map((schedule, index) =>
+        mapScheduleToSlot(schedule, index, doctor)
+      )
+    );
+
+    setFormData((previous) => ({
+      ...previous,
+      channelingHospital: doctor?.channelingHospitals?.[0] || "",
+      location: doctor?.baseHospital || "",
+    }));
+  };
+
+  const availableChannelingHospitals = useMemo(() => {
+    if (!Array.isArray(doctorProfile?.channelingHospitals)) {
+      return [];
+    }
+
+    return doctorProfile.channelingHospitals.filter(
+      (hospital) => typeof hospital === "string" && hospital.trim() !== ""
+    );
+  }, [doctorProfile]);
+
+  const fetchDoctorAvailability = async () => {
+    try {
+      setIsLoading(true);
+      setError("");
+
+      const doctor = getStoredDoctor();
+      const doctorId = doctor?.id;
+
+      if (!doctorId) {
+        setAvailabilityList([]);
+        setError("Doctor session not found. Please login again.");
+        return;
+      }
+
+      const response = await fetch(`${DOCTOR_SERVICE_URL}/api/doctors/${doctorId}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to load doctor availability.");
+      }
+
+      applyDoctorData(data?.data || null);
+    } catch (fetchError) {
+      setAvailabilityList([]);
+      setError(fetchError.message || "Failed to load doctor availability.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDoctorAvailability();
+  }, []);
+
+  const saveAvailabilityList = async (nextList, successMessage) => {
+    try {
+      setIsSubmitting(true);
+      setError("");
+
+      const doctor = getStoredDoctor();
+      const doctorId = doctor?.id;
+      const token = getToken();
+
+      if (!doctorId || !token) {
+        throw new Error("Doctor session not found. Please login again.");
+      }
+
+      const payload = {
+        availabilitySchedules: nextList.map(mapSlotToSchedule),
+      };
+
+      const response = await fetch(
+        `${DOCTOR_SERVICE_URL}/api/doctors/${doctorId}/profile`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to save availability.");
+      }
+
+      applyDoctorData(data?.data || doctorProfile);
+      setMessage(successMessage);
+    } catch (saveError) {
+      setError(saveError.message || "Failed to save availability.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -68,19 +247,34 @@ const DoctorAvailability = () => {
     }));
   };
 
-  const validateForm = () => {
-    if (!formData.hospital.trim()) {
-      setError("Hospital name is required.");
-      return false;
-    }
+  const handleDateChange = (event) => {
+    const { value } = event.target;
 
-    if (!formData.department.trim()) {
-      setError("Department is required.");
+    setFormData((previous) => ({
+      ...previous,
+      date: value,
+      day: getDayNameFromDate(value),
+    }));
+  };
+
+  const validateForm = () => {
+    if (!formData.channelingHospital.trim()) {
+      setError("Channeling hospital name is required.");
       return false;
     }
 
     if (!formData.location.trim()) {
       setError("Location is required.");
+      return false;
+    }
+
+    if (!formData.date) {
+      setError("Please select a date.");
+      return false;
+    }
+
+    if (!isDateWithinCurrentWeek(formData.date, minDate, maxDate)) {
+      setError("Please select a date from today through the end of this week.");
       return false;
     }
 
@@ -116,38 +310,38 @@ const DoctorAvailability = () => {
       return;
     }
 
-    setIsSubmitting(true);
-
     const newSlot = {
       ...formData,
       id: `AVL${Date.now().toString().slice(-6)}`,
+      channelingHospital:
+        formData.channelingHospital ||
+        doctorProfile?.channelingHospitals?.[0] ||
+        "Not specified",
+      location: formData.location,
+      date: formData.date,
+      day: formData.day || getDayNameFromDate(formData.date),
     };
 
-    setAvailabilityList((previous) => [newSlot, ...previous]);
+    const nextList = [newSlot, ...availabilityList];
+    saveAvailabilityList(nextList, "Availability slot added successfully.");
     setFormData(createEmptySlot());
-    setMessage("Availability slot added successfully.");
-    setIsSubmitting(false);
   };
 
   const handleDelete = (slotId) => {
-    setAvailabilityList((previous) =>
-      previous.filter((slot) => slot.id !== slotId)
-    );
-    setMessage("Availability slot deleted successfully.");
-    setError("");
+    const nextList = availabilityList.filter((slot) => slot.id !== slotId);
+    saveAvailabilityList(nextList, "Availability slot deleted successfully.");
   };
 
   const handleStatusToggle = (slotId) => {
-    setAvailabilityList((previous) =>
-      previous.map((slot) =>
-        slot.id === slotId
-          ? {
-              ...slot,
-              status: slot.status === "Available" ? "Unavailable" : "Available",
-            }
-          : slot
-      )
+    const nextList = availabilityList.map((slot) =>
+      slot.id === slotId
+        ? {
+            ...slot,
+            status: slot.status === "Available" ? "Unavailable" : "Available",
+          }
+        : slot
     );
+    saveAvailabilityList(nextList, "Availability status updated successfully.");
   };
 
   const filteredAvailability = useMemo(() => {
@@ -191,25 +385,29 @@ const DoctorAvailability = () => {
             <form onSubmit={handleSubmit} className="availability-form">
               <div className="availability-form-grid">
                 <div className="availability-field">
-                  <label>Hospital Name</label>
-                  <input
-                    type="text"
-                    name="hospital"
-                    value={formData.hospital}
-                    onChange={handleChange}
-                    placeholder="Nawaloka Hospital"
-                  />
-                </div>
-
-                <div className="availability-field">
-                  <label>Department</label>
-                  <input
-                    type="text"
-                    name="department"
-                    value={formData.department}
-                    onChange={handleChange}
-                    placeholder="Cardiology"
-                  />
+                  <label>Channeling Hospital Name</label>
+                  {availableChannelingHospitals.length > 0 ? (
+                    <select
+                      name="channelingHospital"
+                      value={formData.channelingHospital}
+                      onChange={handleChange}
+                    >
+                      <option value="">Select Channeling Hospital</option>
+                      {availableChannelingHospitals.map((hospital) => (
+                        <option key={hospital} value={hospital}>
+                          {hospital}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      name="channelingHospital"
+                      value={formData.channelingHospital}
+                      onChange={handleChange}
+                      placeholder="Asiri Hospital"
+                    />
+                  )}
                 </div>
 
                 <div className="availability-field full-width">
@@ -223,14 +421,30 @@ const DoctorAvailability = () => {
                   />
                 </div>
 
+                <div className="availability-field full-width">
+                  <label>Date</label>
+                  <input
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleDateChange}
+                    min={minDate}
+                    max={maxDate}
+                  />
+                  <span className="field-hint">
+                    Select a date from today through the end of this week.
+                  </span>
+                </div>
+
                 <div className="availability-field">
                   <label>Day</label>
                   <select
                     name="day"
                     value={formData.day}
                     onChange={handleChange}
+                    disabled
                   >
-                    <option value="">Select Day</option>
+                    <option value="">Select date first</option>
                     <option value="Monday">Monday</option>
                     <option value="Tuesday">Tuesday</option>
                     <option value="Wednesday">Wednesday</option>
@@ -336,13 +550,16 @@ const DoctorAvailability = () => {
             </div>
 
             <div className="availability-list">
-              {filteredAvailability.length > 0 ? (
+              {isLoading ? (
+                <div className="availability-empty-state">
+                  Loading your availability...
+                </div>
+              ) : filteredAvailability.length > 0 ? (
                 filteredAvailability.map((slot) => (
                   <div className="availability-item-card" key={slot.id}>
                     <div className="availability-item-top">
                       <div>
-                        <h3>{slot.hospital}</h3>
-                        <p>{slot.department}</p>
+                        <h3>{slot.channelingHospital}</h3>
                       </div>
 
                       <span
@@ -358,6 +575,7 @@ const DoctorAvailability = () => {
 
                     <div className="availability-item-info">
                       <span>📍 {slot.location}</span>
+                      <span>🗓️ {slot.date}</span>
                       <span>📅 {slot.day}</span>
                       <span>
                         ⏰ {slot.startTime} - {slot.endTime}
@@ -369,6 +587,7 @@ const DoctorAvailability = () => {
                       <button
                         type="button"
                         className="toggle-btn"
+                        disabled={isSubmitting}
                         onClick={() => handleStatusToggle(slot.id)}
                       >
                         {slot.status === "Available"
@@ -379,6 +598,7 @@ const DoctorAvailability = () => {
                       <button
                         type="button"
                         className="delete-btn"
+                        disabled={isSubmitting}
                         onClick={() => handleDelete(slot.id)}
                       >
                         Delete

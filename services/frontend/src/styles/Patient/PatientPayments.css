@@ -1,9 +1,8 @@
-/* Patient Payments Page Styles */
 .patient-payments-page {
   display: flex;
   min-height: 100vh;
   background: #fef8f4;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 .patient-payments-main {
@@ -12,7 +11,6 @@
   min-height: 100vh;
 }
 
-/* Topbar */
 .patient-payments-topbar {
   position: fixed;
   top: 0;
@@ -92,133 +90,144 @@
   color: #1d2d44;
 }
 
-.user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: #e7e1dd;
-}
-
-.user-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Content */
 .patient-payments-content {
   padding: 96px 32px 32px;
 }
 
-/* Summary Grid */
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin-bottom: 40px;
+  gap: 18px;
+  margin-bottom: 32px;
+  align-items: stretch;
 }
 
 .summary-card {
   background: white;
-  border-radius: 16px;
-  padding: 24px;
+  border-radius: 18px;
+  padding: 14px 16px;
   position: relative;
   transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
   border: 1px solid rgba(197, 198, 205, 0.2);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
 
 .summary-card:hover {
-  transform: scale(1.02);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(29, 45, 68, 0.08);
+}
+
+.compact-summary-card {
+  min-height: 120px;
 }
 
 .card-icon {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .card-icon.primary {
-  background: #d5e3ff;
+  background: #dbe8ff;
   color: #07182e;
 }
 
 .card-icon.secondary {
-  background: #c6dbff;
+  background: #d6e6ff;
   color: #4b5f7e;
 }
 
 .card-icon.tertiary {
-  background: #b7c9d5;
+  background: #d5e1e8;
   color: #091a23;
 }
 
 .card-icon span {
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .card-badge {
   position: absolute;
-  top: 20px;
-  right: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: #d5e3ff;
+  top: 14px;
+  right: 14px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #dbe8ff;
   color: #07182e;
 }
 
 .card-badge.warning {
-  background: #ffdad6;
+  background: #ffe0dc;
   color: #ba1a1a;
 }
 
+/* ========== INCREASED FONT SIZES FOR BETTER READABILITY ========== */
+/* Labels like "Total Spent", "Pending Payments", "Last Transaction" */
 .card-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #75777e;
-  margin: 0 0 4px 0;
+  font-size: 13px !important;
+  font-weight: 600;
+  color: #6b7280;
+  margin: 0 0 6px 0;
+  letter-spacing: 0.3px;
 }
 
+/* Amount values like "LKR 34,700.00" */
 .summary-card h3 {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 18px !important;
+  line-height: 1.25;
+  font-weight: 800;
   color: #07182e;
-  margin: 0 0 12px 0;
+  margin: 0 0 8px 0;
+  word-break: break-word;
+  letter-spacing: -0.2px;
 }
 
+/* Trend text like "~12% increase from last year" */
 .card-trend {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px !important;
+  font-weight: 600;
   color: #4b5f7e;
 }
 
 .card-trend span {
-  font-size: 14px;
+  font-size: 12px;
 }
 
+/* Due date text like "Next due date: Oct 24, 2024" */
 .card-due {
-  font-size: 12px;
-  color: #75777e;
+  font-size: 11px !important;
+  color: #5f6368;
   margin: 0;
+  line-height: 1.4;
+  font-weight: 500;
 }
 
+/* Transaction text like "Paid to Dr. Sarah Vance • Oct 12, 2024" */
 .card-transaction {
-  font-size: 12px;
-  color: #75777e;
+  font-size: 11px !important;
+  color: #5f6368;
   margin: 0;
+  line-height: 1.4;
+  font-weight: 500;
 }
 
-/* Transactions Section */
+/* Any additional text inside cards */
+.card-subtext {
+  font-size: 11px !important;
+}
+
 .transactions-section {
   background: white;
   border-radius: 16px;
@@ -304,7 +313,6 @@
   font-size: 18px;
 }
 
-/* Table */
 .table-wrapper {
   overflow-x: auto;
 }
@@ -448,7 +456,6 @@
   background: rgba(75, 95, 126, 0.1);
 }
 
-/* Table Footer */
 .table-footer {
   display: flex;
   justify-content: space-between;
@@ -504,99 +511,6 @@
   font-size: 18px;
 }
 
-/* AI Insight Card */
-.ai-insight-card {
-  position: relative;
-  overflow: hidden;
-  background: #1d2d44;
-  border-radius: 16px;
-  padding: 48px;
-  margin-bottom: 32px;
-}
-
-.ai-background {
-  position: absolute;
-  right: -80px;
-  bottom: -80px;
-  width: 320px;
-  height: 320px;
-  background: rgba(79, 95, 121, 0.1);
-  border-radius: 50%;
-  filter: blur(60px);
-}
-
-.ai-content {
-  position: relative;
-  z-index: 10;
-  max-width: 600px;
-}
-
-.ai-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  margin-bottom: 24px;
-}
-
-.ai-badge span:first-child {
-  font-size: 18px;
-  color: #b7c9d5;
-}
-
-.ai-badge span:last-child {
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: #b7c9d5;
-}
-
-.ai-content h2 {
-  font-size: 32px;
-  font-weight: 700;
-  color: white;
-  margin: 0 0 16px 0;
-}
-
-.ai-content p {
-  font-size: 16px;
-  line-height: 1.6;
-  color: #b7c9d5;
-  margin: 0 0 32px 0;
-}
-
-.ai-content p strong {
-  color: white;
-  font-weight: 700;
-}
-
-.savings-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #1d2d44;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.savings-btn:hover {
-  transform: translateX(4px);
-}
-
-.savings-btn span {
-  font-size: 18px;
-}
-
-/* Loading & Empty States */
 .loading-state,
 .empty-state {
   text-align: center;
@@ -616,7 +530,6 @@
   margin: 0;
 }
 
-/* Footer */
 .payments-footer {
   text-align: center;
   padding: 24px 32px;
@@ -631,18 +544,17 @@
   margin: 0;
 }
 
-/* Responsive */
 @media (max-width: 1200px) {
   .summary-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .transactions-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
   }
-  
+
   .header-actions {
     width: 100%;
     justify-content: space-between;
@@ -653,15 +565,15 @@
   .patient-payments-main {
     margin-left: 0;
   }
-  
+
   .patient-payments-topbar {
     left: 0;
   }
-  
+
   .topbar-right .search-wrapper {
     display: none;
   }
-  
+
   .table-footer {
     flex-direction: column;
     gap: 16px;

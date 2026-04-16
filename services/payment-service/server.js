@@ -1,8 +1,11 @@
+import dns from 'dns';
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
-import paymentRoutes from "./routes/paymentRoutes.js"; 
+import paymentRoutes from "./routes/paymentRoutes.js";
 
 dotenv.config();
 

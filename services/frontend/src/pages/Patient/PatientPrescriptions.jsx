@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PatientSidebar from "../../components/Patient/PatientSidebar";
 import "../../styles/Patient/PatientPrescriptions.css";
@@ -8,6 +8,8 @@ export default function PatientPrescriptions() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPrescription, setSelectedPrescription] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
@@ -19,61 +21,89 @@ export default function PatientPrescriptions() {
   const patientId = patientProfile?.patientId || user?.patientId || "PAT0004";
   const patientEmail = patientProfile?.email || user?.email || "No email";
 
-  // Mock data with Appointment ID
-  const prescriptions = [
-    {
-      _id: "1",
-      appointmentId: "APT901545139",
-      medicineName: "Lisinopril",
-      category: "Heart & Circulation",
-      dosage: "10mg",
-      dosageForm: "Tablet",
-      frequency: "Once daily",
-      prescribedBy: "Dr. David Simmons",
-      instructions: "Take with or without food. Maintain consistent time each day. Avoid potassium supplements.",
-      status: "ACTIVE",
-      issuedDate: "2024-01-15"
-    },
-    {
-      _id: "2",
-      appointmentId: "APT901545140",
-      medicineName: "Amoxicillin",
-      category: "Anti-infective",
-      dosage: "500mg",
-      dosageForm: "Capsule",
-      frequency: "Every 8 hours",
-      prescribedBy: "Dr. Elena Martinez",
-      instructions: "Take with food. Complete full course even if feeling better. Stay hydrated.",
-      status: "ACTIVE",
-      issuedDate: "2024-10-10"
-    },
-    {
-      _id: "3",
-      appointmentId: "APT901545141",
-      medicineName: "Atorvastatin",
-      category: "Cholesterol Control",
-      dosage: "40mg",
-      dosageForm: "Tablet",
-      frequency: "Before bed",
-      prescribedBy: "Dr. James Chen",
-      instructions: "Take at the same time each night. Avoid grapefruit products. Report any muscle pain.",
-      status: "ACTIVE",
-      issuedDate: "2024-08-01"
-    },
-    {
-      _id: "4",
-      appointmentId: "APT901545142",
-      medicineName: "Ibuprofen",
-      category: "Pain Management",
-      dosage: "400mg",
-      dosageForm: "Tablet",
-      frequency: "As needed",
-      prescribedBy: "Dr. Elena Martinez",
-      instructions: "Take with food. Maximum 3 tablets per day. Do not exceed 7 days without consulting doctor.",
-      status: "ACTIVE",
-      issuedDate: "2024-09-01"
+  const PRESCRIPTIONS_BASE_URL = import.meta.env.VITE_DOCTOR_SERVICE_URL
+    ? `${import.meta.env.VITE_DOCTOR_SERVICE_URL}/api/prescriptions`
+    : "http://localhost:6010/api/prescriptions";
+
+  const parseResponseData = async (response) => {
+    const contentType = response.headers.get("content-type") || "";
+
+    if (contentType.includes("application/json")) {
+      return await response.json();
     }
-  ];
+
+    const text = await response.text();
+    return {
+      message: text || "Unexpected server response",
+    };
+  };
+
+  const mapPrescriptionForUI = (prescription) => {
+    const firstMedicine =
+      Array.isArray(prescription.medicines) && prescription.medicines.length > 0
+        ? prescription.medicines[0]
+        : null;
+
+    return {
+      ...prescription,
+      medicineName: firstMedicine?.medicineName || "No medicine",
+      category: prescription.diagnosis || "General",
+      dosage: firstMedicine?.dosage || "--",
+      dosageForm: "",
+      frequency: firstMedicine?.frequency || "--",
+      prescribedBy: prescription.doctorName || "--",
+      instructions: firstMedicine?.instructions || prescription.notes || "--",
+      issuedDate: prescription.issuedDate || prescription.createdAt,
+      status: String(prescription.status || "active").toUpperCase(),
+      medicines: Array.isArray(prescription.medicines) ? prescription.medicines : [],
+    };
+  };
+
+  const fetchPrescriptions = async () => {
+    try {
+      setLoading(true);
+
+      const token =
+        user?.token ||
+        localStorage.getItem("token") ||
+        localStorage.getItem("authToken") ||
+        localStorage.getItem("accessToken") ||
+        "";
+
+      const response = await fetch(
+        `${PRESCRIPTIONS_BASE_URL}/patient/${patientId}`,
+        {
+          method: "GET",
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
+      );
+
+      const data = await parseResponseData(response);
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to fetch prescriptions");
+      }
+
+      const prescriptionList = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.data)
+        ? data.data
+        : [];
+
+      setPrescriptions(prescriptionList.map(mapPrescriptionForUI));
+    } catch (error) {
+      console.error("Failed to fetch prescriptions:", error);
+      setPrescriptions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPrescriptions();
+  }, []);
 
   const handleViewDetails = (prescription) => {
     setSelectedPrescription(prescription);
@@ -91,12 +121,20 @@ export default function PatientPrescriptions() {
     navigate("/login");
   };
 
-  const filteredPrescriptions = prescriptions.filter(p =>
-    p.medicineName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.prescribedBy.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.appointmentId.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPrescriptions = useMemo(() => {
+    return prescriptions.filter((p) => {
+      const medicineNames = Array.isArray(p.medicines)
+        ? p.medicines.map((medicine) => medicine.medicineName).join(" ")
+        : "";
+
+      return (
+        medicineNames.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(p.prescribedBy || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(p.category || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(p.appointmentId || "").toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    });
+  }, [prescriptions, searchTerm]);
 
   return (
     <div className="patient-prescriptions-page">
@@ -136,7 +174,7 @@ export default function PatientPrescriptions() {
               />
             </div>
             <div className="action-buttons">
-              <button className="action-btn refresh">
+              <button className="action-btn refresh" onClick={fetchPrescriptions}>
                 <span className="material-symbols-outlined">refresh</span>
                 Refresh
               </button>
@@ -155,7 +193,12 @@ export default function PatientPrescriptions() {
           <div className="prescriptions-table-container">
             <h2>Active Prescriptions</h2>
             
-            {filteredPrescriptions.length === 0 ? (
+            {loading ? (
+              <div className="empty-state">
+                <span className="material-symbols-outlined">medication</span>
+                <p>Loading prescriptions...</p>
+              </div>
+            ) : filteredPrescriptions.length === 0 ? (
               <div className="empty-state">
                 <span className="material-symbols-outlined">medication</span>
                 <p>No prescriptions found</p>
@@ -252,10 +295,47 @@ export default function PatientPrescriptions() {
                 <label>INSTRUCTIONS</label>
                 <p className="instructions-text">{selectedPrescription.instructions}</p>
               </div>
+
+              {selectedPrescription.medicines.length > 1 && (
+                <div className="detail-section">
+                  <label>ALL MEDICINES</label>
+                  <div style={{ display: "grid", gap: "12px" }}>
+                    {selectedPrescription.medicines.map((medicine, index) => (
+                      <div
+                        key={`${medicine.medicineName}-${index}`}
+                        style={{
+                          padding: "12px",
+                          borderRadius: "12px",
+                          background: "#f8f2ee",
+                        }}
+                      >
+                        <p
+                          style={{
+                            margin: "0 0 6px 0",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {medicine.medicineName}
+                        </p>
+                        <p style={{ margin: "0 0 4px 0" }}>
+                          {medicine.dosage} • {medicine.frequency}
+                        </p>
+                        <p style={{ margin: 0, color: "#75777e" }}>
+                          {medicine.duration}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               <div className="detail-section">
                 <label>ISSUED DATE</label>
-                <p>{new Date(selectedPrescription.issuedDate).toLocaleDateString()}</p>
+                <p>
+                  {selectedPrescription.issuedDate
+                    ? new Date(selectedPrescription.issuedDate).toLocaleDateString()
+                    : "--"}
+                </p>
               </div>
             </div>
             <div className="modal-footer">

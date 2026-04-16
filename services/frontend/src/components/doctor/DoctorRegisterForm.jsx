@@ -1,30 +1,33 @@
 import React, { useState } from "react";
 import { registerDoctor } from "../../services/doctor/doctorService.js";
-import AvailabilityScheduleInput from "./AvailabilityScheduleInput.jsx";
 import "../../styles/Doctor/doctorRegister.css";
 
 let DoctorRegisterForm = () => {
+  let specializationOptions = [
+    "Cardiologist",
+    "Neurologist",
+    "Dermatologist",
+    "Nephrologist",
+    "Gastroenterologist",
+    "Radiologist",
+    "Oncologist",
+    "Endocrinologist",
+    "Pulmonologist",
+    "Rheumatologist",
+  ];
+
   let [formData, setFormData] = useState({
     fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
     phone: "",
-    photo: "",
     specialization: "",
     licenseNumber: "",
     experienceYears: "",
     baseHospital: "",
     channelingHospitals: "",
     consultationFee: "",
-    availabilitySchedules: [
-      {
-        day: "",
-        startTime: "",
-        endTime: "",
-        isAvailable: true,
-      },
-    ],
   });
 
   let [errors, setErrors] = useState({});
@@ -43,42 +46,6 @@ let DoctorRegisterForm = () => {
     setErrors((previousErrors) => ({
       ...previousErrors,
       [name]: "",
-    }));
-  };
-
-  let handleAvailabilityChange = (index, field, value) => {
-    let updatedSchedules = [...formData.availabilitySchedules];
-    updatedSchedules[index][field] = value;
-
-    setFormData((previousData) => ({
-      ...previousData,
-      availabilitySchedules: updatedSchedules,
-    }));
-  };
-
-  let addAvailabilityRow = () => {
-    setFormData((previousData) => ({
-      ...previousData,
-      availabilitySchedules: [
-        ...previousData.availabilitySchedules,
-        {
-          day: "",
-          startTime: "",
-          endTime: "",
-          isAvailable: true,
-        },
-      ],
-    }));
-  };
-
-  let removeAvailabilityRow = (index) => {
-    let updatedSchedules = formData.availabilitySchedules.filter(
-      (_, scheduleIndex) => scheduleIndex !== index
-    );
-
-    setFormData((previousData) => ({
-      ...previousData,
-      availabilitySchedules: updatedSchedules,
     }));
   };
 
@@ -137,32 +104,9 @@ let DoctorRegisterForm = () => {
       newErrors.consultationFee = "Consultation fee cannot be negative";
     }
 
-    formData.availabilitySchedules.forEach((slot, index) => {
-      if (!slot.day) {
-        newErrors[`availability_day_${index}`] = "Day is required";
-      }
-
-      if (!slot.startTime) {
-        newErrors[`availability_startTime_${index}`] = "Start time is required";
-      }
-
-      if (!slot.endTime) {
-        newErrors[`availability_endTime_${index}`] = "End time is required";
-      }
-
-      if (
-        slot.startTime &&
-        slot.endTime &&
-        slot.startTime >= slot.endTime
-      ) {
-        newErrors[`availability_endTime_${index}`] =
-          "End time must be later than start time";
-      }
-    });
-
     setErrors(newErrors);
 
-    return Object.keys(newErrors).length === 0;
+    return newErrors;
   };
 
   let handleSubmit = async (event) => {
@@ -171,7 +115,20 @@ let DoctorRegisterForm = () => {
     setSuccessMessage("");
     setServerError("");
 
-    if (!validateForm()) {
+    let validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setServerError("Please correct the highlighted fields and try again.");
+
+      let firstErrorFieldName = Object.keys(validationErrors)[0];
+      let firstErrorField = document.querySelector(
+        `[name="${firstErrorFieldName}"]`
+      );
+
+      if (firstErrorField) {
+        firstErrorField.focus();
+        firstErrorField.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+
       return;
     }
 
@@ -183,7 +140,6 @@ let DoctorRegisterForm = () => {
         email: formData.email.trim(),
         password: formData.password,
         phone: formData.phone.trim(),
-        photo: formData.photo.trim(),
         specialization: formData.specialization.trim(),
         licenseNumber: formData.licenseNumber.trim(),
         experienceYears: Number(formData.experienceYears),
@@ -193,13 +149,15 @@ let DoctorRegisterForm = () => {
           .map((hospital) => hospital.trim())
           .filter((hospital) => hospital !== ""),
         consultationFee: Number(formData.consultationFee),
-        availabilitySchedules: formData.availabilitySchedules,
       };
 
       let response = await registerDoctor(payload);
 
       if (response.success) {
-        setSuccessMessage(response.message || "Doctor registration submitted successfully and pending admin approval.");
+        setSuccessMessage(
+          response.message ||
+            "Doctor registration submitted successfully and pending admin approval."
+        );
 
         setFormData({
           fullName: "",
@@ -207,29 +165,27 @@ let DoctorRegisterForm = () => {
           password: "",
           confirmPassword: "",
           phone: "",
-          photo: "",
           specialization: "",
           licenseNumber: "",
           experienceYears: "",
           baseHospital: "",
           channelingHospitals: "",
           consultationFee: "",
-          availabilitySchedules: [
-            {
-              day: "",
-              startTime: "",
-              endTime: "",
-              isAvailable: true,
-            },
-          ],
         });
-
         setErrors({});
       }
     } catch (error) {
       console.error("Registration error:", error);
-      const errorMsg = error.response?.data?.message || error.message || "Registration failed. Please try again.";
+
+      const errorMsg = !error.response
+        ? "Cannot reach Doctor Service. Please check service status and try again."
+        : error.response?.data?.message ||
+          error.message ||
+          "Registration failed. Please try again.";
+
       setServerError(errorMsg);
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
     }
@@ -312,7 +268,9 @@ let DoctorRegisterForm = () => {
                     onChange={handleChange}
                     placeholder="Dr. John Doe"
                   />
-                  {errors.fullName && <span className="field-error">{errors.fullName}</span>}
+                  {errors.fullName && (
+                    <span className="field-error">{errors.fullName}</span>
+                  )}
                 </div>
 
                 <div className="doctor-register-field">
@@ -324,7 +282,9 @@ let DoctorRegisterForm = () => {
                     onChange={handleChange}
                     placeholder="doctor@email.com"
                   />
-                  {errors.email && <span className="field-error">{errors.email}</span>}
+                  {errors.email && (
+                    <span className="field-error">{errors.email}</span>
+                  )}
                 </div>
 
                 <div className="doctor-register-field">
@@ -336,19 +296,11 @@ let DoctorRegisterForm = () => {
                     onChange={handleChange}
                     placeholder="0771234567"
                   />
-                  {errors.phone && <span className="field-error">{errors.phone}</span>}
+                  {errors.phone && (
+                    <span className="field-error">{errors.phone}</span>
+                  )}
                 </div>
 
-                <div className="doctor-register-field full-width">
-                  <label>Photo URL</label>
-                  <input
-                    type="text"
-                    name="photo"
-                    value={formData.photo}
-                    onChange={handleChange}
-                    placeholder="https://example.com/doctor-photo.jpg"
-                  />
-                </div>
               </div>
             </div>
 
@@ -360,13 +312,18 @@ let DoctorRegisterForm = () => {
               <div className="doctor-register-grid two-columns">
                 <div className="doctor-register-field">
                   <label>Specialization</label>
-                  <input
-                    type="text"
+                  <select
                     name="specialization"
                     value={formData.specialization}
                     onChange={handleChange}
-                    placeholder="Cardiologist"
-                  />
+                  >
+                    <option value="">Select specialization</option>
+                    {specializationOptions.map((specialization) => (
+                      <option key={specialization} value={specialization}>
+                        {specialization}
+                      </option>
+                    ))}
+                  </select>
                   {errors.specialization && (
                     <span className="field-error">{errors.specialization}</span>
                   )}
@@ -444,33 +401,6 @@ let DoctorRegisterForm = () => {
               </div>
             </div>
 
-            <AvailabilityScheduleInput
-              availabilitySchedules={formData.availabilitySchedules}
-              handleAvailabilityChange={handleAvailabilityChange}
-              addAvailabilityRow={addAvailabilityRow}
-              removeAvailabilityRow={removeAvailabilityRow}
-            />
-
-            {formData.availabilitySchedules.map((slot, index) => (
-              <div key={index} className="availability-errors">
-                {errors[`availability_day_${index}`] && (
-                  <span className="field-error">
-                    Schedule {index + 1}: {errors[`availability_day_${index}`]}
-                  </span>
-                )}
-                {errors[`availability_startTime_${index}`] && (
-                  <span className="field-error">
-                    Schedule {index + 1}: {errors[`availability_startTime_${index}`]}
-                  </span>
-                )}
-                {errors[`availability_endTime_${index}`] && (
-                  <span className="field-error">
-                    Schedule {index + 1}: {errors[`availability_endTime_${index}`]}
-                  </span>
-                )}
-              </div>
-            ))}
-
             <div className="doctor-register-section">
               <div className="doctor-register-section-header">
                 <h3>Account Security</h3>
@@ -486,7 +416,9 @@ let DoctorRegisterForm = () => {
                     onChange={handleChange}
                     placeholder="Enter password"
                   />
-                  {errors.password && <span className="field-error">{errors.password}</span>}
+                  {errors.password && (
+                    <span className="field-error">{errors.password}</span>
+                  )}
                 </div>
 
                 <div className="doctor-register-field">
@@ -512,6 +444,12 @@ let DoctorRegisterForm = () => {
             >
               {isSubmitting ? "Submitting..." : "Complete Registration"}
             </button>
+
+            {serverError && (
+              <div className="doctor-register-error-message inline-submit-error">
+                {serverError}
+              </div>
+            )}
 
             <p className="doctor-register-footer-text">
               Already registered? Wait for admin approval before accessing your

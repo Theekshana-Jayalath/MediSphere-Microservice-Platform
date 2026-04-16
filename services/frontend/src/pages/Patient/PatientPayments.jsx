@@ -14,13 +14,19 @@ export default function PatientPayments() {
 
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
-  
+
   const storedPatientProfile = localStorage.getItem("patientProfile");
-  const patientProfile = storedPatientProfile ? JSON.parse(storedPatientProfile) : null;
-  
-  const patientName = patientProfile?.name || patientProfile?.fullName || user?.name || "Patient";
+  const patientProfile = storedPatientProfile
+    ? JSON.parse(storedPatientProfile)
+    : null;
+
+  const patientName =
+    patientProfile?.name || patientProfile?.fullName || user?.name || "Patient";
   const patientId = patientProfile?.patientId || user?.patientId || "PAT0004";
-  const patientEmail = patientProfile?.email || user?.email || "No email";
+
+  const API_GATEWAY_URL = import.meta.env.VITE_API_GATEWAY_URL
+    ? import.meta.env.VITE_API_GATEWAY_URL
+    : "http://localhost:5015";
 
   useEffect(() => {
     fetchPayments();
@@ -28,25 +34,32 @@ export default function PatientPayments() {
 
   const fetchPayments = async () => {
     try {
-      const token = localStorage.getItem("token");
-      
-      const response = await fetch(`http://localhost:5004/api/payments/patient/${patientId}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const token =
+        localStorage.getItem("token") ||
+        localStorage.getItem("authToken") ||
+        localStorage.getItem("accessToken") ||
+        "";
 
-      if (response.ok) {
-        const data = await response.json();
-        setPayments(data);
-      } else {
-        setPayments(getMockPayments());
+      const response = await fetch(
+        `${API_GATEWAY_URL}/api/payments/patient/${patientId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch payments");
       }
+
+      const data = await response.json();
+      setPayments(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch payments:", error);
-      setPayments(getMockPayments());
+      setPayments([]);
     } finally {
       setLoading(false);
     }
@@ -66,7 +79,7 @@ export default function PatientPayments() {
         paymentMethod: "PayHere",
         status: "PENDING",
         createdAt: "2024-10-20T10:30:00.000Z",
-        updatedAt: "2024-10-20T10:30:00.000Z"
+        updatedAt: "2024-10-20T10:30:00.000Z",
       },
       {
         _id: "69c7c32d6f9f54d1af9572b5",
@@ -80,7 +93,7 @@ export default function PatientPayments() {
         paymentMethod: "PayHere",
         status: "PAID",
         createdAt: "2024-10-05T09:00:00.000Z",
-        updatedAt: "2024-10-05T09:15:00.000Z"
+        updatedAt: "2024-10-05T09:15:00.000Z",
       },
       {
         _id: "69c7c32d6f9f54d1af9572b6",
@@ -94,7 +107,7 @@ export default function PatientPayments() {
         paymentMethod: "PayHere",
         status: "PAID",
         createdAt: "2024-09-28T11:45:00.000Z",
-        updatedAt: "2024-09-28T12:00:00.000Z"
+        updatedAt: "2024-09-28T12:00:00.000Z",
       },
       {
         _id: "69c7c32d6f9f54d1af9572b7",
@@ -108,7 +121,7 @@ export default function PatientPayments() {
         paymentMethod: "PayHere",
         status: "PAID",
         createdAt: "2024-10-12T14:15:00.000Z",
-        updatedAt: "2024-10-12T14:20:00.000Z"
+        updatedAt: "2024-10-12T14:20:00.000Z",
       },
       {
         _id: "69c7c32d6f9f54d1af9572b8",
@@ -122,7 +135,7 @@ export default function PatientPayments() {
         paymentMethod: "PayHere",
         status: "PAID",
         createdAt: "2024-09-15T09:00:00.000Z",
-        updatedAt: "2024-09-15T09:10:00.000Z"
+        updatedAt: "2024-09-15T09:10:00.000Z",
       },
       {
         _id: "69c7c32d6f9f54d1af9572b9",
@@ -136,18 +149,25 @@ export default function PatientPayments() {
         paymentMethod: "PayHere",
         status: "PAID",
         createdAt: "2024-09-05T13:30:00.000Z",
-        updatedAt: "2024-09-05T13:45:00.000Z"
-      }
+        updatedAt: "2024-09-05T13:45:00.000Z",
+      },
     ];
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
   const formatAmount = (amount) => {
-    return `LKR ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `LKR ${amount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   const getStatusBadgeClass = (status) => {
@@ -155,31 +175,36 @@ export default function PatientPayments() {
   };
 
   const getDoctorInitials = (doctorName) => {
-    return doctorName.split(' ').map(n => n[0]).join('');
+    return doctorName
+      .split(" ")
+      .map((n) => n[0])
+      .join("");
   };
 
   const calculateTotals = () => {
-    const patientPayments = payments.filter(p => p.patientId === patientId);
+    const patientPayments = payments.filter((p) => p.patientId === patientId);
     const totalSpent = patientPayments
-      .filter(p => p.status === "PAID")
+      .filter((p) => p.status === "PAID")
       .reduce((sum, p) => sum + p.amount, 0);
-    
+
     const pendingAmount = patientPayments
-      .filter(p => p.status === "PENDING")
+      .filter((p) => p.status === "PENDING")
       .reduce((sum, p) => sum + p.amount, 0);
-    
+
     const lastTransaction = patientPayments
-      .filter(p => p.status === "PAID")
+      .filter((p) => p.status === "PAID")
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
-    
+
     return { totalSpent, pendingAmount, lastTransaction };
   };
 
-  const filteredPayments = payments.filter(payment => {
+  const filteredPayments = payments.filter((payment) => {
     const matchesPatient = payment.patientId === patientId;
-    const matchesSearch = payment.doctorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          payment.serviceType.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === "all" || payment.status === filterStatus;
+    const matchesSearch =
+      payment.doctorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.serviceType.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      filterStatus === "all" || payment.status === filterStatus;
     return matchesPatient && matchesSearch && matchesStatus;
   });
 
@@ -196,6 +221,83 @@ export default function PatientPayments() {
     localStorage.removeItem("patientProfile");
     localStorage.removeItem("token");
     navigate("/login");
+  };
+
+  const handleExportAll = () => {
+    const exportRows = filteredPayments.map((payment) => ({
+      date: formatDate(payment.createdAt),
+      appointmentId: payment.appointmentId || "",
+      doctorName: payment.doctorName || "",
+      serviceType: payment.serviceType || "",
+      amount: payment.amount || 0,
+      currency: payment.currency || "LKR",
+      paymentMethod: payment.paymentMethod || "",
+      status: payment.status || "",
+      patientId: payment.patientId || "",
+      doctorId: payment.doctorId || "",
+      paymentId: payment._id || "",
+    }));
+
+    const headers = [
+      "Date",
+      "Appointment ID",
+      "Doctor Name",
+      "Service Type",
+      "Amount",
+      "Currency",
+      "Payment Method",
+      "Status",
+      "Patient ID",
+      "Doctor ID",
+      "Payment ID",
+    ];
+
+    const escapeCSV = (value) => {
+      const stringValue = String(value ?? "");
+      if (
+        stringValue.includes(",") ||
+        stringValue.includes('"') ||
+        stringValue.includes("\n")
+      ) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
+    const csvContent = [
+      headers.join(","),
+      ...exportRows.map((row) =>
+        [
+          row.date,
+          row.appointmentId,
+          row.doctorName,
+          row.serviceType,
+          row.amount,
+          row.currency,
+          row.paymentMethod,
+          row.status,
+          row.patientId,
+          row.doctorId,
+          row.paymentId,
+        ]
+          .map(escapeCSV)
+          .join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const date = new Date().toISOString().split("T")[0];
+
+    link.href = url;
+    link.setAttribute("download", `patient-payments-${date}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -234,21 +336,16 @@ export default function PatientPayments() {
             <button className="notification-btn">
               <span className="material-symbols-outlined">notifications</span>
             </button>
-            <div className="user-avatar">
-              <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCn_Qt3esgtuXr34odduCGODVcQ-gBns6mA8zll1mVAIpVOEYOC4h0chtXUWSWzRQFKrSJcsh7tOStCiRUyfzkluS6MIc-6hheL5_kGRjCn7GfpD0wCLr3CR5GzEE3u7xyWXij1dvTQzQMdsntbIdICQpdUw61n-ReviuK1-z8m5hj-4lskU_dndlNEPvDhRv1jsUMwL5GVE56MalxP0U91E6BnRBhGEdBigT0apPIGyhuszlQlSrfkT3LkFhiAcBRBygJbTc93O_U"
-                alt="Patient Avatar"
-              />
-            </div>
           </div>
         </header>
 
         <div className="patient-payments-content">
-          {/* Summary Cards */}
           <section className="summary-grid">
-            <div className="summary-card">
+            <div className="summary-card compact-summary-card">
               <div className="card-icon primary">
-                <span className="material-symbols-outlined">account_balance_wallet</span>
+                <span className="material-symbols-outlined">
+                  account_balance_wallet
+                </span>
               </div>
               <div className="card-badge">Annual</div>
               <p className="card-label">Total Spent</p>
@@ -259,9 +356,11 @@ export default function PatientPayments() {
               </div>
             </div>
 
-            <div className="summary-card">
+            <div className="summary-card compact-summary-card">
               <div className="card-icon secondary">
-                <span className="material-symbols-outlined">pending_actions</span>
+                <span className="material-symbols-outlined">
+                  pending_actions
+                </span>
               </div>
               <div className="card-badge warning">Action Required</div>
               <p className="card-label">Pending Payments</p>
@@ -269,19 +368,26 @@ export default function PatientPayments() {
               <p className="card-due">Next due date: Oct 24, 2024</p>
             </div>
 
-            <div className="summary-card">
+            <div className="summary-card compact-summary-card">
               <div className="card-icon tertiary">
                 <span className="material-symbols-outlined">history</span>
               </div>
               <p className="card-label">Last Transaction</p>
-              <h3>{lastTransaction ? formatAmount(lastTransaction.amount) : "LKR 0.00"}</h3>
+              <h3>
+                {lastTransaction
+                  ? formatAmount(lastTransaction.amount)
+                  : "LKR 0.00"}
+              </h3>
               <p className="card-transaction">
-                {lastTransaction ? `Paid to ${lastTransaction.doctorName} • ${formatDate(lastTransaction.createdAt)}` : "No transactions yet"}
+                {lastTransaction
+                  ? `Paid to ${lastTransaction.doctorName} • ${formatDate(
+                      lastTransaction.createdAt
+                    )}`
+                  : "No transactions yet"}
               </p>
             </div>
           </section>
 
-          {/* Transactions Table */}
           <section className="transactions-section">
             <div className="transactions-header">
               <div>
@@ -290,26 +396,35 @@ export default function PatientPayments() {
               </div>
               <div className="header-actions">
                 <div className="filter-buttons">
-                  <button 
-                    className={filterStatus === "all" ? "active" : ""} 
-                    onClick={() => setFilterStatus("all")}
+                  <button
+                    className={filterStatus === "all" ? "active" : ""}
+                    onClick={() => {
+                      setFilterStatus("all");
+                      setCurrentPage(1);
+                    }}
                   >
                     All
                   </button>
-                  <button 
-                    className={filterStatus === "PAID" ? "active" : ""} 
-                    onClick={() => setFilterStatus("PAID")}
+                  <button
+                    className={filterStatus === "PAID" ? "active" : ""}
+                    onClick={() => {
+                      setFilterStatus("PAID");
+                      setCurrentPage(1);
+                    }}
                   >
                     Paid
                   </button>
-                  <button 
-                    className={filterStatus === "PENDING" ? "active" : ""} 
-                    onClick={() => setFilterStatus("PENDING")}
+                  <button
+                    className={filterStatus === "PENDING" ? "active" : ""}
+                    onClick={() => {
+                      setFilterStatus("PENDING");
+                      setCurrentPage(1);
+                    }}
                   >
                     Pending
                   </button>
                 </div>
-                <button className="export-btn">
+                <button className="export-btn" onClick={handleExportAll}>
                   <span className="material-symbols-outlined">download</span>
                   Export All
                 </button>
@@ -345,22 +460,32 @@ export default function PatientPayments() {
                             <div className="doctor-avatar">
                               {getDoctorInitials(payment.doctorName)}
                             </div>
-                            <span className="doctor-name">{payment.doctorName}</span>
+                            <span className="doctor-name">
+                              {payment.doctorName}
+                            </span>
                           </div>
                         </td>
                         <td className="service-type">{payment.serviceType}</td>
-                        <td className="amount-cell text-right">{formatAmount(payment.amount)}</td>
+                        <td className="amount-cell text-right">
+                          {formatAmount(payment.amount)}
+                        </td>
                         <td className="text-center">
-                          <span className={`status-badge ${getStatusBadgeClass(payment.status)}`}>
+                          <span
+                            className={`status-badge ${getStatusBadgeClass(
+                              payment.status
+                            )}`}
+                          >
                             {payment.status}
                           </span>
                         </td>
                         <td className="actions-cell text-right">
-                          <button 
+                          <button
                             className="action-btn receipt-btn"
                             title="View Receipt"
                           >
-                            <span className="material-symbols-outlined">receipt_long</span>
+                            <span className="material-symbols-outlined">
+                              receipt_long
+                            </span>
                           </button>
                         </td>
                       </tr>
@@ -373,30 +498,39 @@ export default function PatientPayments() {
             {!loading && filteredPayments.length > 0 && (
               <div className="table-footer">
                 <p className="pagination-info">
-                  Showing {((currentPage - 1) * itemsPerPage) + 1}-
-                  {Math.min(currentPage * itemsPerPage, filteredPayments.length)} of {filteredPayments.length} transactions
+                  Showing {(currentPage - 1) * itemsPerPage + 1}-
+                  {Math.min(currentPage * itemsPerPage, filteredPayments.length)} of{" "}
+                  {filteredPayments.length} transactions
                 </p>
                 <div className="pagination-controls">
                   <button
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
                   >
-                    <span className="material-symbols-outlined">chevron_left</span>
+                    <span className="material-symbols-outlined">
+                      chevron_left
+                    </span>
                   </button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      className={currentPage === page ? "active" : ""}
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </button>
-                  ))}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => (
+                      <button
+                        key={page}
+                        className={currentPage === page ? "active" : ""}
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </button>
+                    )
+                  )}
                   <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
                     disabled={currentPage === totalPages}
                   >
-                    <span className="material-symbols-outlined">chevron_right</span>
+                    <span className="material-symbols-outlined">
+                      chevron_right
+                    </span>
                   </button>
                 </div>
               </div>
