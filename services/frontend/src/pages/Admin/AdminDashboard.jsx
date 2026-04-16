@@ -93,7 +93,7 @@ export default function AdminDashboard() {
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD",
+      currency: "LKR",
       maximumFractionDigits: 0,
     }).format(Number(value || 0));
   };
