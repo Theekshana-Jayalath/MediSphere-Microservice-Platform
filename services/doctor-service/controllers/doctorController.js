@@ -321,6 +321,22 @@ export const getAllDoctors = async (req, res, next) => {
   }
 };
 
+// Public endpoint: return approved doctors for frontend consumption
+export const getPublicDoctors = async (req, res, next) => {
+  try {
+    const doctors = await Doctor.find({ approvalStatus: 'approved' })
+      .select('-password')
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      data: doctors,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getPendingDoctors = async (req, res, next) => {
   try {
     const doctors = await Doctor.find({ approvalStatus: "pending_approval" })
