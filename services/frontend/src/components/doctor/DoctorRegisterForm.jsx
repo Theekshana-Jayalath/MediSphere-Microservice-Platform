@@ -1,6 +1,5 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { registerDoctor } from "../../services/doctor/doctorService.js";
-import AvailabilityScheduleInput from "./AvailabilityScheduleInput.jsx";
 import "../../styles/Doctor/doctorRegister.css";
 
 let DoctorRegisterForm = () => {
@@ -17,20 +16,16 @@ let DoctorRegisterForm = () => {
     baseHospital: "",
     channelingHospitals: "",
     consultationFee: "",
-    availabilitySchedules: [
-      {
-        day: "",
-        startTime: "",
-        endTime: "",
-        isAvailable: true,
-      },
-    ],
   });
 
   let [errors, setErrors] = useState({});
   let [isSubmitting, setIsSubmitting] = useState(false);
   let [successMessage, setSuccessMessage] = useState("");
   let [serverError, setServerError] = useState("");
+  let [photoPreview, setPhotoPreview] = useState("");
+  let [isDragging, setIsDragging] = useState(false);
+
+  let fileInputRef = useRef(null);
 
   let handleChange = (event) => {
     let { name, value } = event.target;
@@ -46,40 +41,95 @@ let DoctorRegisterForm = () => {
     }));
   };
 
-  let handleAvailabilityChange = (index, field, value) => {
-    let updatedSchedules = [...formData.availabilitySchedules];
-    updatedSchedules[index][field] = value;
+  let convertFileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      let reader = new FileReader();
 
-    setFormData((previousData) => ({
-      ...previousData,
-      availabilitySchedules: updatedSchedules,
-    }));
+      reader.readAsDataURL(file);
+
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
   };
 
-  let addAvailabilityRow = () => {
-    setFormData((previousData) => ({
-      ...previousData,
-      availabilitySchedules: [
-        ...previousData.availabilitySchedules,
-        {
-          day: "",
-          startTime: "",
-          endTime: "",
-          isAvailable: true,
-        },
-      ],
-    }));
+  let handlePhotoFile = async (file) => {
+    if (!file) return;
+
+    let allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
+    let maxSize = 5 * 1024 * 1024;
+
+    if (!allowedTypes.includes(file.type)) {
+      setErrors((previousErrors) => ({
+        ...previousErrors,
+        photo: "Only JPG, JPEG, and PNG files are allowed",
+      }));
+      return;
+    }
+
+    if (file.size > maxSize) {
+      setErrors((previousErrors) => ({
+        ...previousErrors,
+        photo: "Image size must be less than 5MB",
+      }));
+      return;
+    }
+
+    try {
+      let base64Image = await convertFileToBase64(file);
+
+      setFormData((previousData) => ({
+        ...previousData,
+        photo: base64Image,
+      }));
+
+      setPhotoPreview(base64Image);
+
+      setErrors((previousErrors) => ({
+        ...previousErrors,
+        photo: "",
+      }));
+    } catch (error) {
+      setErrors((previousErrors) => ({
+        ...previousErrors,
+        photo: "Failed to process image",
+      }));
+    }
   };
 
-  let removeAvailabilityRow = (index) => {
-    let updatedSchedules = formData.availabilitySchedules.filter(
-      (_, scheduleIndex) => scheduleIndex !== index
-    );
+  let handlePhotoChange = async (event) => {
+    let file = event.target.files[0];
+    await handlePhotoFile(file);
+  };
 
+  let handleDrop = async (event) => {
+    event.preventDefault();
+    setIsDragging(false);
+
+    let file = event.dataTransfer.files[0];
+    await handlePhotoFile(file);
+  };
+
+  let handleDragOver = (event) => {
+    event.preventDefault();
+    setIsDragging(true);
+  };
+
+  let handleDragLeave = (event) => {
+    event.preventDefault();
+    setIsDragging(false);
+  };
+
+  let removePhoto = () => {
     setFormData((previousData) => ({
       ...previousData,
-      availabilitySchedules: updatedSchedules,
+      photo: "",
     }));
+
+    setPhotoPreview("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   let validateForm = () => {
@@ -137,32 +187,9 @@ let DoctorRegisterForm = () => {
       newErrors.consultationFee = "Consultation fee cannot be negative";
     }
 
-    formData.availabilitySchedules.forEach((slot, index) => {
-      if (!slot.day) {
-        newErrors[`availability_day_${index}`] = "Day is required";
-      }
-
-      if (!slot.startTime) {
-        newErrors[`availability_startTime_${index}`] = "Start time is required";
-      }
-
-      if (!slot.endTime) {
-        newErrors[`availability_endTime_${index}`] = "End time is required";
-      }
-
-      if (
-        slot.startTime &&
-        slot.endTime &&
-        slot.startTime >= slot.endTime
-      ) {
-        newErrors[`availability_endTime_${index}`] =
-          "End time must be later than start time";
-      }
-    });
-
     setErrors(newErrors);
 
-    return Object.keys(newErrors).length === 0;
+    return newErrors;
   };
 
   let handleSubmit = async (event) => {
@@ -171,7 +198,20 @@ let DoctorRegisterForm = () => {
     setSuccessMessage("");
     setServerError("");
 
-    if (!validateForm()) {
+    let validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setServerError("Please correct the highlighted fields and try again.");
+
+      let firstErrorFieldName = Object.keys(validationErrors)[0];
+      let firstErrorField = document.querySelector(
+        `[name="${firstErrorFieldName}"]`
+      );
+
+      if (firstErrorField) {
+        firstErrorField.focus();
+        firstErrorField.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+
       return;
     }
 
@@ -183,7 +223,7 @@ let DoctorRegisterForm = () => {
         email: formData.email.trim(),
         password: formData.password,
         phone: formData.phone.trim(),
-        photo: formData.photo.trim(),
+        photo: formData.photo,
         specialization: formData.specialization.trim(),
         licenseNumber: formData.licenseNumber.trim(),
         experienceYears: Number(formData.experienceYears),
@@ -193,13 +233,15 @@ let DoctorRegisterForm = () => {
           .map((hospital) => hospital.trim())
           .filter((hospital) => hospital !== ""),
         consultationFee: Number(formData.consultationFee),
-        availabilitySchedules: formData.availabilitySchedules,
       };
 
       let response = await registerDoctor(payload);
 
       if (response.success) {
-        setSuccessMessage(response.message || "Doctor registration submitted successfully and pending admin approval.");
+        setSuccessMessage(
+          response.message ||
+            "Doctor registration submitted successfully and pending admin approval."
+        );
 
         setFormData({
           fullName: "",
@@ -214,22 +256,27 @@ let DoctorRegisterForm = () => {
           baseHospital: "",
           channelingHospitals: "",
           consultationFee: "",
-          availabilitySchedules: [
-            {
-              day: "",
-              startTime: "",
-              endTime: "",
-              isAvailable: true,
-            },
-          ],
         });
 
+        setPhotoPreview("");
         setErrors({});
+
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
       }
     } catch (error) {
       console.error("Registration error:", error);
-      const errorMsg = error.response?.data?.message || error.message || "Registration failed. Please try again.";
+
+      const errorMsg = !error.response
+        ? "Cannot reach Doctor Service. Please check service status and try again."
+        : error.response?.data?.message ||
+          error.message ||
+          "Registration failed. Please try again.";
+
       setServerError(errorMsg);
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
     }
@@ -312,7 +359,9 @@ let DoctorRegisterForm = () => {
                     onChange={handleChange}
                     placeholder="Dr. John Doe"
                   />
-                  {errors.fullName && <span className="field-error">{errors.fullName}</span>}
+                  {errors.fullName && (
+                    <span className="field-error">{errors.fullName}</span>
+                  )}
                 </div>
 
                 <div className="doctor-register-field">
@@ -324,7 +373,9 @@ let DoctorRegisterForm = () => {
                     onChange={handleChange}
                     placeholder="doctor@email.com"
                   />
-                  {errors.email && <span className="field-error">{errors.email}</span>}
+                  {errors.email && (
+                    <span className="field-error">{errors.email}</span>
+                  )}
                 </div>
 
                 <div className="doctor-register-field">
@@ -336,18 +387,73 @@ let DoctorRegisterForm = () => {
                     onChange={handleChange}
                     placeholder="0771234567"
                   />
-                  {errors.phone && <span className="field-error">{errors.phone}</span>}
+                  {errors.phone && (
+                    <span className="field-error">{errors.phone}</span>
+                  )}
                 </div>
 
                 <div className="doctor-register-field full-width">
-                  <label>Photo URL</label>
+                  <label>Profile Photo</label>
+
                   <input
-                    type="text"
-                    name="photo"
-                    value={formData.photo}
-                    onChange={handleChange}
-                    placeholder="https://example.com/doctor-photo.jpg"
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".jpg,.jpeg,.png"
+                    onChange={handlePhotoChange}
+                    className="doctor-register-file-input"
                   />
+
+                  <div
+                    className={`doctor-register-upload-box ${
+                      isDragging ? "dragging" : ""
+                    }`}
+                    onClick={() => fileInputRef.current?.click()}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                  >
+                    {!photoPreview ? (
+                      <div className="doctor-register-upload-content">
+                        <div className="doctor-register-upload-icon">☁</div>
+                        <h4>Drop files here</h4>
+                        <p>JPG, JPEG, PNG up to 5MB</p>
+                      </div>
+                    ) : (
+                      <div className="doctor-register-photo-preview-wrapper">
+                        <img
+                          src={photoPreview}
+                          alt="Doctor preview"
+                          className="doctor-register-photo-preview"
+                        />
+                        <div className="doctor-register-photo-actions">
+                          <button
+                            type="button"
+                            className="doctor-register-photo-btn"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              fileInputRef.current?.click();
+                            }}
+                          >
+                            Change
+                          </button>
+                          <button
+                            type="button"
+                            className="doctor-register-photo-btn remove"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              removePhoto();
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {errors.photo && (
+                    <span className="field-error">{errors.photo}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -444,33 +550,6 @@ let DoctorRegisterForm = () => {
               </div>
             </div>
 
-            <AvailabilityScheduleInput
-              availabilitySchedules={formData.availabilitySchedules}
-              handleAvailabilityChange={handleAvailabilityChange}
-              addAvailabilityRow={addAvailabilityRow}
-              removeAvailabilityRow={removeAvailabilityRow}
-            />
-
-            {formData.availabilitySchedules.map((slot, index) => (
-              <div key={index} className="availability-errors">
-                {errors[`availability_day_${index}`] && (
-                  <span className="field-error">
-                    Schedule {index + 1}: {errors[`availability_day_${index}`]}
-                  </span>
-                )}
-                {errors[`availability_startTime_${index}`] && (
-                  <span className="field-error">
-                    Schedule {index + 1}: {errors[`availability_startTime_${index}`]}
-                  </span>
-                )}
-                {errors[`availability_endTime_${index}`] && (
-                  <span className="field-error">
-                    Schedule {index + 1}: {errors[`availability_endTime_${index}`]}
-                  </span>
-                )}
-              </div>
-            ))}
-
             <div className="doctor-register-section">
               <div className="doctor-register-section-header">
                 <h3>Account Security</h3>
@@ -486,7 +565,9 @@ let DoctorRegisterForm = () => {
                     onChange={handleChange}
                     placeholder="Enter password"
                   />
-                  {errors.password && <span className="field-error">{errors.password}</span>}
+                  {errors.password && (
+                    <span className="field-error">{errors.password}</span>
+                  )}
                 </div>
 
                 <div className="doctor-register-field">
@@ -512,6 +593,12 @@ let DoctorRegisterForm = () => {
             >
               {isSubmitting ? "Submitting..." : "Complete Registration"}
             </button>
+
+            {serverError && (
+              <div className="doctor-register-error-message inline-submit-error">
+                {serverError}
+              </div>
+            )}
 
             <p className="doctor-register-footer-text">
               Already registered? Wait for admin approval before accessing your

@@ -4,7 +4,6 @@ import DoctorSidebar from "../../components/doctor/DoctorSidebar";
 import "../../styles/Doctor/doctorDashboard.css";
 
 import {
-  doctorProfile,
   todayAppointments,
   pendingRequests,
   availabilitySlots,
@@ -14,6 +13,17 @@ import {
 
 const DoctorDashboard = () => {
   const navigate = useNavigate();
+  let user = null;
+  try {
+    const storedUser = localStorage.getItem("user");
+    user = storedUser ? JSON.parse(storedUser) : null;
+  } catch (error) {
+    user = null;
+  }
+  const rawDoctorName = user?.name || user?.fullName || "Doctor";
+  const doctorName = /^dr\.?\s/i.test(rawDoctorName)
+    ? rawDoctorName
+    : `Dr. ${rawDoctorName}`;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date().getDate());
   const [calendarDays, setCalendarDays] = useState([]);
@@ -183,7 +193,7 @@ const DoctorDashboard = () => {
           <div>
             <h1 className="page-title">Dashboard</h1>
             <p className="page-subtitle">
-              Welcome back, {doctorProfile.name}. You have {dashboardStats.sessionsToday} sessions today.
+              Welcome back, {doctorName}. You have {dashboardStats.sessionsToday} sessions today.
             </p>
           </div>
 

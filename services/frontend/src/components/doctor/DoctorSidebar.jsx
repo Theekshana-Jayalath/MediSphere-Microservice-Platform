@@ -3,6 +3,18 @@ import "../../styles/Doctor/doctorSidebar.css";
 
 const DoctorSidebar = () => {
   const location = useLocation();
+  let user = null;
+  try {
+    const storedUser = localStorage.getItem("user");
+    user = storedUser ? JSON.parse(storedUser) : null;
+  } catch (error) {
+    user = null;
+  }
+  const rawDoctorName = user?.name || user?.fullName || "Doctor";
+  const doctorName = /^dr\.?\s/i.test(rawDoctorName)
+    ? rawDoctorName
+    : `Dr. ${rawDoctorName}`;
+  const doctorRole = user?.specialization || user?.role || "Doctor";
 
   const menuItems = [
     { label: "Dashboard", path: "/doctor/dashboard", icon: "📊" },
@@ -46,8 +58,8 @@ const DoctorSidebar = () => {
         <div className="doctor-mini-card">
           <div className="doctor-avatar">👨‍⚕️</div>
           <div>
-            <h4>Dr. Julian Vane</h4>
-            <p>Chief Cardiologist</p>
+            <h4>{doctorName}</h4>
+            <p>{doctorRole}</p>
           </div>
         </div>
       </div>

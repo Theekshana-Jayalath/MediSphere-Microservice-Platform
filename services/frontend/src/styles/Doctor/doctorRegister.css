@@ -1,3 +1,4 @@
+/* ================= BASE ================= */
 * {
   box-sizing: border-box;
 }
@@ -9,6 +10,7 @@
   background: #f5f1ed;
 }
 
+/* ================= LEFT PANEL ================= */
 .doctor-register-left-panel {
   background: linear-gradient(180deg, #10294b 0%, #163862 100%);
   color: #ffffff;
@@ -44,83 +46,19 @@
   margin: 0;
   font-size: 30px;
   font-weight: 800;
-  letter-spacing: 0.5px;
-}
-
-.doctor-register-left-content {
-  max-width: 620px;
-  margin-top: 40px;
-}
-
-.doctor-register-badge {
-  display: inline-block;
-  padding: 10px 18px;
-  border-radius: 999px;
-  background: #dbe8ff;
-  color: #10294b;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  margin-bottom: 28px;
 }
 
 .doctor-register-left-content h1 {
-  margin: 0 0 24px;
-  font-size: 78px;
-  line-height: 0.95;
+  font-size: 72px;
   font-weight: 800;
 }
 
-.doctor-register-left-content h1 span {
-  font-style: italic;
-  color: #c7d5ec;
-}
-
 .doctor-register-left-content p {
-  max-width: 640px;
-  font-size: 27px;
-  line-height: 1.7;
+  font-size: 22px;
   color: #d7e3f6;
-  margin-bottom: 48px;
 }
 
-.doctor-register-highlight-box {
-  width: 420px;
-  background: rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(10px);
-  border-radius: 24px;
-  padding: 24px;
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.14);
-}
-
-.doctor-register-highlight-box h4 {
-  margin: 0 0 8px;
-  font-size: 24px;
-  color: #ffffff;
-}
-
-.doctor-register-highlight-box p {
-  font-size: 18px;
-  margin: 0 0 18px;
-  line-height: 1.6;
-  color: #d9e6f7;
-}
-
-.doctor-register-progress-bar {
-  height: 8px;
-  width: 100%;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.35);
-  overflow: hidden;
-}
-
-.doctor-register-progress-fill {
-  height: 100%;
-  width: 68%;
-  background: #0b1f3a;
-  border-radius: 999px;
-}
-
+/* ================= RIGHT PANEL ================= */
 .doctor-register-right-panel {
   background: #f6f1ed;
   padding: 30px 40px;
@@ -132,57 +70,13 @@
   margin: 0 auto;
 }
 
-.doctor-register-back-link {
-  border: none;
-  background: transparent;
-  color: #08244a;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-bottom: 18px;
-  padding: 0;
-}
-
-.doctor-register-form-wrapper h2 {
-  font-size: 52px;
-  color: #08244a;
-  margin: 0 0 12px;
-  font-weight: 800;
-}
-
-.doctor-register-subtitle {
-  color: #4c5d76;
-  font-size: 24px;
-  margin-bottom: 34px;
-  line-height: 1.6;
-}
-
 .doctor-register-form {
   display: flex;
   flex-direction: column;
   gap: 26px;
 }
 
-.doctor-register-section {
-  border-top: 1px solid #d8d1cb;
-  padding-top: 24px;
-}
-
-.doctor-register-section-header h3 {
-  margin: 0 0 18px;
-  color: #08244a;
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-}
-
-.doctor-register-section-header p {
-  color: #67758c;
-  margin-top: -8px;
-  margin-bottom: 18px;
-  font-size: 18px;
-}
-
+/* ================= FIELDS ================= */
 .doctor-register-grid {
   display: grid;
   gap: 22px;
@@ -190,10 +84,6 @@
 
 .doctor-register-grid.two-columns {
   grid-template-columns: 1fr 1fr;
-}
-
-.doctor-register-grid.three-columns {
-  grid-template-columns: 1fr 1fr 1fr;
 }
 
 .doctor-register-field {
@@ -206,219 +96,176 @@
 }
 
 .doctor-register-field label {
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
-  color: #50627f;
-  margin-bottom: 10px;
-  text-transform: uppercase;
-}
-
-.doctor-register-field input,
-.doctor-register-field select,
-.doctor-register-field textarea {
-  width: 100%;
-  height: 64px;
-  border: 1px solid #e0dad4;
-  border-radius: 18px;
-  padding: 0 18px;
-  font-size: 22px;
-  color: #233754;
-  background: #ffffff;
-  outline: none;
-  transition: 0.2s ease;
-}
-
-.doctor-register-field textarea {
-  min-height: 120px;
-  padding-top: 18px;
-  resize: vertical;
-}
-
-.doctor-register-field input:focus,
-.doctor-register-field select:focus,
-.doctor-register-field textarea:focus {
-  border-color: #183a66;
-  box-shadow: 0 0 0 4px rgba(24, 58, 102, 0.08);
-}
-
-.field-hint {
-  margin-top: 8px;
   font-size: 14px;
-  color: #7a879c;
-}
-
-.field-error {
-  margin-top: 8px;
-  font-size: 14px;
-  color: #d12828;
-  font-weight: 600;
-  display: block;
-}
-
-.doctor-register-success-message {
-  background: #e8f8ef;
-  color: #12733d;
-  padding: 16px 18px;
-  border-radius: 14px;
-  margin-bottom: 18px;
-  font-weight: 600;
-}
-
-.doctor-register-error-message {
-  background: #ffeceb;
-  color: #c02b1d;
-  padding: 16px 18px;
-  border-radius: 14px;
-  margin-bottom: 18px;
-  font-weight: 600;
-}
-
-.availability-row {
-  margin-bottom: 18px;
-  padding: 18px;
-  border: 1px solid #e2ddd8;
-  border-radius: 18px;
-  background: #fffdfa;
-}
-
-.availability-row-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 12px;
-}
-
-.doctor-register-secondary-btn,
-.doctor-register-remove-btn {
-  border: none;
-  border-radius: 14px;
-  padding: 12px 18px;
-  font-size: 15px;
   font-weight: 700;
+  color: #50627f;
+  margin-bottom: 8px;
+}
+
+.doctor-register-field input {
+  height: 60px;
+  border: 1px solid #e0dad4;
+  border-radius: 16px;
+  padding: 0 16px;
+  font-size: 18px;
+}
+
+.doctor-register-field input:focus {
+  border-color: #183a66;
+  box-shadow: 0 0 0 3px rgba(24, 58, 102, 0.1);
+}
+
+/* ================= UPLOAD BOX ================= */
+
+.doctor-register-file-input {
+  display: none;
+}
+
+.doctor-register-upload-box {
+  width: 100%;
+  min-height: 160px;
+  border: 2px dashed #d8d3cd;
+  border-radius: 20px;
+  background: #fbf9f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: 0.3s ease;
+  padding: 20px;
+}
+
+.doctor-register-upload-box:hover {
+  border-color: #10294b;
+  background: #f3f6fb;
+}
+
+.doctor-register-upload-box.dragging {
+  border-color: #10294b;
+  background: #eaf1fb;
+  transform: scale(1.01);
+}
+
+/* Upload content */
+.doctor-register-upload-content {
+  text-align: center;
+  color: #6c7a89;
+}
+
+.doctor-register-upload-icon {
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+
+.doctor-register-upload-content h4 {
+  margin: 0;
+  font-size: 18px;
+  color: #10294b;
+}
+
+.doctor-register-upload-content p {
+  font-size: 14px;
+  color: #8a96a6;
+}
+
+/* ================= IMAGE PREVIEW ================= */
+
+.doctor-register-photo-preview-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.doctor-register-photo-preview {
+  width: 150px;
+  height: 150px;
+  border-radius: 18px;
+  object-fit: cover;
+  border: 3px solid #dbe5f0;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
+}
+
+.doctor-register-photo-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.doctor-register-photo-btn {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: none;
+  background: #10294b;
+  color: white;
+  font-size: 14px;
   cursor: pointer;
 }
 
-.doctor-register-secondary-btn {
-  background: #dbe7f7;
-  color: #0f2c52;
-  margin-top: 8px;
+.doctor-register-photo-btn:hover {
+  background: #0b1f3a;
 }
 
-.doctor-register-remove-btn {
-  background: #ffe5e2;
-  color: #af2f24;
+.doctor-register-photo-btn.remove {
+  background: #f1dcdc;
+  color: #a52a2a;
 }
 
-.availability-errors {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
+/* ================= BUTTON ================= */
 
 .doctor-register-submit-btn {
   height: 70px;
-  border: none;
   border-radius: 20px;
-  background: linear-gradient(90deg, #031f45 0%, #1d3658 100%);
-  color: #ffffff;
-  font-size: 26px;
-  font-weight: 800;
+  background: linear-gradient(90deg, #031f45, #1d3658);
+  color: #fff;
+  font-size: 22px;
+  font-weight: bold;
   cursor: pointer;
-  margin-top: 8px;
-  transition: 0.2s ease;
 }
 
 .doctor-register-submit-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 20px rgba(9, 28, 55, 0.16);
+  transform: translateY(-2px);
 }
 
-.doctor-register-submit-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
+/* ================= ERROR ================= */
+
+.field-error {
+  font-size: 13px;
+  color: red;
+  margin-top: 6px;
 }
 
-.doctor-register-footer-text {
-  text-align: center;
-  color: #7b8292;
-  font-size: 16px;
-  margin-top: 10px;
-  line-height: 1.6;
+.doctor-register-error-message {
+  background: #fde9e9;
+  color: #9f1f1f;
+  border: 1px solid #f3c1c1;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
-@media (max-width: 1400px) {
-  .doctor-register-left-content h1 {
-    font-size: 58px;
-  }
-
-  .doctor-register-left-content p {
-    font-size: 20px;
-  }
-
-  .doctor-register-form-wrapper h2 {
-    font-size: 40px;
-  }
-
-  .doctor-register-subtitle {
-    font-size: 18px;
-  }
-
-  .doctor-register-field input,
-  .doctor-register-field select,
-  .doctor-register-field textarea {
-    font-size: 18px;
-    height: 56px;
-  }
+.inline-submit-error {
+  margin-top: -8px;
 }
 
-@media (max-width: 1100px) {
+.doctor-register-success-message {
+  background: #e8f7ed;
+  color: #1d6a3a;
+  border: 1px solid #bfe8cc;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 900px) {
   .doctor-register-page {
     grid-template-columns: 1fr;
   }
 
-  .doctor-register-left-panel {
-    position: relative;
-    min-height: auto;
-    padding: 28px;
-  }
-
-  .doctor-register-highlight-box {
-    width: 100%;
-    max-width: 420px;
-  }
-
-  .doctor-register-right-panel {
-    padding: 24px;
-  }
-}
-
-@media (max-width: 768px) {
-  .doctor-register-left-content h1 {
-    font-size: 44px;
-  }
-
-  .doctor-register-left-content p {
-    font-size: 18px;
-  }
-
-  .doctor-register-form-wrapper h2 {
-    font-size: 34px;
-  }
-
-  .doctor-register-grid.two-columns,
-  .doctor-register-grid.three-columns {
+  .doctor-register-grid.two-columns {
     grid-template-columns: 1fr;
-  }
-
-  .doctor-register-field input,
-  .doctor-register-field select,
-  .doctor-register-field textarea {
-    font-size: 16px;
-    height: 52px;
-  }
-
-  .doctor-register-submit-btn {
-    font-size: 20px;
-    height: 60px;
   }
 }

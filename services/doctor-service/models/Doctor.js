@@ -2,6 +2,16 @@ import mongoose from "mongoose";
 
 const availabilitySlotSchema = new mongoose.Schema(
   {
+    channelingHospital: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    location: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     day: {
       type: String,
       required: true,
@@ -16,6 +26,11 @@ const availabilitySlotSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+    },
+    type: {
+      type: String,
+      enum: ["In-Person", "Video Call", "Mixed"],
+      default: "In-Person",
     },
     isAvailable: {
       type: Boolean,

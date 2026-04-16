@@ -56,6 +56,90 @@ const forwardRequest = async (req, res, targetBaseUrl) => {
   }
 };
 
+// Get doctors that the patient has appointments with
+app.get("/api/doctors/my-doctors", async (req, res) => {
+  try {
+    const token = req.headers.authorization;
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required"
+      });
+    }
+
+    console.log("Fetching patient's doctors from appointment service");
+
+    // First, get all appointments for this patient
+    const appointmentsResponse = await axios({
+      method: "GET",
+      url: `${process.env.APPOINTMENT_SERVICE_URL}/api/appointments/my-appointments`,
+      headers: {
+        Authorization: token
+      },
+      validateStatus: () => true,
+    });
+
+    if (appointmentsResponse.status !== 200) {
+      return res.status(200).json({
+        success: true,
+        data: []
+      });
+    }
+
+    const appointments = appointmentsResponse.data.data || appointmentsResponse.data || [];
+    
+    // Extract unique doctor IDs from appointments
+    const doctorIds = [...new Set(appointments.map(apt => apt.doctorId).filter(id => id))];
+    
+    if (doctorIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: []
+      });
+    }
+
+    // Fetch doctor details for those IDs
+    const doctorPromises = doctorIds.map(async (doctorId) => {
+      const doctorResponse = await axios({
+        method: "GET",
+        url: `${process.env.DOCTOR_SERVICE_URL}/api/doctors/${doctorId}`,
+        validateStatus: () => true,
+      });
+      
+      if (doctorResponse.status === 200 && doctorResponse.data) {
+        const doctor = doctorResponse.data.data || doctorResponse.data;
+        return {
+          _id: doctor._id,
+          fullName: doctor.fullName,
+          specialization: doctor.specialization,
+          consultationFee: doctor.consultationFee,
+          experienceYears: doctor.experienceYears,
+          photo: doctor.photo,
+          baseHospital: doctor.baseHospital
+        };
+      }
+      return null;
+    });
+
+    const doctors = (await Promise.all(doctorPromises)).filter(d => d !== null);
+    
+    console.log(`Found ${doctors.length} doctors for this patient`);
+    return res.status(200).json({
+      success: true,
+      data: doctors
+    });
+    
+  } catch (error) {
+    console.error("Error fetching patient's doctors:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch doctors",
+      data: []
+    });
+  }
+});
+
 app.use("/api/auth", (req, res) =>
   forwardRequest(req, res, process.env.AUTH_SERVICE_URL)
 );

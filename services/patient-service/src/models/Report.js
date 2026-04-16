@@ -12,6 +12,11 @@ const reportSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    doctorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Doctor",
+      required: false,
+    },
     title: {
       type: String,
       required: [true, "Report title is required"],

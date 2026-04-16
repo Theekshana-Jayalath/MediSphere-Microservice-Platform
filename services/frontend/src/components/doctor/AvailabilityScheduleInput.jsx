@@ -15,7 +15,7 @@ let AvailabilityScheduleInput = ({
 
       {availabilitySchedules.map((slot, index) => (
         <div className="availability-row" key={index}>
-          <div className="doctor-register-grid three-columns">
+          <div className="doctor-register-grid two-columns">
             <div className="doctor-register-field">
               <label>Day</label>
               <select
@@ -54,6 +54,18 @@ let AvailabilityScheduleInput = ({
                 onChange={(event) =>
                   handleAvailabilityChange(index, "endTime", event.target.value)
                 }
+              />
+            </div>
+
+            <div className="doctor-register-field">
+              <label>Department</label>
+              <input
+                type="text"
+                value={slot.department || ""}
+                onChange={(event) =>
+                  handleAvailabilityChange(index, "department", event.target.value)
+                }
+                placeholder="Cardiology"
               />
             </div>
           </div>
