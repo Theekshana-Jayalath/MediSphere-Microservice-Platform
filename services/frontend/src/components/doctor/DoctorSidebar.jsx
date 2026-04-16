@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import "../../styles/Doctor/doctorSidebar.css";
 
@@ -15,6 +16,61 @@ const DoctorSidebar = () => {
     ? rawDoctorName
     : `Dr. ${rawDoctorName}`;
   const doctorRole = user?.specialization || user?.role || "Doctor";
+  const [doctorIdentifier, setDoctorIdentifier] = useState(
+    user?.doctorId || "ID pending"
+  );
+
+  useEffect(() => {
+    const doctorUserId = user?.id || user?._id;
+
+    if (user?.doctorId || !doctorUserId) {
+      return;
+    }
+
+    const token = localStorage.getItem("authToken") || localStorage.getItem("token");
+    const baseUrls = [
+      import.meta.env.VITE_DOCTOR_API_BASE_URL,
+      "http://localhost:6010/api/doctors",
+    ].filter(Boolean);
+
+    const fetchDoctorId = async () => {
+      for (const baseUrl of baseUrls) {
+        try {
+          const response = await fetch(`${baseUrl}/${doctorUserId}`, {
+            headers: token
+              ? {
+                  Authorization: `Bearer ${token}`,
+                }
+              : {},
+          });
+
+          if (!response.ok) {
+            continue;
+          }
+
+          const payload = await response.json();
+          const fetchedDoctorId = payload?.data?.doctorId;
+
+          if (fetchedDoctorId) {
+            setDoctorIdentifier(fetchedDoctorId);
+            localStorage.setItem(
+              "user",
+              JSON.stringify({
+                ...user,
+                doctorId: fetchedDoctorId,
+              })
+            );
+          }
+
+          break;
+        } catch (error) {
+          continue;
+        }
+      }
+    };
+
+    fetchDoctorId();
+  }, [user]);
 
   const menuItems = [
     { label: "Dashboard", path: "/doctor/dashboard", icon: "📊" },
@@ -60,6 +116,7 @@ const DoctorSidebar = () => {
           <div>
             <h4>{doctorName}</h4>
             <p>{doctorRole}</p>
+            <p className="doctor-id-badge">{doctorIdentifier}</p>
           </div>
         </div>
       </div>

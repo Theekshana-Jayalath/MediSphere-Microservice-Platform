@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Doctor from "../models/Doctor.js";
+import Counter from "../models/Counter.js";
 
 const WEEKDAY_NAMES = [
   "Sunday",
@@ -95,6 +96,16 @@ const generateDoctorToken = (doctor) => {
   );
 };
 
+const generateDoctorId = async () => {
+  const counter = await Counter.findOneAndUpdate(
+    { name: "doctorId" },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+
+  return `DOC${String(counter.seq).padStart(4, "0")}`;
+};
+
 export const registerDoctor = async (req, res, next) => {
   try {
     const {
@@ -150,8 +161,10 @@ export const registerDoctor = async (req, res, next) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const doctorId = await generateDoctorId();
 
     const doctor = await Doctor.create({
+      doctorId,
       fullName,
       email: email.toLowerCase(),
       password: hashedPassword,
@@ -174,6 +187,7 @@ export const registerDoctor = async (req, res, next) => {
     });
 
     console.log("Doctor registered successfully:", doctor._id);
+    console.log("Assigned doctor ID:", doctor.doctorId);
 
     return res.status(201).json({
       success: true,
@@ -210,7 +224,7 @@ export const getDoctorById = async (req, res, next) => {
 export const getDoctorApprovalStatus = async (req, res, next) => {
   try {
     const doctor = await Doctor.findById(req.params.id).select(
-      "approvalStatus rejectionReason fullName email"
+      "doctorId approvalStatus rejectionReason fullName email"
     );
 
     if (!doctor) {
@@ -499,6 +513,7 @@ export const loginDoctor = async (req, res, next) => {
       token: generateDoctorToken(doctor),
       user: {
         id: doctor._id,
+        doctorId: doctor.doctorId,
         name: doctor.fullName,
         email: doctor.email,
         role: doctor.role || "doctor",
