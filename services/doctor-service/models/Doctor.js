@@ -12,6 +12,11 @@ const availabilitySlotSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    date: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     day: {
       type: String,
       required: true,

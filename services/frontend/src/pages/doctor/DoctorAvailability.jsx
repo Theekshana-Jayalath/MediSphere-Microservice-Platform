@@ -2,10 +2,65 @@
 import DoctorSidebar from "../../components/doctor/DoctorSidebar";
 import "../../styles/Doctor/doctorAvailability.css";
 
+const WEEKDAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+const toLocalDateInputValue = (date) => {
+  const offsetInMilliseconds = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - offsetInMilliseconds)
+    .toISOString()
+    .split("T")[0];
+};
+
+const getCurrentWeekBounds = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const weekEnd = new Date(today);
+  weekEnd.setDate(today.getDate() + (6 - today.getDay()));
+  weekEnd.setHours(0, 0, 0, 0);
+
+  return {
+    minDate: toLocalDateInputValue(today),
+    maxDate: toLocalDateInputValue(weekEnd),
+  };
+};
+
+const getDayNameFromDate = (dateValue) => {
+  if (!dateValue) {
+    return "";
+  }
+
+  const [year, month, day] = dateValue.split("-").map(Number);
+
+  if (!year || !month || !day) {
+    return "";
+  }
+
+  const selectedDate = new Date(year, month - 1, day);
+  return WEEKDAY_NAMES[selectedDate.getDay()];
+};
+
+const isDateWithinCurrentWeek = (dateValue, minDate, maxDate) => {
+  if (!dateValue) {
+    return false;
+  }
+
+  return dateValue >= minDate && dateValue <= maxDate;
+};
+
 const createEmptySlot = () => ({
   id: "",
   channelingHospital: "",
   location: "",
+  date: "",
   day: "",
   startTime: "",
   endTime: "",
@@ -25,6 +80,7 @@ const safeParseJSON = (value) => {
 };
 
 const DoctorAvailability = () => {
+  const { minDate, maxDate } = useMemo(() => getCurrentWeekBounds(), []);
   const [availabilityList, setAvailabilityList] = useState([]);
   const [doctorProfile, setDoctorProfile] = useState(null);
   const [formData, setFormData] = useState(createEmptySlot());
@@ -56,6 +112,7 @@ const DoctorAvailability = () => {
       profile?.baseHospital ||
       "Not specified",
     location: schedule?.location || profile?.baseHospital || "Not specified",
+    date: schedule?.date || "",
     day: schedule?.day || "",
     startTime: schedule?.startTime || "",
     endTime: schedule?.endTime || "",
@@ -66,6 +123,7 @@ const DoctorAvailability = () => {
   const mapSlotToSchedule = (slot) => ({
     channelingHospital: slot.channelingHospital,
     location: slot.location,
+    date: slot.date,
     day: slot.day,
     startTime: slot.startTime,
     endTime: slot.endTime,
@@ -189,6 +247,16 @@ const DoctorAvailability = () => {
     }));
   };
 
+  const handleDateChange = (event) => {
+    const { value } = event.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      date: value,
+      day: getDayNameFromDate(value),
+    }));
+  };
+
   const validateForm = () => {
     if (!formData.channelingHospital.trim()) {
       setError("Channeling hospital name is required.");
@@ -197,6 +265,16 @@ const DoctorAvailability = () => {
 
     if (!formData.location.trim()) {
       setError("Location is required.");
+      return false;
+    }
+
+    if (!formData.date) {
+      setError("Please select a date.");
+      return false;
+    }
+
+    if (!isDateWithinCurrentWeek(formData.date, minDate, maxDate)) {
+      setError("Please select a date from today through the end of this week.");
       return false;
     }
 
@@ -240,6 +318,8 @@ const DoctorAvailability = () => {
         doctorProfile?.channelingHospitals?.[0] ||
         "Not specified",
       location: formData.location,
+      date: formData.date,
+      day: formData.day || getDayNameFromDate(formData.date),
     };
 
     const nextList = [newSlot, ...availabilityList];
@@ -330,8 +410,6 @@ const DoctorAvailability = () => {
                   )}
                 </div>
 
-                
-
                 <div className="availability-field full-width">
                   <label>Location</label>
                   <input
@@ -343,14 +421,30 @@ const DoctorAvailability = () => {
                   />
                 </div>
 
+                <div className="availability-field full-width">
+                  <label>Date</label>
+                  <input
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleDateChange}
+                    min={minDate}
+                    max={maxDate}
+                  />
+                  <span className="field-hint">
+                    Select a date from today through the end of this week.
+                  </span>
+                </div>
+
                 <div className="availability-field">
                   <label>Day</label>
                   <select
                     name="day"
                     value={formData.day}
                     onChange={handleChange}
+                    disabled
                   >
-                    <option value="">Select Day</option>
+                    <option value="">Select date first</option>
                     <option value="Monday">Monday</option>
                     <option value="Tuesday">Tuesday</option>
                     <option value="Wednesday">Wednesday</option>
@@ -481,6 +575,7 @@ const DoctorAvailability = () => {
 
                     <div className="availability-item-info">
                       <span>📍 {slot.location}</span>
+                      <span>🗓️ {slot.date}</span>
                       <span>📅 {slot.day}</span>
                       <span>
                         ⏰ {slot.startTime} - {slot.endTime}
