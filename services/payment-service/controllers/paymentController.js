@@ -1,5 +1,6 @@
 import Payment from "../models/paymentModel.js";
 import { generateHash } from "../utils/payhereHash.js";
+import axios from "axios";
 
 export const createPayment = async (req, res) => {
   try {
@@ -28,12 +29,55 @@ export const createPayment = async (req, res) => {
       amount: Number(amount),
       currency: "LKR",
       status: "PENDING",
-      contact,
-      bookingDetails: bookingDetails || {}
+      contact
+      // bookingDetails: bookingDetails || {}
     });
 
     await payment.save();
     console.log("💾 Payment saved to database");
+
+    // If the caller already provided an appointmentId (appointment created earlier),
+    // we should NOT create a duplicate appointment — keep the same id.
+    if (!appointmentId && !payment.appointmentId) {
+      try {
+        const appointmentServiceBase = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
+        const bd = payment.bookingDetails || {};
+        const doc = bd.doctor || {};
+
+        const appointmentPayload = {
+          appointmentId: payment.appointmentId || `APT_${Date.now()}`,
+          patientId: payment.patientId,
+          doctorId: payment.doctorId,
+          doctorName: doc.fullName || doc.name || "",
+          doctorSpecialty: doc.specialization || doc.specialty || "",
+          hospital: doc.baseHospital || doc.hospital || "",
+          appointmentDate: bd.selectedDate || bd.appointmentDate || "",
+          appointmentTime: bd.selectedTime || bd.appointmentTime || bd.startTime || "",
+          startTime: bd.selectedTime || bd.startTime || "",
+          duration: bd.duration || bd.selectedConsultation?.duration || 30,
+          consultationType: bd.selectedConsultation?.type || bd.selectedConsultation || "Consultation",
+          amount: payment.amount || 0,
+          paymentId: payment._id.toString(),
+          status: "PENDING"
+        };
+
+        console.log("📤 Creating initial appointment (PENDING) via Appointment Service:", appointmentPayload);
+        const resp = await axios.post(`${appointmentServiceBase}/api/appointments`, appointmentPayload, {
+          headers: { "Content-Type": "application/json" },
+          timeout: 8000
+        });
+
+        console.log("✅ Initial appointment created:", resp.data);
+        if (resp.data && (resp.data._id || resp.data.appointmentId)) {
+          payment.appointmentId = resp.data.appointmentId || payment.appointmentId || appointmentPayload.appointmentId;
+          await payment.save();
+        }
+      } catch (err) {
+        console.error("⚠️ Could not create initial appointment (will retry on IPN):", err?.response?.data || err.message || err);
+      }
+    } else {
+      console.log("ℹ️ Skipping appointment creation because appointmentId was provided by caller:", appointmentId || payment.appointmentId);
+    }
 
     const formattedAmount = Number(amount).toFixed(2);
     console.log("💰 Amount:", formattedAmount);
@@ -111,7 +155,98 @@ export const createPayment = async (req, res) => {
 
 export const handleIPN = async (req, res) => {
   console.log("📨 IPN received:", req.body);
-  res.sendStatus(200);
+
+  try {
+    const body = req.body || {};
+
+    const orderId = body.order_id || body.orderId || body.orderId;
+    const statusCode = body.status_code || body.status || body.payment_status;
+
+    // Find the payment by orderId
+    if (!orderId) {
+      console.error("⚠️ IPN missing order_id");
+      return res.status(400).send("Missing order_id");
+    }
+
+    const payment = await Payment.findOne({ orderId });
+
+    if (!payment) {
+      console.error("⚠️ Payment not found for orderId:", orderId);
+      return res.status(404).send("Payment not found");
+    }
+
+    // PayHere uses status_code: 2 = success
+    const isSuccess = String(statusCode) === "2" || String(body.status).toLowerCase() === "paid" || String(body.status).toLowerCase() === "success";
+
+    if (!isSuccess) {
+      // mark as failed
+      payment.status = "FAILED";
+      payment.transactionId = body.payment_id || body.transaction_id || payment.transactionId;
+      await payment.save();
+      console.log("⚠️ Payment marked as FAILED for orderId:", orderId);
+      return res.status(200).send("OK");
+    }
+
+    // Update payment record to SUCCESS
+    payment.status = "SUCCESS";
+    payment.transactionId = body.payment_id || body.transaction_id || payment.transactionId || (body.paymentId || body.payhere_payment_id);
+    payment.updatedAt = new Date();
+    await payment.save();
+
+    console.log("✅ Payment updated to SUCCESS for orderId:", orderId);
+
+    // Create appointment in Appointment Service using saved payment data
+    const appointmentServiceBase = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
+
+    const bd = payment.bookingDetails || {};
+    const doc = bd.doctor || {};
+
+    // Map bookingDetails -> appointment payload expected by appointment service
+    const appointmentPayload = {
+      appointmentId: payment.appointmentId || `APT_${Date.now()}`,
+      patientId: payment.patientId,
+      doctorId: payment.doctorId,
+      doctorName: doc.fullName || doc.name || doc.fullName || doc.displayName || "",
+      doctorSpecialty: doc.specialization || doc.specialty || "",
+      hospital: doc.baseHospital || doc.hospital || "",
+      appointmentDate: bd.selectedDate || bd.appointmentDate || "",
+      appointmentTime: bd.selectedTime || bd.appointmentTime || bd.startTime || "",
+      // include startTime and duration which appointment controller expects for overlap checks
+      startTime: bd.selectedTime || bd.startTime || "",
+      duration: bd.duration || 30,
+      consultationType: bd.selectedConsultation || bd.consultationType || "",
+      amount: payment.amount || 0,
+      paymentId: payment._id.toString()
+    };
+
+    console.log("📤 Creating appointment via Appointment Service:", appointmentPayload);
+
+    try {
+      const resp = await axios.post(`${appointmentServiceBase}/api/appointments`, appointmentPayload, {
+        headers: { "Content-Type": "application/json" },
+        timeout: 10000
+      });
+
+      console.log("✅ Appointment created:", resp.data);
+
+      // Optionally link appointment internal id back to payment if returned
+      // If appointment creation returns appointment.appointmentId or _id, keep them
+      if (resp.data && (resp.data._id || resp.data.appointmentId)) {
+        payment.appointmentId = resp.data.appointmentId || payment.appointmentId;
+        await payment.save();
+      }
+
+      return res.status(200).send("OK");
+    } catch (err) {
+      console.error("❌ Failed to create appointment after payment success:", err?.response?.data || err.message || err);
+      // Keep payment as SUCCESS but log error. Respond 500 so IPN sender can retry.
+      return res.status(500).send("Appointment creation failed");
+    }
+
+  } catch (error) {
+    console.error("❌ IPN handler error:", error);
+    return res.status(500).send("IPN processing error");
+  }
 };
 
 export const getPaymentStatus = async (req, res) => {
@@ -123,6 +258,55 @@ export const getPaymentStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: "Payment not found" });
     }
     
+    // If payment still PENDING but this request originates from the frontend redirect
+    // (user returned from PayHere popup), attempt to finalize appointment as a fallback.
+    if (payment.status === "PENDING") {
+      const requestOrigin = req.get("origin") || req.get("referer") || "";
+      const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
+
+      if (requestOrigin.includes(frontendOrigin)) {
+        console.log("🔁 Frontend-origin verification detected for pending payment. Attempting to finalize appointment.");
+
+        // Mark payment SUCCESS and create appointment (best-effort fallback)
+        payment.status = "SUCCESS";
+        payment.updatedAt = new Date();
+        await payment.save();
+
+        // Create appointment via Appointment Service (same mapping used in IPN)
+        try {
+          const appointmentServiceBase = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
+          const bd = payment.bookingDetails || {};
+          const doc = bd.doctor || {};
+
+          const appointmentPayload = {
+            appointmentId: payment.appointmentId || `APT_${Date.now()}`,
+            patientId: payment.patientId,
+            doctorId: payment.doctorId,
+            doctorName: doc.fullName || doc.name || doc.displayName || "",
+            doctorSpecialty: doc.specialization || doc.specialty || "",
+            hospital: doc.baseHospital || doc.hospital || "",
+            appointmentDate: bd.selectedDate || bd.appointmentDate || "",
+            appointmentTime: bd.selectedTime || bd.appointmentTime || bd.startTime || "",
+            startTime: bd.selectedTime || bd.startTime || "",
+            duration: bd.duration || bd.selectedConsultation?.duration || 30,
+            consultationType: bd.selectedConsultation?.type || bd.selectedConsultation || "Consultation",
+            amount: payment.amount || 0,
+            paymentId: payment._id.toString()
+          };
+
+          console.log("📤 (fallback) Creating appointment via Appointment Service:", appointmentPayload);
+          const resp = await axios.post(`${appointmentServiceBase}/api/appointments`, appointmentPayload, { headers: { "Content-Type": "application/json" }, timeout: 10000 });
+          console.log("✅ (fallback) Appointment created:", resp.data);
+          if (resp.data && (resp.data._id || resp.data.appointmentId)) {
+            payment.appointmentId = resp.data.appointmentId || payment.appointmentId;
+            await payment.save();
+          }
+        } catch (err) {
+          console.error("❌ (fallback) Failed to create appointment:", err?.response?.data || err.message || err);
+        }
+      }
+    }
+
     res.json({ success: true, status: payment.status, payment });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

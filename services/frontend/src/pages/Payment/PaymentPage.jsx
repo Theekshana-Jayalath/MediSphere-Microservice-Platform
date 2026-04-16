@@ -18,6 +18,9 @@ const PaymentPage = () => {
     bookingDetails?.doctor?.raw?.consultationFee ||
     bookingDetails?.doctor?.consultationFee ||
     500;
+  const serviceCharge = 500;
+  const tax = consultationFee * 0.04;
+  const totalAmount = consultationFee + serviceCharge + tax;
 
   // Check if PayHere is loaded and setup event handlers
   useEffect(() => {
@@ -99,10 +102,10 @@ const PaymentPage = () => {
       const patientId = localStorage.getItem("patientId") || "temp_patient_" + Date.now();
       
       const requestBody = {
-        appointmentId: "APT_" + Date.now(),
+        appointmentId: bookingDetails?.appointmentId || "APT_" + Date.now(),
         patientId: patientId,
         doctorId: bookingDetails?.doctor?.id || bookingDetails?.doctor?._id,
-        amount: consultationFee,
+        amount: totalAmount,
         contact: contact,
         bookingDetails: {
           doctor: bookingDetails?.doctor,

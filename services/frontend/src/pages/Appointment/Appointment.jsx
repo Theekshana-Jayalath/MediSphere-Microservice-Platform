@@ -9,11 +9,56 @@ const Appointment = () => {
   const [search, setSearch] = useState("");
   const [selectedSpecialties, setSelectedSpecialties] = useState([]);
   const [selectedHospital, setSelectedHospital] = useState("All Hospitals");
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(() => sessionStorage.getItem("appointmentSelectedDate") || "");
   const [dateError, setDateError] = useState(false);
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (selectedDate) {
+      sessionStorage.setItem("appointmentSelectedDate", selectedDate);
+    } else {
+      sessionStorage.removeItem("appointmentSelectedDate");
+    }
+  }, [selectedDate]);
+
+  const isDoctorAvailableOnSelectedDate = (doctor, dateStr) => {
+    if (!dateStr) return true;
+
+    const schedules = doctor?.raw?.availabilitySchedules;
+    if (!Array.isArray(schedules) || schedules.length === 0) return false;
+
+    const selectedDateObj = new Date(`${dateStr}T00:00:00`);
+    const selectedDayName = selectedDateObj.toLocaleDateString("en-US", {
+      weekday: "long",
+    });
+    const selectedDayIndex = selectedDateObj.getDay();
+    const dayIndexMap = {
+      sunday: 0,
+      monday: 1,
+      tuesday: 2,
+      wednesday: 3,
+      thursday: 4,
+      friday: 5,
+      saturday: 6,
+    };
+
+    return schedules.some((schedule) => {
+      const scheduleDay = String(schedule?.day || "").trim().toLowerCase();
+      if (!scheduleDay) return false;
+
+      const selectedDayLower = selectedDayName.toLowerCase();
+      if (scheduleDay === selectedDayLower) return true;
+      if (scheduleDay === selectedDayLower.slice(0, 3)) return true;
+      if (dayIndexMap[scheduleDay] === selectedDayIndex) return true;
+      if (scheduleDay === "all" || scheduleDay === "everyday" || scheduleDay === "daily") {
+        return true;
+      }
+
+      return false;
+    });
+  };
 
   const filtered = doctors.filter((d) => {
     if (!d.name.toLowerCase().includes(search.toLowerCase())) return false;
@@ -28,6 +73,7 @@ const Appointment = () => {
       d.hospital !== selectedHospital
     )
       return false;
+    if (!isDoctorAvailableOnSelectedDate(d, selectedDate)) return false;
     return true;
   });
 
@@ -86,6 +132,7 @@ const Appointment = () => {
                 setSelectedSpecialties([]);
                 setSelectedHospital("All Hospitals");
                 setSelectedDate("");
+                setDateError(false);
               }}
             />
           </div>

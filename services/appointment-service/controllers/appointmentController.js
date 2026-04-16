@@ -1,5 +1,6 @@
 import Appointment from "../models/appointmentModel.js";
 import { generateSlots } from "../service/slotService.js";
+import axios from "axios";
 
 /* SEARCH */
 export async function searchAppointments(req, res) {
@@ -37,18 +38,40 @@ export async function getSlots(req, res) {
 export async function createAppointment(req, res) {
 
   try {
+  const data = req.body;
+  console.log("📥 Received createAppointment request:", JSON.stringify(data));
 
-    const data = req.body;
+    // Ensure required timing fields exist and are normalized
+    data.startTime = data.startTime || data.appointmentTime || "00:00";
+    data.duration = Number(data.duration) || (data.selectedConsultation?.duration ? Number(data.selectedConsultation.duration) : 30);
 
-    // calculate end time
-    const [h,m] = data.startTime.split(":");
+    // Safely parse startTime (format HH:MM)
+    const [h = "0", m = "0"] = String(data.startTime).split(":");
     const start = parseInt(h) * 60 + parseInt(m);
-    const end = start + data.duration;
+    const end = start + Number(data.duration);
 
     const endHour = Math.floor(end / 60);
     const endMin = end % 60;
 
-    data.endTime = `${endHour}:${endMin === 0 ? "00" : "30"}`;
+    data.endTime = `${endHour}:${endMin === 0 ? "00" : (endMin < 10 ? `0${endMin}` : endMin)}`;
+
+    // If doctor related display fields are missing, try to fetch from Doctor Service
+    const docId = data.doctorId;
+    if (docId && (!data.doctorName || !data.doctorSpecialty || !data.hospital)) {
+      const doctorServiceBase = process.env.DOCTOR_SERVICE_URL || "http://localhost:6010";
+      try {
+        const dresp = await axios.get(`${doctorServiceBase}/api/doctors/${docId}`, { timeout: 5000 });
+        const d = dresp.data;
+        if (d) {
+          data.doctorName = data.doctorName || d.fullName || d.name || d.displayName || "";
+          data.doctorSpecialty = data.doctorSpecialty || d.specialization || d.specialty || "";
+          data.hospital = data.hospital || d.baseHospital || d.hospital || "";
+        }
+      } catch (err) {
+        // Non-fatal: continue with whatever data is available
+        console.warn("⚠️ Could not fetch doctor details, proceeding with provided data:", err?.message || err);
+      }
+    }
 
     // overlap check
     const booked = await Appointment.find({
@@ -68,12 +91,30 @@ export async function createAppointment(req, res) {
       }
     }
 
+    // Ensure unique appointmentId - if missing or duplicate, generate a new one
+    if (!data.appointmentId) data.appointmentId = `APT_${Date.now()}_${Math.random().toString(36).substr(2,6)}`;
+    // If appointmentId already exists, append suffix until unique
+    let tries = 0;
+    while (tries < 3) {
+      const exists = await Appointment.findOne({ appointmentId: data.appointmentId });
+      if (!exists) break;
+      data.appointmentId = `${data.appointmentId}_${Math.random().toString(36).substr(2,4)}`;
+      tries++;
+    }
+
     const appointment = await Appointment.create(data);
 
     res.status(201).json(appointment);
 
   } catch (err) {
-    res.status(500).json(err);
+    console.error("❌ Create appointment error:", err);
+    // Format validation errors
+    if (err && err.name === 'ValidationError') {
+      const details = {};
+      for (const [k,v] of Object.entries(err.errors || {})) details[k] = v.message || String(v);
+      return res.status(400).json({ success: false, message: 'Validation failed', details });
+    }
+    res.status(500).json({ success: false, message: err?.message || 'Internal error', details: err });
   }
 }
 

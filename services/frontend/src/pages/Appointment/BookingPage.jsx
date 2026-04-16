@@ -22,7 +22,7 @@ const BookingPage = () => {
     }
   }, [doctor, navigate]);
 
-  const handleConfirmBooking = () => {
+  const handleConfirmBooking = async () => {
     // Validate consultation type
     if (!selectedType) {
       setValidationError('Please select a consultation type');
@@ -37,23 +37,68 @@ const BookingPage = () => {
       return;
     }
     
-    // Clear error and proceed to payment
+  // Clear error and proceed to payment
     setValidationError('');
     
     // Get consultation fee from doctor data (from database)
     const consultationFee = doctor?.raw?.consultationFee || doctor?.consultationFee || 500;
-    
-    navigate("/payment", {
-      state: {
-        bookingDetails: {
-          doctor,
-          selectedDate,
-          selectedTime,
-          selectedConsultation,
-          consultationFee: consultationFee // Pass consultation fee from database
-        }
+
+    // Create a PENDING appointment on the backend to reserve the slot
+    try {
+  const patientId = localStorage.getItem('patientId') || "temp_patient_" + Date.now();
+
+      const payload = {
+        appointmentId: "APT_" + Date.now(),
+        patientId: patientId,
+        doctorId: doctor._id || doctor.id,
+        doctorName: doctor.fullName || doctor.name || "",
+        doctorSpecialty: doctor.specialization || doctor.specialty || "",
+        hospital: doctor.baseHospital || doctor.hospital || "",
+        appointmentDate: selectedDate,
+        appointmentTime: selectedTime,
+        startTime: selectedTime,
+        duration: selectedConsultation?.duration || 30,
+  consultationType: selectedConsultation?.id || selectedConsultation?.type || selectedConsultation?.name || (typeof selectedConsultation === 'string' ? selectedConsultation : "Consultation"),
+        amount: consultationFee,
+        status: "PENDING"
+      };
+
+      const resp = await fetch("http://localhost:5002/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      console.log("📤 Appointment request payload:", payload);
+      console.log("📡 Appointment POST response status:", resp.status);
+
+      if (!resp.ok) {
+        let errBody = null;
+        try { errBody = await resp.json(); } catch (e) { try { errBody = await resp.text(); } catch(_) { errBody = null; } }
+        console.error("Failed to reserve appointment server response:", errBody);
+        setValidationError('Failed to reserve appointment: ' + (errBody ? JSON.stringify(errBody) : resp.statusText || 'Unknown error'));
+        return;
       }
-    });
+
+      const created = await resp.json();
+
+      // Navigate to payment with bookingDetails including created appointmentId
+      navigate("/payment", {
+        state: {
+          bookingDetails: {
+            doctor,
+            selectedDate,
+            selectedTime,
+            selectedConsultation,
+            consultationFee: consultationFee,
+            appointmentId: created.appointmentId || created._id
+          }
+        }
+      });
+    } catch (error) {
+      setValidationError('Failed to reserve appointment: ' + (error.message || error));
+      return;
+    }
   };
 
   if (!doctor) {

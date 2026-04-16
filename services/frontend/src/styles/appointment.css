@@ -290,6 +290,18 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 24px;
+  animation: filterGridIn 180ms ease-out;
+}
+
+@keyframes filterGridIn {
+  from {
+    opacity: 0.65;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Loading, Error, Empty States */
@@ -351,6 +363,18 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
+  animation: filterCardIn 180ms ease-out;
+}
+
+@keyframes filterCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .doctor-card:hover {
