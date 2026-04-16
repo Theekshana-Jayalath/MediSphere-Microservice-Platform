@@ -12,6 +12,23 @@ export async function getAllAppointments(req, res) {
   }
 }
 
+/* GET BY PATIENT */
+export async function getAppointmentsByPatient(req, res) {
+  try {
+    const { patientId } = req.params;
+
+    const appointments = await Appointment.find({ patientId }).sort({
+      appointmentDate: -1,
+      createdAt: -1,
+    });
+
+    res.status(200).json(appointments);
+  } catch (err) {
+    console.error("Failed to fetch patient appointments:", err);
+    res.status(500).json({ message: "Failed to fetch patient appointments" });
+  }
+}
+
 /* SEARCH */
 export async function searchAppointments(req, res) {
   const { doctorName, specialization, hospital, type } = req.query;
@@ -79,6 +96,60 @@ export async function createAppointment(req, res) {
     res.status(201).json(appointment);
   } catch (err) {
     res.status(500).json(err);
+  }
+}
+
+/* RESCHEDULE */
+export async function rescheduleAppointment(req, res) {
+  try {
+    const { id } = req.params;
+    const { appointmentDate, startTime } = req.body;
+
+    const appointment = await Appointment.findById(id);
+
+    if (!appointment) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    const targetDate = appointmentDate || appointment.appointmentDate;
+    const targetStartTime = startTime || appointment.startTime;
+    const duration = appointment.duration;
+
+    const [h, m] = targetStartTime.split(":");
+    const start = parseInt(h) * 60 + parseInt(m);
+    const end = start + duration;
+
+    const endHour = Math.floor(end / 60);
+    const endMin = end % 60;
+    const endTime = `${endHour}:${endMin === 0 ? "00" : "30"}`;
+
+    const booked = await Appointment.find({
+      _id: { $ne: id },
+      doctorId: appointment.doctorId,
+      appointmentDate: targetDate,
+      status: { $ne: "CANCELLED" },
+    });
+
+    for (let b of booked) {
+      const [bh, bm] = b.startTime.split(":");
+      const bStart = parseInt(bh) * 60 + parseInt(bm);
+      const bEnd = bStart + b.duration;
+
+      if (start < bEnd && end > bStart) {
+        return res.status(400).json({ message: "Time overlap" });
+      }
+    }
+
+    appointment.appointmentDate = targetDate;
+    appointment.startTime = targetStartTime;
+    appointment.endTime = endTime;
+
+    await appointment.save();
+
+    res.status(200).json(appointment);
+  } catch (err) {
+    console.error("Failed to reschedule appointment:", err);
+    res.status(500).json({ message: "Failed to reschedule appointment" });
   }
 }
 
