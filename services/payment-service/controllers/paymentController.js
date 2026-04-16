@@ -85,3 +85,16 @@ export const getAllPayments = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch payments" });
   }
 };
+
+export const getPaymentsByPatient = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+
+    const payments = await Payment.find({ patientId }).sort({ createdAt: -1 });
+
+    res.status(200).json(payments);
+  } catch (error) {
+    console.error("Failed to fetch patient payments:", error);
+    res.status(500).json({ message: "Failed to fetch patient payments" });
+  }
+};
