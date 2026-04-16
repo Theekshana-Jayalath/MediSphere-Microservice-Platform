@@ -6,6 +6,8 @@ export default function AdminDoctors() {
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [doctorToDelete, setDoctorToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [specialtyFilter, setSpecialtyFilter] = useState("All Specialties");
   const [statusFilter, setStatusFilter] = useState("All Status");
@@ -89,17 +91,16 @@ export default function AdminDoctors() {
     fetchDoctors();
   }, []);
 
-  const handleDelete = async (doctor) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${doctor.fullName || doctor.name}?`
-    );
-
-    if (!confirmed) return;
+  const handleDelete = async () => {
+    if (!doctorToDelete) return;
 
     try {
-      const token = getAuthToken();
+      setDeleting(true);
 
-      const response = await fetch(`${API_BASE_URL}/${doctor._id}`, {
+      const token = getAuthToken();
+      const doctorId = doctorToDelete._id || doctorToDelete.id;
+
+      const response = await fetch(`${API_BASE_URL}/${doctorId}`, {
         method: "DELETE",
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -112,15 +113,21 @@ export default function AdminDoctors() {
         throw new Error(data?.message || "Failed to delete doctor");
       }
 
-      if (selectedDoctor?._id === doctor._id) {
+      if (
+        selectedDoctor &&
+        (selectedDoctor._id || selectedDoctor.id) === doctorId
+      ) {
         setSelectedDoctor(null);
       }
 
+      setDoctorToDelete(null);
       await fetchDoctors();
       alert("Doctor deleted successfully");
     } catch (error) {
       console.error("Failed to delete doctor:", error);
       alert(error.message || "Failed to delete doctor");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -134,7 +141,9 @@ export default function AdminDoctors() {
 
   const filteredDoctors = useMemo(() => {
     return doctors.filter((doctor) => {
-      const fullName = String(doctor.fullName || doctor.name || "").toLowerCase();
+      const fullName = String(
+        doctor.fullName || doctor.name || ""
+      ).toLowerCase();
       const email = String(doctor.email || "").toLowerCase();
       const specialty = String(
         doctor.specialization || doctor.specialty || ""
@@ -381,7 +390,11 @@ export default function AdminDoctors() {
                           <td>{doctor.licenseNumber || "--"}</td>
 
                           <td>
-                            <div className={`status-pill ${formatStatusClass(status)}`}>
+                            <div
+                              className={`status-pill ${formatStatusClass(
+                                status
+                              )}`}
+                            >
                               <span className="dot"></span>
                               <span>{status}</span>
                             </div>
@@ -404,7 +417,7 @@ export default function AdminDoctors() {
                                 type="button"
                                 className="icon-action delete"
                                 title="Delete"
-                                onClick={() => handleDelete(doctor)}
+                                onClick={() => setDoctorToDelete(doctor)}
                               >
                                 <span className="material-symbols-outlined">
                                   delete
@@ -427,13 +440,17 @@ export default function AdminDoctors() {
 
               <div className="pagination">
                 <button type="button" disabled>
-                  <span className="material-symbols-outlined">chevron_left</span>
+                  <span className="material-symbols-outlined">
+                    chevron_left
+                  </span>
                 </button>
                 <button type="button" className="active">
                   1
                 </button>
                 <button type="button" disabled>
-                  <span className="material-symbols-outlined">chevron_right</span>
+                  <span className="material-symbols-outlined">
+                    chevron_right
+                  </span>
                 </button>
               </div>
             </div>
@@ -442,11 +459,11 @@ export default function AdminDoctors() {
       </div>
 
       {selectedDoctor && (
-        <div className="doctor-modal-overlay" onClick={() => setSelectedDoctor(null)}>
-          <div
-            className="doctor-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div
+          className="doctor-modal-overlay"
+          onClick={() => setSelectedDoctor(null)}
+        >
+          <div className="doctor-modal" onClick={(e) => e.stopPropagation()}>
             <div className="doctor-modal-header">
               <h2>Doctor Details</h2>
               <button type="button" onClick={() => setSelectedDoctor(null)}>
@@ -464,7 +481,9 @@ export default function AdminDoctors() {
                 alt={selectedDoctor.fullName || selectedDoctor.name}
               />
               <div>
-                <h3>{selectedDoctor.fullName || selectedDoctor.name || "--"}</h3>
+                <h3>
+                  {selectedDoctor.fullName || selectedDoctor.name || "--"}
+                </h3>
                 <p>{selectedDoctor.email || "--"}</p>
               </div>
             </div>
@@ -552,6 +571,51 @@ export default function AdminDoctors() {
                   <span>--</span>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {doctorToDelete && (
+        <div
+          className="doctor-modal-overlay"
+          onClick={() => {
+            if (!deleting) setDoctorToDelete(null);
+          }}
+        >
+          <div
+            className="doctor-modal delete-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="delete-modal-icon">
+              <span className="material-symbols-outlined">warning</span>
+            </div>
+
+            <h2>Delete Doctor</h2>
+            <p>
+              Are you sure you want to delete{" "}
+              <strong>{doctorToDelete.fullName || doctorToDelete.name}</strong>?
+            </p>
+            <p className="delete-subtext">This action cannot be undone.</p>
+
+            <div className="delete-modal-actions">
+              <button
+                type="button"
+                className="cancel-delete-btn"
+                onClick={() => setDoctorToDelete(null)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="confirm-delete-btn"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Yes, Delete"}
+              </button>
             </div>
           </div>
         </div>

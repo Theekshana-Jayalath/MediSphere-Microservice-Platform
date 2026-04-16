@@ -150,14 +150,6 @@ export default function AdminDashboard() {
           </div>
 
           <div className="admin-topbar-right">
-            <button className="admin-icon-btn">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
-            <button className="admin-icon-btn">
-              <span className="material-symbols-outlined">dark_mode</span>
-            </button>
-            <button className="admin-report-btn">Create Report</button>
-
             <div className="admin-profile-box">
               <div>
                 <h4>{user?.name || "Main Admin"}</h4>
@@ -289,16 +281,6 @@ export default function AdminDashboard() {
                       {getServiceStatusLabel(stats.platformStatistics?.paymentService)}
                     </span>
                   </div>
-                </div>
-              </div>
-
-              <div className="admin-card quick-actions-card">
-                <h3>QUICK ACTIONS</h3>
-                <div className="quick-actions-grid">
-                  <button>New Doctor</button>
-                  <button>Sync DB</button>
-                  <button>Audit Log</button>
-                  <button>Security</button>
                 </div>
               </div>
             </div>

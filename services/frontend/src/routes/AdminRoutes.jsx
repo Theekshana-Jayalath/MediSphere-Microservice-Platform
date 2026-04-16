@@ -3,6 +3,8 @@ import AdminDashboard from "../pages/Admin/AdminDashboard";
 import AdminPatients from "../pages/Admin/AdminPatients";
 import AdminDoctorVerification from "../pages/Admin/AdminVerifyAccounts";
 import AdminDoctors from "../pages/Admin/AdminDoctors";
+import AdminPayments from "../pages/Admin/AdminPayments";
+import AdminAppointments from "../pages/Admin/AdminAppointments";
 
 const adminRoutes = [
   <Route
@@ -24,6 +26,16 @@ const adminRoutes = [
     key="admin-doctors"
     path="/admin/doctors"
     element={<AdminDoctors />}
+  />,
+  <Route
+    key="admin-payments"
+    path="/admin/payments"
+    element={<AdminPayments />}
+  />,
+  <Route
+    key="admin-appointments"
+    path="/admin/appointments"
+    element={<AdminAppointments />}
   />,
 ];
 
