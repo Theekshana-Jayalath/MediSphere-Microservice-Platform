@@ -68,6 +68,7 @@ const Appointment = () => {
   return (
     <div className="appointment-page">
       <div className="appointment-container">
+
         <TopSearch search={search} setSearch={setSearch} />
 
         <div className="main-content">

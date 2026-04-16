@@ -626,3 +626,624 @@ body {
 .doctor-card:nth-child(6) { animation-delay: 0.3s; }
 .doctor-card:nth-child(7) { animation-delay: 0.35s; }
 .doctor-card:nth-child(8) { animation-delay: 0.4s; }
+
+/* ==================== BOOKING PAGE STYLES ==================== */
+
+/* Booking Page - Fixed Height, No Scroll */
+.booking-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--ms-accent) 0%, #fff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.booking-container {
+  max-width: 1300px;
+  width: 100%;
+  background: white;
+  border-radius: 28px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  padding: 32px 40px;
+}
+
+/* Header Section */
+.booking-header {
+  margin-bottom: 32px;
+}
+
+.booking-title-section {
+  text-align: center;
+}
+
+.booking-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--ms-dark);
+  margin: 0 0 12px 0;
+  background: linear-gradient(135deg, var(--ms-dark) 0%, var(--ms-mid) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.booking-subtitle {
+  font-size: 14px;
+  color: var(--ms-gray-600);
+  margin: 0 0 16px 0;
+}
+
+.booking-date-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--ms-dark) 0%, var(--ms-mid) 100%);
+  padding: 8px 24px;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  box-shadow: 0 4px 12px rgba(29, 45, 68, 0.2);
+}
+
+/* Main Grid - Fixed Height */
+.booking-main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-bottom: 32px;
+}
+
+/* Left Column */
+.booking-left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Doctor Info Card */
+.doctor-info-card {
+  background: linear-gradient(135deg, var(--ms-gray-100) 0%, white 100%);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.booking-doctor-card {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.booking-doctor-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--ms-dark) 0%, var(--ms-mid) 100%);
+  flex-shrink: 0;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.booking-doctor-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.booking-doctor-details {
+  flex: 1;
+}
+
+.booking-doctor-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.booking-doctor-header h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--ms-dark);
+  margin: 0;
+}
+
+.doctor-specialty-tag {
+  background: white;
+  color: var(--ms-mid);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.doctor-bio {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ms-gray-700);
+  margin: 0 0 16px 0;
+}
+
+.doctor-stats {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ms-gray-700);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Consultation Section */
+.consultation-section {
+  background: linear-gradient(135deg, var(--ms-gray-100) 0%, white 100%);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ms-gray-600);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0 0 20px 0;
+}
+
+/* Consultation Type Buttons with Icons */
+.consultation-types-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.consultation-type-btn {
+  width: 100%;
+  padding: 16px 20px;
+  background: white;
+  border: 2px solid var(--ms-gray-300);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.consultation-type-btn:hover {
+  transform: translateX(6px);
+  border-color: var(--ms-mid);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.consultation-type-btn.active {
+  border-color: var(--ms-dark);
+  background: linear-gradient(135deg, rgba(29, 45, 68, 0.05) 0%, rgba(52, 73, 102, 0.05) 100%);
+  box-shadow: 0 4px 12px rgba(29, 45, 68, 0.1);
+}
+
+.consultation-type-btn-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.consultation-type-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  transition: all 0.3s ease;
+}
+
+.consultation-type-btn.active .consultation-type-icon {
+  transform: scale(1.05);
+}
+
+.consultation-type-info {
+  flex: 1;
+  text-align: left;
+}
+
+.consultation-type-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ms-dark);
+  margin-bottom: 4px;
+}
+
+.consultation-type-description {
+  font-size: 12px;
+  color: var(--ms-gray-600);
+}
+
+.consultation-type-fee {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ms-success);
+}
+
+.consultation-type-check {
+  width: 28px;
+  height: 28px;
+  background: var(--ms-dark);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Right Column - Time Slots */
+.booking-right-column {
+  background: linear-gradient(135deg, var(--ms-gray-100) 0%, white 100%);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.timeslot-section {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.timeslot-wrapper {
+  flex: 1;
+}
+
+.timeslot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.timeslot-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.timeslot-grid::-webkit-scrollbar-track {
+  background: var(--ms-gray-200);
+  border-radius: 10px;
+}
+
+.timeslot-grid::-webkit-scrollbar-thumb {
+  background: var(--ms-mid);
+  border-radius: 10px;
+}
+
+.timeslot-btn {
+  background: white;
+  border: 2px solid var(--ms-gray-300);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.timeslot-btn:hover:not(.disabled) {
+  transform: translateY(-2px);
+  border-color: var(--ms-mid);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.timeslot-btn.selected {
+  background: linear-gradient(135deg, var(--ms-dark) 0%, var(--ms-mid) 100%);
+  border-color: var(--ms-dark);
+}
+
+.timeslot-btn.selected .timeslot-time,
+.timeslot-btn.selected .timeslot-hospital {
+  color: white;
+}
+
+.timeslot-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--ms-gray-200);
+}
+
+.timeslot-time {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ms-dark);
+  margin-bottom: 6px;
+}
+
+.timeslot-hospital {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ms-mid);
+}
+
+/* Footer */
+.booking-footer {
+  padding-top: 24px;
+  border-top: 2px solid var(--ms-gray-200);
+}
+
+.booking-confirm-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.confirm-booking-btn {
+  background: linear-gradient(135deg, var(--ms-dark) 0%, var(--ms-mid) 100%);
+  color: white;
+  border: none;
+  padding: 14px 48px;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(29, 45, 68, 0.3);
+}
+
+.confirm-booking-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(29, 45, 68, 0.4);
+}
+
+.confirm-booking-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confirm-error-message {
+  font-size: 12px;
+  color: var(--ms-danger);
+  margin: 0;
+}
+
+/* Loading State */
+.booking-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: var(--ms-accent);
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid var(--ms-gray-300);
+  border-top-color: var(--ms-dark);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Responsive Design for Booking Page */
+@media (max-width: 968px) {
+  .booking-container {
+    padding: 24px;
+  }
+  
+  .booking-main-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  
+  .booking-title {
+    font-size: 28px;
+  }
+  
+  .booking-doctor-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .booking-doctor-header {
+    justify-content: center;
+  }
+  
+  .doctor-stats {
+    justify-content: center;
+  }
+  
+  .consultation-type-btn-content {
+    flex-wrap: wrap;
+  }
+  
+  .timeslot-grid {
+    grid-template-columns: 1fr;
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 576px) {
+  .booking-page {
+    padding: 16px;
+  }
+  
+  .booking-container {
+    padding: 20px;
+  }
+  
+  .booking-title {
+    font-size: 24px;
+  }
+  
+  .booking-doctor-avatar {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .booking-doctor-header h2 {
+    font-size: 20px;
+  }
+  
+  .consultation-type-btn {
+    padding: 12px 16px;
+  }
+  
+  .consultation-type-name {
+    font-size: 14px;
+  }
+  
+  .consultation-type-fee {
+    font-size: 16px;
+  }
+  
+  .timeslot-time {
+    font-size: 13px;
+  }
+}
+
+/* Validation Error Styles */
+.validation-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.1) 0%, rgba(220, 53, 69, 0.05) 100%);
+  border: 1px solid var(--ms-danger);
+  border-radius: 12px;
+  padding: 12px 20px;
+  margin-bottom: 20px;
+  color: var(--ms-danger);
+  font-size: 14px;
+  font-weight: 500;
+  animation: shake 0.5s ease;
+}
+
+.error-icon {
+  font-size: 18px;
+}
+
+.required-star {
+  color: var(--ms-danger);
+  font-size: 14px;
+  font-weight: bold;
+  margin-left: 4px;
+}
+
+.consultation-section.has-error,
+.timeslot-section.has-error {
+  animation: highlightBorder 0.5s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+@keyframes highlightBorder {
+  0%, 100% { border-color: transparent; }
+  50% { border-color: var(--ms-danger); }
+}
+
+/* Time Slots Session Styles */
+.timeslot-session {
+  margin-bottom: 24px;
+}
+
+.timeslot-session:last-child {
+  margin-bottom: 0;
+}
+
+.timeslot-session-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ms-mid);
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--ms-gray-200);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.timeslot-type {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ms-gray-500);
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+.timeslot-btn.selected .timeslot-type {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Loading State */
+.timeslot-loading {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.loading-spinner-small {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--ms-gray-200);
+  border-top-color: var(--ms-dark);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 12px;
+}
+
+.timeslot-loading p {
+  font-size: 14px;
+  color: var(--ms-gray-600);
+}
+
+/* Empty State */
+.timeslot-empty {
+  text-align: center;
+  padding: 40px 20px;
+  background: var(--ms-gray-100);
+  border-radius: 12px;
+}
+
+.timeslot-empty p {
+  font-size: 14px;
+  color: var(--ms-gray-600);
+  margin: 0;
+}
+
+.timeslot-empty-hint {
+  font-size: 12px;
+  color: var(--ms-gray-500);
+  margin-top: 8px !important;
+}
+
+/* Update existing timeslot-grid for session layout */
+.timeslot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .timeslot-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

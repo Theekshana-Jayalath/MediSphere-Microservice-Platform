@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 // Helper: format Date to hh:mm AM/PM
 const formatTime = (date) => {
@@ -7,172 +7,255 @@ const formatTime = (date) => {
   const mer = hh >= 12 ? "PM" : "AM";
   const h = ((hh + 11) % 12) + 1;
   const mmStr = mm.toString().padStart(2, '0');
-  return `${h.toString().padStart(2, '0')}:${mmStr} ${mer}`;
+  return `${h}:${mmStr} ${mer}`;
 };
 
 // Create consecutive slots of slotDurationMinutes between start and end
 const buildSlots = (start, end, slotDurationMinutes = 120) => {
   const slots = [];
   let cursor = new Date(start.getTime());
+  
   while (cursor.getTime() + slotDurationMinutes * 60000 <= end.getTime()) {
     const slotStart = new Date(cursor.getTime());
     const slotEnd = new Date(cursor.getTime() + slotDurationMinutes * 60000);
     slots.push({ start: slotStart, end: slotEnd });
-    cursor = slotEnd; // move cursor forward by one slot (no overlap)
+    cursor = slotEnd;
   }
+  
+  // If there's remaining time that's less than slotDuration but more than 1 hour
+  const remainingTime = end.getTime() - cursor.getTime();
+  if (remainingTime >= 60 * 60000) { // at least 1 hour remaining
+    const slotStart = new Date(cursor.getTime());
+    const slotEnd = new Date(end.getTime());
+    slots.push({ start: slotStart, end: slotEnd });
+  }
+  
   return slots;
 };
 
 const TimeSlots = ({ doctor = null, selectedDate = '', selectedTime = '', setSelectedTime }) => {
-  // Determine day name from selectedDate
-  const dayNameFromDate = (dateStr) => {
+  const [slots, setSlots] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Get day name from date
+  const getDayName = (dateStr) => {
     if (!dateStr) return null;
     const parts = dateStr.split('-');
     const dt = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-    return dt.toLocaleDateString(undefined, { weekday: 'long' }); // e.g. 'Monday'
+    return dt.toLocaleDateString('en-US', { weekday: 'long' }); // e.g., 'Monday'
   };
 
+  // Check if slot is in the past
   const isPast = (slot) => {
     if (!selectedDate) return false;
     const now = new Date();
-    // if slot end is <= now, it's past
     return slot.end.getTime() <= now.getTime();
   };
 
-  // Debug: show incoming schedules
-  // eslint-disable-next-line no-console
-  console.log('TimeSlots debug - selectedDate:', selectedDate, 'doctor availabilitySchedules:', doctor?.raw?.availabilitySchedules);
-
-  // If doctor provides availabilitySchedules, use them; otherwise fallback to sample blocks
-  const buildAllSlots = () => {
-    const slotsList = [];
-    const slotDurationMin = 120; // 2 hours
-
-    if (doctor && doctor.raw && Array.isArray(doctor.raw.availabilitySchedules) && selectedDate) {
-      const dayName = dayNameFromDate(selectedDate);
-      const dayIndex = (selectedDate) ? (new Date(selectedDate).getDay()) : null; // 0 (Sun) - 6 (Sat)
-
-      const weekdayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-      const weekdayShort = weekdayNames.map(n => n.slice(0,3));
-
-      // Filter schedules that match the day. Accept numbers, full names, short names, arrays, or 'all'
-      const schedules = doctor.raw.availabilitySchedules.filter((s) => {
-        if (!s) return false;
-        const val = s.day ?? s.days ?? s.weekday;
-        if (!val) return false;
-        // if val is array, check any match
-        const values = Array.isArray(val) ? val : [val];
-        return values.some(v => {
-          if (v === null || v === undefined) return false;
-          const vs = String(v).trim();
-          if (!vs) return false;
-          // numeric day
-          if (/^\d+$/.test(vs)) {
-            return Number(vs) === dayIndex;
-          }
-          const l = vs.toLowerCase();
-          if (l === 'all' || l === 'everyday' || l === 'daily') return true;
-          // match full name
-          if (weekdayNames.map(x => x.toLowerCase()).includes(l)) return weekdayNames[dayIndex] && weekdayNames[dayIndex].toLowerCase() === l;
-          // match short name
-          if (weekdayShort.map(x => x.toLowerCase()).includes(l)) return weekdayShort[dayIndex] && weekdayShort[dayIndex].toLowerCase() === l;
-          return false;
-        });
-      });
-
-      schedules.forEach((s) => {
-        // s.startTime and s.endTime expected like '08:00' or '08:00 AM' etc. We'll parse flexibly
-        const parseTimeToDate = (timeStr) => {
-          // accept 'HH:MM', 'HH:MM:SS' or 'HH:MM AM/PM' or 'H:MM'
-          if (!timeStr) timeStr = '00:00';
-          let t = String(timeStr).trim();
-          // separate meridiem if present
-          let mer = null;
-          const merMatch = t.match(/\b(AM|PM)\b/i);
-          if (merMatch) {
-            mer = merMatch[1].toUpperCase();
-            t = t.replace(/\b(AM|PM)\b/i, '').trim();
-          }
-          // remove seconds if present
-          const timePart = t.split(':').slice(0,2);
-          const hh = Number(timePart[0]) || 0;
-          const mm = Number(timePart[1]) || 0;
-          let hours = hh;
-          if (mer) {
-            if (mer === 'PM' && hours !== 12) hours += 12;
-            if (mer === 'AM' && hours === 12) hours = 0;
-          }
-          const parts = selectedDate.split('-');
-          return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), hours, mm);
-        };
-
-        const start = parseTimeToDate(s.startTime || s.start || '08:00');
-        const end = parseTimeToDate(s.endTime || s.end || '17:00');
-  const built = buildSlots(start, end, slotDurationMin);
-  built.forEach(b => slotsList.push({ ...b, hospital: s.channelingHospital || s.location || s.baseHospital || doctor.hospital || doctor.raw.baseHospital || 'Unknown Hospital' }));
-      });
+  // Parse time string (supports "08:00", "08:00 AM", "2:30 PM", etc.)
+  const parseTimeToDate = (timeStr, dateStr) => {
+    if (!timeStr || !dateStr) return null;
+    
+    let t = String(timeStr).trim();
+    let mer = null;
+    
+    // Check for AM/PM
+    const merMatch = t.match(/\b(AM|PM)\b/i);
+    if (merMatch) {
+      mer = merMatch[1].toUpperCase();
+      t = t.replace(/\b(AM|PM)\b/i, '').trim();
     }
-
-    // Fallback: if no slots built, generate fixed session slots (2-hour duration)
-    if (slotsList.length === 0) {
-      const parts = selectedDate ? selectedDate.split('-') : null;
-      const makeDate = (h, m = 0) => parts ? new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), h, m) : null;
-      const fallbacks = [
-        { start: makeDate(8,0), end: makeDate(10,0), hospital: 'Central Clinic' },
-        { start: makeDate(10,0), end: makeDate(12,0), hospital: 'Central Clinic' },
-        { start: makeDate(13,0), end: makeDate(15,0), hospital: 'Eastside Medical Hub' },
-        { start: makeDate(15,0), end: makeDate(17,0), hospital: 'Eastside Medical Hub' },
-        { start: makeDate(17,0), end: makeDate(19,0), hospital: 'Telemedicine' },
-      ];
-      fallbacks.forEach(f => {
-        if (!f.start || !f.end) return;
-        slotsList.push({ start: f.start, end: f.end, hospital: f.hospital });
-      });
+    
+    // Parse time
+    const timeParts = t.split(':');
+    let hours = parseInt(timeParts[0]) || 0;
+    const minutes = parseInt(timeParts[1]) || 0;
+    
+    // Adjust for AM/PM
+    if (mer) {
+      if (mer === 'PM' && hours !== 12) hours += 12;
+      if (mer === 'AM' && hours === 12) hours = 0;
     }
-
-  // debug list
-  // eslint-disable-next-line no-console
-  console.log('TimeSlots debug - built slotsList:', slotsList);
-  return slotsList;
+    
+    // Create date object
+    const dateParts = dateStr.split('-');
+    return new Date(
+      parseInt(dateParts[0]),
+      parseInt(dateParts[1]) - 1,
+      parseInt(dateParts[2]),
+      hours,
+      minutes
+    );
   };
 
-  const slots = buildAllSlots();
-  const rawSchedules = doctor?.raw?.availabilitySchedules || doctor?.raw?.availability || doctor?.raw?.availabilitySchedule || [];
+  // Build all time slots from doctor's availability
+  const buildAllSlots = () => {
+    if (!doctor || !selectedDate || !doctor.raw?.availabilitySchedules) {
+      return [];
+    }
 
-  const SlotGrid = ({ slots }) => (
-    <div style={{ marginTop: 12 }}>
-      <div style={{ fontSize: 12, color: 'var(--ms-mid)', marginBottom: 8 }}>Available Slots</div>
-      <div className="timeslot-grid">
-        {slots.map((slot, idx) => {
-          const label = `${formatTime(slot.start)} - ${formatTime(slot.end)}`;
-          const disabled = isPast(slot);
-          return (
-            <button
-              key={`${label}-${idx}`}
-              className={`timeslot-btn ${selectedTime === label ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
-              onClick={() => !disabled && setSelectedTime && setSelectedTime(label)}
-              disabled={disabled}
-              aria-disabled={disabled}
-            >
-              <div style={{ fontWeight: 700 }}>{label}</div>
-              <div style={{ fontSize: 12, color: 'var(--ms-mid)', marginTop: 6 }}>{slot.hospital}</div>
-            </button>
-          );
-        })}
+    const dayName = getDayName(selectedDate);
+    const dayIndex = new Date(selectedDate).getDay();
+    const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+    // Filter schedules for the selected day
+    const schedulesForDay = doctor.raw.availabilitySchedules.filter(schedule => {
+      if (!schedule || !schedule.day) return false;
+      
+      const scheduleDay = schedule.day.trim();
+      
+      // Check if schedule matches by full name
+      if (scheduleDay.toLowerCase() === dayName?.toLowerCase()) return true;
+      
+      // Check by short name (first 3 letters)
+      if (scheduleDay.toLowerCase() === dayName?.slice(0, 3).toLowerCase()) return true;
+      
+      // Check by day index (0-6)
+      const dayIndexMap = {
+        'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+        'thursday': 4, 'friday': 5, 'saturday': 6
+      };
+      const scheduleDayLower = scheduleDay.toLowerCase();
+      if (dayIndexMap[scheduleDayLower] === dayIndex) return true;
+      
+      // Check for 'all' or 'everyday'
+      if (scheduleDayLower === 'all' || scheduleDayLower === 'everyday' || scheduleDayLower === 'daily') {
+        return true;
+      }
+      
+      return false;
+    });
+
+    if (schedulesForDay.length === 0) {
+      console.log('No schedules found for', dayName);
+      return [];
+    }
+
+    const slotDurationMinutes = 120; // 2 hours
+    const allSlots = [];
+
+    schedulesForDay.forEach(schedule => {
+      const startTime = schedule.startTime;
+      const endTime = schedule.endTime;
+      
+      if (!startTime || !endTime) {
+        console.log('Missing start or end time for schedule:', schedule);
+        return;
+      }
+      
+      const startDate = parseTimeToDate(startTime, selectedDate);
+      const endDate = parseTimeToDate(endTime, selectedDate);
+      
+      if (!startDate || !endDate) {
+        console.log('Failed to parse times:', startTime, endTime);
+        return;
+      }
+      
+      // Build slots for this time range
+      const builtSlots = buildSlots(startDate, endDate, slotDurationMinutes);
+      
+      builtSlots.forEach(slot => {
+        allSlots.push({
+          ...slot,
+          hospital: schedule.channelingHospital || schedule.location || doctor.hospital || doctor.raw?.baseHospital || 'Hospital',
+          type: schedule.type || 'In-Person'
+        });
+      });
+    });
+
+    // Sort slots by start time
+    allSlots.sort((a, b) => a.start.getTime() - b.start.getTime());
+    
+    return allSlots;
+  };
+
+  // Generate slots when doctor or selectedDate changes
+  useEffect(() => {
+    if (doctor && selectedDate) {
+      setLoading(true);
+      const generatedSlots = buildAllSlots();
+      setSlots(generatedSlots);
+      setLoading(false);
+    }
+  }, [doctor, selectedDate]);
+
+  // Group slots by session (morning, afternoon, evening)
+  const groupSlotsBySession = (slotsList) => {
+    const morning = [];
+    const afternoon = [];
+    const evening = [];
+    
+    slotsList.forEach(slot => {
+      const hour = slot.start.getHours();
+      if (hour < 12) {
+        morning.push(slot);
+      } else if (hour >= 12 && hour < 17) {
+        afternoon.push(slot);
+      } else {
+        evening.push(slot);
+      }
+    });
+    
+    return { morning, afternoon, evening };
+  };
+
+  const { morning, afternoon, evening } = groupSlotsBySession(slots);
+  const hasSlots = slots.length > 0;
+
+  // Render session slots
+  const renderSessionSlots = (sessionSlots, title) => {
+    if (sessionSlots.length === 0) return null;
+    
+    return (
+      <div className="timeslot-session">
+        <div className="timeslot-session-title">{title}</div>
+        <div className="timeslot-grid">
+          {sessionSlots.map((slot, idx) => {
+            const label = `${formatTime(slot.start)} - ${formatTime(slot.end)}`;
+            const disabled = isPast(slot);
+            const isSelected = selectedTime === label;
+            
+            return (
+              <button
+                key={`${label}-${idx}`}
+                className={`timeslot-btn ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
+                onClick={() => !disabled && setSelectedTime && setSelectedTime(label)}
+                disabled={disabled}
+              >
+                <div className="timeslot-time">{label}</div>
+                <div className="timeslot-hospital">{slot.hospital}</div>
+                <div className="timeslot-type">{slot.type}</div>
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="timeslot-loading">
+        <div className="loading-spinner-small"></div>
+        <p>Loading available time slots...</p>
+      </div>
+    );
+  }
+
+  if (!hasSlots) {
+    return (
+      <div className="timeslot-empty">
+        <p>No available time slots for {getDayName(selectedDate)}</p>
+        <p className="timeslot-empty-hint">Please select another date</p>
+      </div>
+    );
+  }
 
   return (
     <div className="timeslot-wrapper">
-      {slots.length === 0 && rawSchedules && rawSchedules.length > 0 ? (
-        <div className="ms-card p-4 rounded-lg" style={{ background: 'rgba(255,255,255,0.9)' }}>
-          <div style={{ fontSize: 13, color: 'var(--ms-mid)', marginBottom: 8 }}>No slots generated for selected date — raw availability (debug):</div>
-          <pre style={{ maxHeight: 240, overflow: 'auto', fontSize: 12 }}>{JSON.stringify(rawSchedules, null, 2)}</pre>
-        </div>
-      ) : (
-        <SlotGrid slots={slots} />
-      )}
+      {renderSessionSlots(morning, "Morning Session")}
+      {renderSessionSlots(afternoon, "Afternoon Session")}
+      {renderSessionSlots(evening, "Evening Session")}
     </div>
   );
 };

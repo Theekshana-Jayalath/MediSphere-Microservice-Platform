@@ -12,11 +12,16 @@ const FilterSidebar = ({
   onClear,
 }) => {
   const specialties = [
-    { name: "Cardiology" },
-    { name: "Neurology"},
-    { name: "Pediatrics" },
-    { name: "Dermatology" },
-    { name: "General Surgery" },
+    { name: "Cardiologist" },
+    { name: "Neurologist"},
+    { name: "Dermatologist" },
+    { name: "Nephrologist" },
+    { name: "Gastroenterologist" },
+    { name: "Radiologist" },
+    { name: "Oncologist" },
+    { name: "Endocrinologist" },
+    { name: "Pulmonologist" },
+    { name: "Rheumatologist" },
   ];
 
   const hospitals = [

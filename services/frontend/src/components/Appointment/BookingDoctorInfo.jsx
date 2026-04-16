@@ -1,31 +1,36 @@
 import React from "react";
-import userImg from "../../assets/user.png";
+import defaultUserImg from "../../assets/user.png";
 
 const BookingDoctorInfo = ({ doctor }) => {
   if (!doctor) return null;
 
   return (
     <div className="booking-doctor-card">
-      <img
-        src={doctor?.image || userImg}
-        alt={doctor?.name || 'doctor'}
-        className="booking-doctor-img"
-      />
+      <div className="booking-doctor-avatar">
+        <img 
+          src={doctor?.image || defaultUserImg} 
+          alt={doctor?.name || 'Doctor'}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = defaultUserImg;
+          }}
+        />
+      </div>
 
       <div className="booking-doctor-details">
         <div className="booking-doctor-header">
           <h2>{doctor.name}</h2>
-          <span className="doctor-tag">{doctor.specialty}</span>
+          <span className="doctor-specialty-tag">{doctor.specialty}</span>
         </div>
 
-        <p className="doctor-description">
-          {doctor.raw?.about || `Practicing at ${doctor.hospital}.`}
+        <p className="doctor-bio">
+          {doctor.raw?.about || `Expert in ${doctor.specialty} with extensive clinical experience.`}
         </p>
 
-        <div className="doctor-meta" style={{ display: 'flex', gap: '12px', marginTop: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span>⭐ {doctor.rating ?? 'N/A'}</span>
-          <span>{doctor.experience}</span>
-          <span>{doctor.raw?.languages?.join(', ') || ''}</span>
+        <div className="doctor-stats">
+          <span className="stat-item">⭐ {doctor.rating || '4.8'}</span>
+          <span className="stat-item">{doctor.experience || '10+ Years'} Exp</span>
+          <span className="stat-item">🏥 {doctor.hospital}</span>
         </div>
       </div>
     </div>
