@@ -3,15 +3,16 @@ import generateToken from "../utils/generateToken.js";
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (!name || !email || !password) {
+    if (!name || !normalizedEmail || !password) {
       return res.status(400).json({
         message: "Name, email and password are required",
       });
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: normalizedEmail });
 
     if (existingUser) {
       return res.status(400).json({
@@ -19,15 +20,18 @@ export const registerUser = async (req, res) => {
       });
     }
 
+    const allowedRoles = ["PATIENT", "DOCTOR", "ADMIN"];
+    const userRole = allowedRoles.includes(role) ? role : "PATIENT";
+
     const user = await User.create({
       name,
-      email,
+      email: normalizedEmail,
       password,
-      role: "PATIENT",
+      role: userRole,
     });
 
     return res.status(201).json({
-      message: "Patient registered successfully",
+      message: `${user.role} registered successfully`,
       token: generateToken(user),
       user: {
         id: user._id,
@@ -44,14 +48,15 @@ export const registerUser = async (req, res) => {
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return res.status(400).json({
         message: "Email and password are required",
       });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
       return res.status(401).json({

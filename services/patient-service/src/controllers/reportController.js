@@ -3,6 +3,16 @@ import path from "path";
 import Patient from "../models/Patient.js";
 import Report from "../models/Report.js";
 
+const uploadsDir = path.join(process.cwd(), "src", "uploads");
+
+const buildPublicFileUrl = (filename) => {
+  return `/uploads/${filename}`;
+};
+
+const getStoredFilenameFromUrl = (fileUrl = "") => {
+  return path.basename(fileUrl);
+};
+
 export const uploadReport = async (req, res) => {
   try {
     const patient = await Patient.findOne({ userId: req.user.id });
@@ -15,7 +25,7 @@ export const uploadReport = async (req, res) => {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    const { title, description, reportType } = req.body;
+    const { title, description, reportType, doctorId } = req.body;
 
     if (!title) {
       return res.status(400).json({ message: "Report title is required" });
@@ -24,9 +34,10 @@ export const uploadReport = async (req, res) => {
     const report = await Report.create({
       patientId: patient._id,
       uploadedBy: req.user.id,
+      doctorId: doctorId || null,
       title,
       description,
-      fileUrl: `/src/uploads/${req.file.filename}`,
+      fileUrl: buildPublicFileUrl(req.file.filename),
       fileName: req.file.originalname,
       fileType: req.file.mimetype,
       fileSize: req.file.size,
@@ -50,7 +61,9 @@ export const getMyReports = async (req, res) => {
       return res.status(404).json({ message: "Patient profile not found" });
     }
 
-    const reports = await Report.find({ patientId: patient._id }).sort({ createdAt: -1 });
+    const reports = await Report.find({ patientId: patient._id }).sort({
+      createdAt: -1,
+    });
 
     return res.status(200).json(reports);
   } catch (error) {
@@ -102,21 +115,24 @@ export const updateReport = async (req, res) => {
       return res.status(403).json({ message: "Not authorized to update this report" });
     }
 
-    const { title, description, reportType } = req.body;
+    const { title, description, reportType, doctorId } = req.body;
 
     if (title !== undefined) report.title = title;
     if (description !== undefined) report.description = description;
     if (reportType !== undefined) report.reportType = reportType;
+    if (doctorId !== undefined) report.doctorId = doctorId;
 
     if (req.file) {
       if (report.fileUrl) {
-        const oldFilePath = path.join(process.cwd(), report.fileUrl.replace(/^\//, ""));
+        const oldFilename = getStoredFilenameFromUrl(report.fileUrl);
+        const oldFilePath = path.join(uploadsDir, oldFilename);
+
         if (fs.existsSync(oldFilePath)) {
           fs.unlinkSync(oldFilePath);
         }
       }
 
-      report.fileUrl = `/src/uploads/${req.file.filename}`;
+      report.fileUrl = buildPublicFileUrl(req.file.filename);
       report.fileName = req.file.originalname;
       report.fileType = req.file.mimetype;
       report.fileSize = req.file.size;
@@ -155,7 +171,9 @@ export const deleteReport = async (req, res) => {
     }
 
     if (report.fileUrl) {
-      const filePath = path.join(process.cwd(), report.fileUrl.replace(/^\//, ""));
+      const filename = getStoredFilenameFromUrl(report.fileUrl);
+      const filePath = path.join(uploadsDir, filename);
+
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
