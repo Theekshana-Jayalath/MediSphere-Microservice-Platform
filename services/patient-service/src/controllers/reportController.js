@@ -71,6 +71,30 @@ export const getMyReports = async (req, res) => {
   }
 };
 
+export const getReportsByDoctor = async (req, res) => {
+  try {
+    const requestedDoctorId = String(req.params.doctorId || "").trim();
+    const requesterRole = String(req.user?.role || "").toUpperCase();
+    const requesterId = String(req.user?.id || "").trim();
+
+    if (!requestedDoctorId) {
+      return res.status(400).json({ message: "Doctor id is required" });
+    }
+
+    if (requesterRole !== "ADMIN" && requesterId !== requestedDoctorId) {
+      return res.status(403).json({ message: "Forbidden: can only access your own reports" });
+    }
+
+    const reports = await Report.find({ doctorId: requestedDoctorId })
+      .populate("patientId", "name patientId")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json(reports);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 export const getReportById = async (req, res) => {
   try {
     const patient = await Patient.findOne({ userId: req.user.id });
