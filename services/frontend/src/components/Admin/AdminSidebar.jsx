@@ -9,8 +9,6 @@ const menuItems = [
   { label: "Verify Accounts", icon: "verified_user", path: "/admin/verify" },
   { label: "Appointments", icon: "calendar_today", path: "/admin/appointments" },
   { label: "Payments", icon: "payments", path: "/admin/payments" },
-  { label: "System Logs", icon: "terminal", path: "/admin/logs" },
-  { label: "Analytics", icon: "analytics", path: "/admin/analytics" },
 ];
 
 export default function AdminSidebar() {
@@ -51,11 +49,6 @@ export default function AdminSidebar() {
       </nav>
 
       <div className="admin-sidebar-footer">
-        <button className="admin-sidebar-link" onClick={() => navigate("/support")}>
-          <span className="material-symbols-outlined">help</span>
-          <span>Support</span>
-        </button>
-
         <button className="admin-sidebar-link" onClick={handleLogout}>
           <span className="material-symbols-outlined">logout</span>
           <span>Logout</span>
