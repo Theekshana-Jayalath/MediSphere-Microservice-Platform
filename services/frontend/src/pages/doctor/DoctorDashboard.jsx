@@ -1,532 +1,538 @@
-﻿import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DoctorSidebar from "../../components/doctor/DoctorSidebar";
+import { getDoctorById } from "../../services/doctor/doctorService.js";
+import { getAllAppointments, getAppointmentsByDoctorId } from "../../services/doctor/appointmentApi.js";
+import { getMyReports } from "../../services/doctor/reportApi.js";
+import { getAllPrescriptions, getPrescriptionsByDoctor } from "../../services/doctor/prescriptionApi.js";
 import "../../styles/Doctor/doctorDashboard.css";
 
-import {
-  todayAppointments,
-  pendingRequests,
-  availabilitySlots,
-  dashboardStats,
-  aiInsight,
-} from "../../data/doctorDashboardData";
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const safeParseJSON = (value) => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
+const formatDoctorName = (user) => {
+  const rawName = user?.name || user?.fullName || user?.email || "Doctor";
+  return /^dr\.?\s/i.test(rawName) ? rawName : `Dr. ${rawName}`;
+};
+
+const getAppointmentDateValue = (appointment) => {
+  return (
+    appointment?.appointmentDate ||
+    appointment?.date ||
+    appointment?.scheduledDate ||
+    appointment?.createdAt ||
+    ""
+  );
+};
+
+const getAppointmentType = (appointment) => {
+  const rawType = (appointment?.appointmentType || appointment?.type || "In-Person")
+    .toString()
+    .trim()
+    .toLowerCase();
+
+  if (rawType === "online" || rawType === "video call" || rawType === "video") {
+    return "Video Call";
+  }
+
+  if (rawType === "physical") {
+    return "In-Person";
+  }
+
+  return appointment?.appointmentType || appointment?.type || "In-Person";
+};
+
+const getAppointmentTime = (appointment) => {
+  return (
+    appointment?.appointmentTime ||
+    appointment?.startTime ||
+    appointment?.time ||
+    "--:--"
+  );
+};
+
+const getPatientName = (appointment) => {
+  return (
+    appointment?.patientName ||
+    appointment?.patient?.name ||
+    appointment?.patient?.fullName ||
+    "Unknown patient"
+  );
+};
+
+const getAppointmentReason = (appointment) => {
+  return appointment?.reason || appointment?.consultationReason || "Consultation";
+};
+
+const getStatusLabel = (appointment) => {
+  const status = (appointment?.status || "pending").toString().trim().toLowerCase();
+
+  if (["confirmed", "accepted", "approved"].includes(status)) return "Confirmed";
+  if (["completed", "done"].includes(status)) return "Completed";
+  if (["cancelled", "canceled", "rejected"].includes(status)) return "Cancelled";
+  return "Pending";
+};
+
+const toArray = (response) => {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (Array.isArray(response?.data)) {
+    return response.data;
+  }
+
+  if (Array.isArray(response?.data?.data)) {
+    return response.data.data;
+  }
+
+  if (Array.isArray(response?.reports)) {
+    return response.reports;
+  }
+
+  if (Array.isArray(response?.prescriptions)) {
+    return response.prescriptions;
+  }
+
+  return [];
+};
 
 const DoctorDashboard = () => {
   const navigate = useNavigate();
-  let user = null;
-  try {
-    const storedUser = localStorage.getItem("user");
-    user = storedUser ? JSON.parse(storedUser) : null;
-  } catch (error) {
-    user = null;
-  }
-  const rawDoctorName = user?.name || user?.fullName || "Doctor";
-  const doctorName = /^dr\.?\s/i.test(rawDoctorName)
-    ? rawDoctorName
-    : `Dr. ${rawDoctorName}`;
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date().getDate());
-  const [calendarDays, setCalendarDays] = useState([]);
-  const [monthLabel, setMonthLabel] = useState("");
-  const [timeSlots, setTimeSlots] = useState(availabilitySlots);
-  const [selectedSlot, setSelectedSlot] = useState(null);
-  const [activeSlotAction, setActiveSlotAction] = useState("");
-  const [showSlotForm, setShowSlotForm] = useState(false);
-  const [formData, setFormData] = useState({
-    time: "",
-    hospital: "",
-    location: "",
-    department: "",
-    capacity: "",
-    type: "In-Person",
-  });
-  const [editingSlotId, setEditingSlotId] = useState(null);
+  const [doctorProfile, setDoctorProfile] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [calendarDate, setCalendarDate] = useState(new Date());
 
-  // Update calendar on component mount and when date changes
-  useEffect(() => {
-    updateCalendar();
-    const timer = setInterval(updateCalendar, 86400000); // Update daily (24 hours)
-    return () => clearInterval(timer);
+  const storedUser = useMemo(() => {
+    return safeParseJSON(localStorage.getItem("user") || "") || {};
   }, []);
 
-  const updateCalendar = () => {
-    const today = new Date();
-    setCurrentDate(today);
-    setSelectedDate(today.getDate());
-    generateCalendarDays(today);
-  };
+  const doctorId = storedUser?.id || storedUser?._id || "";
+  const doctorName = useMemo(() => formatDoctorName(storedUser), [storedUser]);
 
-  const generateCalendarDays = (date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    
-    // Get first day of the month and number of days
-    const firstDay = new Date(year, month, 1).getDay();
+  const calendarMatrix = useMemo(() => {
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+    const today = new Date();
+    const firstDayIndex = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const daysInPrevMonth = new Date(year, month, 0).getDate();
 
-    // Create month label
-    const monthName = date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-    setMonthLabel(monthName);
+    const monthLabel = calendarDate.toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
 
-    // Build calendar array
     const days = [];
-    
-    // Previous month's days
-    for (let i = firstDay - 1; i >= 0; i--) {
+
+    for (let index = firstDayIndex - 1; index >= 0; index -= 1) {
       days.push({
-        date: daysInPrevMonth - i,
+        date: daysInPrevMonth - index,
         isCurrentMonth: false,
         isToday: false,
       });
     }
 
-    // Current month's days
-    for (let i = 1; i <= daysInMonth; i++) {
+    for (let day = 1; day <= daysInMonth; day += 1) {
       days.push({
-        date: i,
+        date: day,
         isCurrentMonth: true,
-        isToday: i === date.getDate() && month === new Date().getMonth() && year === new Date().getFullYear(),
+        isToday:
+          day === today.getDate() &&
+          month === today.getMonth() &&
+          year === today.getFullYear(),
       });
     }
 
-    // Next month's days
-    const remainingDays = 42 - days.length; // 6 rows × 7 days
-    for (let i = 1; i <= remainingDays; i++) {
+    while (days.length < 42) {
       days.push({
-        date: i,
+        date: days.length - (firstDayIndex + daysInMonth) + 1,
         isCurrentMonth: false,
         isToday: false,
       });
     }
 
-    setCalendarDays(days);
-  };
+    return { monthLabel, days };
+  }, [calendarDate]);
 
-  const getAvailableSlotsForDate = (date) => {
-    // Return available time slots (can be extended to filter by date logic)
-    return timeSlots;
-  };
+  const availableSlots = useMemo(() => {
+    const schedules = Array.isArray(doctorProfile?.availabilitySchedules)
+      ? doctorProfile.availabilitySchedules
+      : [];
 
-  const handleSlotClick = (slot) => {
-    setSelectedSlot(slot);
-  };
-
-  const handleAddSlot = () => {
-    setEditingSlotId(null);
-    setFormData({
-      time: "",
-      hospital: "",
-      location: "",
-      department: "",
-      capacity: "",
-      type: "In-Person",
-    });
-    setShowSlotForm(true);
-  };
-
-  const handleEditSlot = (slot) => {
-    setEditingSlotId(slot.id);
-    setFormData({
-      time: slot.time,
-      hospital: slot.hospital,
-      location: slot.location,
-      department: slot.department,
-      capacity: slot.capacity,
-      type: slot.type,
-    });
-    setShowSlotForm(true);
-  };
-
-  const handleDeleteSlot = (slotId) => {
-    setTimeSlots(timeSlots.filter((slot) => slot.id !== slotId));
-    if (selectedSlot?.id === slotId) {
-      setSelectedSlot(null);
-    }
-  };
-
-  const handleSaveSlot = (e) => {
-    e.preventDefault();
-    if (editingSlotId) {
-      // Edit existing slot
-      setTimeSlots(
-        timeSlots.map((slot) =>
-          slot.id === editingSlotId
-            ? { ...slot, ...formData }
-            : slot
-        )
-      );
-    } else {
-      // Add new slot
-      const newSlot = {
-        id: `SLOT${Date.now()}`,
-        ...formData,
-        booked: 0,
-      };
-      setTimeSlots([...timeSlots, newSlot]);
-    }
-    setShowSlotForm(false);
-    setFormData({
-      time: "",
-      hospital: "",
-      location: "",
-      department: "",
-      capacity: "",
-      type: "In-Person",
-    });
-  };
-
-  const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === "capacity" ? parseInt(value) || "" : value,
+    return schedules.map((slot, index) => ({
+      id: slot?._id || `${index}-${slot?.date || slot?.day || slot?.startTime || "slot"}`,
+      date: slot?.date || "",
+      day: slot?.day || "",
+      time: [slot?.startTime, slot?.endTime].filter(Boolean).join(" - ") || "Not set",
+      hospital: slot?.channelingHospital || doctorProfile?.channelingHospitals?.[0] || "Not specified",
+      type: slot?.type || "In-Person",
+      status: slot?.isAvailable === false ? "Unavailable" : "Available",
     }));
-  };
+  }, [doctorProfile]);
+
+  const totalAppointments = appointments.length;
+  const videoConsultations = useMemo(() => {
+    return appointments.filter((appointment) => getAppointmentType(appointment) === "Video Call");
+  }, [appointments]);
+
+  const confirmedAppointments = useMemo(() => {
+    return appointments.filter((appointment) => getStatusLabel(appointment) === "Confirmed");
+  }, [appointments]);
+
+  const pendingAppointments = useMemo(() => {
+    return appointments.filter((appointment) => getStatusLabel(appointment) === "Pending");
+  }, [appointments]);
+
+  const todayAppointments = useMemo(() => {
+    const todayKey = new Date().toLocaleDateString("en-CA");
+
+    return appointments.filter((appointment) => {
+      const rawDate = getAppointmentDateValue(appointment);
+      if (!rawDate) return true;
+
+      const parsedDate = new Date(rawDate);
+      if (Number.isNaN(parsedDate.getTime())) return true;
+
+      return parsedDate.toLocaleDateString("en-CA") === todayKey;
+    });
+  }, [appointments]);
+
+  const quickStats = useMemo(() => {
+    return [
+      {
+        label: "Availability Overview",
+        value: availableSlots.length,
+        detail: `${availableSlots.filter((slot) => slot.status === "Available").length} active slots`,
+        tone: "violet",
+      },
+      {
+        label: "Total Reports",
+        value: reports.length,
+        detail: "Clinical uploads and diagnostics",
+        tone: "teal",
+      },
+      {
+        label: "Video Consultations",
+        value: videoConsultations.length,
+        detail: "Telemedicine appointments",
+        tone: "gold",
+      },
+      {
+        label: "Total Prescriptions",
+        value: prescriptions.length,
+        detail: "Issued treatment records",
+        tone: "rose",
+      },
+      {
+        label: "Total Appointments",
+        value: totalAppointments,
+        detail: `${confirmedAppointments.length} confirmed • ${pendingAppointments.length} pending`,
+        tone: "blue",
+      },
+      {
+        label: "Video Consultation Summary",
+        value: videoConsultations.length,
+        detail: `${todayAppointments.filter((appointment) => getAppointmentType(appointment) === "Video Call").length} scheduled today`,
+        tone: "emerald",
+      },
+    ];
+  }, [availableSlots.length, confirmedAppointments.length, pendingAppointments.length, prescriptions.length, reports.length, totalAppointments, todayAppointments, videoConsultations.length]);
+
+  const recentAppointments = useMemo(() => {
+    return [...appointments]
+      .sort((left, right) => new Date(getAppointmentDateValue(right) || 0) - new Date(getAppointmentDateValue(left) || 0))
+      .slice(0, 4);
+  }, [appointments]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        setError("");
+
+        const doctorRequests = doctorId ? getDoctorById(doctorId) : Promise.resolve(null);
+        const appointmentsRequest = doctorId
+          ? getAppointmentsByDoctorId(doctorId)
+          : getAllAppointments();
+        const reportsRequest = getMyReports();
+        const prescriptionsRequest = doctorId
+          ? getPrescriptionsByDoctor(doctorId)
+          : getAllPrescriptions();
+
+        const [doctorResult, appointmentsResult, reportsResult, prescriptionsResult] =
+          await Promise.allSettled([
+            doctorRequests,
+            appointmentsRequest,
+            reportsRequest,
+            prescriptionsRequest,
+          ]);
+
+        if (!isMounted) return;
+
+        const doctorData =
+          doctorResult.status === "fulfilled"
+            ? doctorResult.value?.data || doctorResult.value || null
+            : null;
+
+        const appointmentData =
+          appointmentsResult.status === "fulfilled"
+            ? toArray(appointmentsResult.value)
+            : [];
+
+        const reportData =
+          reportsResult.status === "fulfilled"
+            ? toArray(reportsResult.value)
+            : [];
+
+        const prescriptionData =
+          prescriptionsResult.status === "fulfilled"
+            ? toArray(prescriptionsResult.value)
+            : [];
+
+        setDoctorProfile(doctorData);
+        setAppointments(Array.isArray(appointmentData) ? appointmentData : appointmentData?.data || []);
+        setReports(Array.isArray(reportData) ? reportData : reportData?.data || []);
+        setPrescriptions(Array.isArray(prescriptionData) ? prescriptionData : prescriptionData?.data || []);
+
+        const errors = [doctorResult, appointmentsResult, reportsResult, prescriptionsResult]
+          .filter((result) => result.status === "rejected")
+          .map((result) => result.reason?.message || "Failed to load dashboard data");
+
+        if (errors.length > 0 && (!appointments.length || !reports.length || !prescriptions.length)) {
+          setError("Some dashboard services are unavailable. Showing what we could load.");
+        }
+      } catch (dashboardError) {
+        if (!isMounted) return;
+        setError(dashboardError.message || "Failed to load doctor dashboard.");
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchDashboardData();
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doctorId]);
 
   return (
-    <div className="dashboard-layout">
+    <div className="doctor-dashboard-shell">
       <DoctorSidebar />
 
-      <main className="dashboard-main">
-        <div className="topbar">
-          <div>
-            <h1 className="page-title">Dashboard</h1>
-            <p className="page-subtitle">
-              Welcome back, {doctorName}. You have {dashboardStats.sessionsToday} sessions today.
+      <main className="doctor-dashboard-main">
+        <section className="doctor-dashboard-hero">
+          <div className="doctor-dashboard-hero-copy">
+            <span className="doctor-dashboard-eyebrow">Doctor Command Center</span>
+            <h1>Welcome back, {doctorName}</h1>
+            <p>
+              A single view of your availability, appointments, telemedicine work, reports, and prescriptions.
             </p>
+
+            <div className="doctor-dashboard-hero-actions">
+              <button type="button" className="doctor-dashboard-primary-btn" onClick={() => navigate("/doctor/telemedicine")}>Start Video Session</button>
+              <button type="button" className="doctor-dashboard-secondary-btn" onClick={() => navigate("/doctor/availability")}>Manage Availability</button>
+            </div>
           </div>
 
-          <button
-            className="ms-btn-primary start-session-btn"
-            onClick={() => navigate("/doctor/telemedicine")}
-          >
-            Start Video Session
-          </button>
-        </div>
+          <div className="doctor-dashboard-hero-card">
+            <div>
+              <span>Specialization</span>
+              <strong>{doctorProfile?.specialization || storedUser?.specialization || "Doctor"}</strong>
+            </div>
+            <div>
+              <span>Base Hospital</span>
+              <strong>{doctorProfile?.baseHospital || storedUser?.baseHospital || "Not set"}</strong>
+            </div>
+            <div>
+              <span>Channeling Hospitals</span>
+              <strong>{availableSlots.length > 0 ? availableSlots[0].hospital : "No slots yet"}</strong>
+            </div>
+          </div>
+        </section>
 
-        <div className="dashboard-grid">
-          <section className="left-column">
-            <div className="dashboard-card">
-              <div className="card-header">
+        {error && <div className="doctor-dashboard-alert error">{error}</div>}
+
+        <section className="doctor-dashboard-stats-grid">
+          {quickStats.map((item) => (
+            <article key={item.label} className={`doctor-dashboard-stat-card tone-${item.tone}`}>
+              <span className="doctor-dashboard-stat-label">{item.label}</span>
+              <strong className="doctor-dashboard-stat-value">{isLoading ? "--" : item.value}</strong>
+              <p className="doctor-dashboard-stat-detail">{item.detail}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="doctor-dashboard-content-grid">
+          <div className="doctor-dashboard-panel doctor-dashboard-panel-large">
+            <div className="doctor-dashboard-panel-header">
+              <div>
+                <span className="doctor-dashboard-panel-kicker">Schedule</span>
                 <h2>Today's Appointments</h2>
-                <button
-                  type="button"
-                  className="card-link"
-                  onClick={() => navigate("/doctor/appointments")}
-                >
-                  View All Schedule
-                </button>
               </div>
-
-              <div className="appointment-list">
-                {todayAppointments.map((appointment) => (
-                  <div
-                    key={appointment.id}
-                    className={`appointment-item ${
-                      appointment.status === "join-now" ? "highlight-item" : ""
-                    }`}
-                  >
-                    <div className="appointment-time">{appointment.time}</div>
-
-                    <div className="appointment-content">
-                      <h3>{appointment.patientName}</h3>
-                      <p>{appointment.reason}</p>
-                    </div>
-
-                    <div className="appointment-actions">
-                      <span className="appointment-badge">{appointment.type}</span>
-                      {appointment.status === "join-now" && (
-                        <button className="join-btn">JOIN NOW</button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <button type="button" className="doctor-dashboard-link-btn" onClick={() => navigate("/doctor/appointments")}>View all appointments</button>
             </div>
 
-            <div className="dashboard-card">
-              <div className="card-header">
-                <h2>Pending Requests</h2>
-              </div>
+            {isLoading ? (
+              <div className="doctor-dashboard-empty">Loading appointments...</div>
+            ) : recentAppointments.length > 0 ? (
+              <div className="doctor-dashboard-appointment-list">
+                {recentAppointments.map((appointment) => (
+                  <article key={appointment._id || appointment.id || `${getPatientName(appointment)}-${getAppointmentTime(appointment)}`} className={`doctor-dashboard-appointment ${getAppointmentType(appointment) === "Video Call" ? "is-highlighted" : ""}`}>
+                    <div className="doctor-dashboard-time-pill">
+                      <span>{getAppointmentTime(appointment)}</span>
+                    </div>
 
-              <div className="requests-grid">
-                {pendingRequests.map((request) => (
-                  <div key={request.id} className="request-card">
-                    <div className="request-top">
-                      <div className="small-avatar">👤</div>
-                      <div>
-                        <h3>{request.patientName}</h3>
-                        <p className="request-time">{request.requestTime}</p>
+                    <div className="doctor-dashboard-appointment-body">
+                      <div className="doctor-dashboard-appointment-row">
+                        <h3>{getPatientName(appointment)}</h3>
+                        <span className={`doctor-dashboard-type-badge type-${getAppointmentType(appointment).toLowerCase().replace(/\s+/g, "-")}`}>
+                          {getAppointmentType(appointment)}
+                        </span>
                       </div>
+                      <p>{getAppointmentReason(appointment)}</p>
                     </div>
 
-                    <p className="request-note">{request.note}</p>
-
-                    <div className="request-buttons">
-                      <button className="ms-btn-primary small-btn">ACCEPT</button>
-                      <button className="secondary-btn small-btn">REJECT</button>
+                    <div className="doctor-dashboard-appointment-meta">
+                      <span className={`doctor-dashboard-status-badge status-${getStatusLabel(appointment).toLowerCase()}`}>{getStatusLabel(appointment)}</span>
+                      <button type="button" className="doctor-dashboard-mini-btn" onClick={() => navigate("/doctor/appointments")}>Open</button>
                     </div>
-                  </div>
+                  </article>
                 ))}
               </div>
-            </div>
-          </section>
+            ) : (
+              <div className="doctor-dashboard-empty">No appointments found for this doctor.</div>
+            )}
+          </div>
 
-          <aside className="right-column">
-            <div className="dashboard-card mini-card">
-              <div className="card-header">
-                <h2>Availability</h2>
+          <aside className="doctor-dashboard-side-stack">
+            <div className="doctor-dashboard-panel doctor-dashboard-calendar-panel">
+              <div className="doctor-dashboard-panel-header">
+                <div>
+                  <span className="doctor-dashboard-panel-kicker">Availability Overview</span>
+                  <h2>{calendarMatrix.monthLabel}</h2>
+                </div>
+                <button type="button" className="doctor-dashboard-link-btn" onClick={() => navigate("/doctor/availability")}>Edit slots</button>
               </div>
 
-              <div className="month-label">{monthLabel}</div>
-
-              <div className="calendar-grid">
-                {["MO", "TU", "WE", "TH", "FR", "SA", "SU"].map((day) => (
-                  <span key={day} className="calendar-day-name">{day}</span>
+              <div className="doctor-dashboard-calendar-grid">
+                {WEEKDAY_LABELS.map((label) => (
+                  <span key={label} className="doctor-dashboard-calendar-label">{label}</span>
                 ))}
-                {calendarDays.map((day, idx) => (
+                {calendarMatrix.days.map((day, index) => (
                   <span
-                    key={idx}
-                    className={`calendar-date ${
-                      day.isToday ? "today-date" : ""
-                    } ${
-                      selectedDate === day.date && day.isCurrentMonth ? "active-date" : ""
-                    } ${!day.isCurrentMonth ? "other-month" : ""}`}
-                    onClick={() => day.isCurrentMonth && setSelectedDate(day.date)}
-                    style={{ cursor: day.isCurrentMonth ? "pointer" : "default" }}
+                    key={`${day.date}-${index}`}
+                    className={`doctor-dashboard-calendar-day ${day.isToday ? "is-today" : ""} ${!day.isCurrentMonth ? "is-muted" : ""}`}
                   >
                     {day.date}
                   </span>
                 ))}
               </div>
 
-              <p className="slot-title">ACTIVE SLOTS - {selectedDate.toString().padStart(2, '0')}</p>
-              <div className="slot-list">
-                {getAvailableSlotsForDate(selectedDate).map((slot) => (
-                  <span
-                    key={slot.id}
-                    className={`slot-chip ${selectedSlot?.id === slot.id ? "selected-slot" : ""}`}
-                    onClick={() => handleSlotClick(slot)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    {slot.time}
-                  </span>
-                ))}
+              <div className="doctor-dashboard-slot-summary">
+                <div>
+                  <span>Total Slots</span>
+                  <strong>{availableSlots.length}</strong>
+                </div>
+                <div>
+                  <span>Available</span>
+                  <strong>{availableSlots.filter((slot) => slot.status === "Available").length}</strong>
+                </div>
+                <div>
+                  <span>Unavailable</span>
+                  <strong>{availableSlots.filter((slot) => slot.status !== "Available").length}</strong>
+                </div>
               </div>
 
-              <button 
-                className="ms-btn-primary" 
-                onClick={handleAddSlot}
-                style={{ marginTop: "10px", width: "100%" }}
-              >
-                + ADD TIME SLOT
-              </button>
+              <div className="doctor-dashboard-slot-chips">
+                {availableSlots.length > 0 ? (
+                  availableSlots.slice(0, 3).map((slot) => (
+                    <article key={slot.id} className="doctor-dashboard-slot-chip">
+                      <strong>{slot.time}</strong>
+                      <span>{slot.hospital}</span>
+                      <p>{slot.date || slot.day || slot.type}</p>
+                    </article>
+                  ))
+                ) : (
+                  <div className="doctor-dashboard-empty compact">No availability slots yet.</div>
+                )}
+              </div>
             </div>
 
-            <div className="dashboard-card mini-card">
-              <h2 className="insight-title">AI ASSISTANT INSIGHT</h2>
-              <p className="insight-text">{aiInsight.message}</p>
-              <button className="ms-btn-primary optimize-btn">
-                OPTIMIZE MY SCHEDULE
-              </button>
-            </div>
+            <div className="doctor-dashboard-panel doctor-dashboard-insight-panel">
+              <div className="doctor-dashboard-panel-header">
+                <div>
+                  <span className="doctor-dashboard-panel-kicker">Clinical Summary</span>
+                  <h2>Video Consultation Snapshot</h2>
+                </div>
+              </div>
 
-            <div className="stats-row">
-              <div className="stat-box">
-                <p>Patients Today</p>
-                <h3>{dashboardStats.patientsToday}</h3>
+              <div className="doctor-dashboard-insight-metric">
+                <strong>{videoConsultations.length}</strong>
+                <span>Video consultations</span>
               </div>
-              <div className="stat-box">
-                <p>Wait Time</p>
-                <h3>{dashboardStats.waitTime}</h3>
+
+              <div className="doctor-dashboard-summary-list">
+                <div>
+                  <span>Confirmed appointments</span>
+                  <strong>{confirmedAppointments.length}</strong>
+                </div>
+                <div>
+                  <span>Pending appointments</span>
+                  <strong>{pendingAppointments.length}</strong>
+                </div>
+                <div>
+                  <span>Reports uploaded</span>
+                  <strong>{reports.length}</strong>
+                </div>
+                <div>
+                  <span>Prescriptions issued</span>
+                  <strong>{prescriptions.length}</strong>
+                </div>
               </div>
+
+              <button type="button" className="doctor-dashboard-primary-btn full-width" onClick={() => navigate("/doctor/prescriptions")}>
+                Review Prescriptions
+              </button>
             </div>
           </aside>
-        </div>
+        </section>
 
-        {/* Hospital Details Panel */}
-        {selectedSlot && (
-          <div className="hospital-details-panel dashboard-card">
-            <div className="card-header">
-              <h2>Hospital Details - {selectedSlot.time}</h2>
-              <button
-                className="close-btn"
-                onClick={() => setSelectedSlot(null)}
-                style={{ cursor: "pointer", fontSize: "20px", border: "none", background: "none" }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="details-content" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-              <div>
-                <p><strong>Hospital:</strong> {selectedSlot.hospital}</p>
-                <p><strong>Location:</strong> {selectedSlot.location}</p>
-                <p><strong>Department:</strong> {selectedSlot.department}</p>
-                <p><strong>Type:</strong> {selectedSlot.type}</p>
-              </div>
-              <div>
-                <p><strong>Total Capacity:</strong> {selectedSlot.capacity}</p>
-                <p><strong>Booked:</strong> {selectedSlot.booked}</p>
-                <p><strong>Available:</strong> {selectedSlot.capacity - selectedSlot.booked}</p>
-                <p style={{ color: selectedSlot.capacity - selectedSlot.booked < 2 ? "red" : "green" }}>
-                  <strong>Status:</strong> {selectedSlot.capacity - selectedSlot.booked < 2 ? "Full" : "Available"}
-                </p>
-              </div>
-            </div>
-
-            <div className="button-group" style={{ marginTop: "15px", display: "flex", gap: "10px" }}>
-              <button
-                className={`ms-btn-primary action-btn ${activeSlotAction === "edit" ? "active" : ""}`}
-                onClick={() => {
-                  setActiveSlotAction("edit");
-                  handleEditSlot(selectedSlot);
-                }}
-              >
-                EDIT
-              </button>
-              <button
-                className={`secondary-btn action-btn ${activeSlotAction === "delete" ? "active" : ""}`}
-                onClick={() => {
-                  setActiveSlotAction("delete");
-                  handleDeleteSlot(selectedSlot.id);
-                }}
-              >
-                DELETE
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Time Slot Management Form */}
-        {showSlotForm && (
-          <div className="time-slot-form dashboard-card" style={{ maxWidth: "500px", margin: "20px auto" }}>
-            <div className="card-header">
-              <h2>{editingSlotId ? "Edit Time Slot" : "Add New Time Slot"}</h2>
-              <button
-                className="close-btn"
-                onClick={() => setShowSlotForm(false)}
-                style={{ cursor: "pointer", fontSize: "20px", border: "none", background: "none" }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveSlot} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-              <div>
-                <label><strong>Time Slot (e.g., 08:00 - 12:00)</strong></label>
-                <input
-                  type="text"
-                  name="time"
-                  value={formData.time}
-                  onChange={handleFormChange}
-                  required
-                  placeholder="08:00 - 12:00"
-                  style={{ width: "100%", padding: "8px", marginTop: "5px" }}
-                />
-              </div>
-
-              <div>
-                <label><strong>Hospital Name</strong></label>
-                <input
-                  type="text"
-                  name="hospital"
-                  value={formData.hospital}
-                  onChange={handleFormChange}
-                  required
-                  placeholder="MediSphere Clinic"
-                  style={{ width: "100%", padding: "8px", marginTop: "5px" }}
-                />
-              </div>
-
-              <div>
-                <label><strong>Location</strong></label>
-                <input
-                  type="text"
-                  name="location"
-                  value={formData.location}
-                  onChange={handleFormChange}
-                  required
-                  placeholder="Downtown, New York"
-                  style={{ width: "100%", padding: "8px", marginTop: "5px" }}
-                />
-              </div>
-
-              <div>
-                <label><strong>Department</strong></label>
-                <input
-                  type="text"
-                  name="department"
-                  value={formData.department}
-                  onChange={handleFormChange}
-                  required
-                  placeholder="Cardiology"
-                  style={{ width: "100%", padding: "8px", marginTop: "5px" }}
-                />
-              </div>
-
-              <div>
-                <label><strong>Capacity</strong></label>
-                <input
-                  type="number"
-                  name="capacity"
-                  value={formData.capacity}
-                  onChange={handleFormChange}
-                  required
-                  placeholder="6"
-                  style={{ width: "100%", padding: "8px", marginTop: "5px" }}
-                />
-              </div>
-
-              <div>
-                <label><strong>Appointment Type</strong></label>
-                <select
-                  name="type"
-                  value={formData.type}
-                  onChange={handleFormChange}
-                  style={{ width: "100%", padding: "8px", marginTop: "5px" }}
-                >
-                  <option value="In-Person">In-Person</option>
-                  <option value="Video Call">Video Call</option>
-                  <option value="Mixed">Mixed</option>
-                </select>
-              </div>
-
-              <div style={{ display: "flex", gap: "10px" }}>
-                <button
-                  type="submit"
-                  className="ms-btn-primary"
-                  style={{ flex: 1 }}
-                >
-                  {editingSlotId ? "UPDATE SLOT" : "ADD SLOT"}
-                </button>
-                <button
-                  type="button"
-                  className="secondary-btn"
-                  onClick={() => setShowSlotForm(false)}
-                  style={{ flex: 1 }}
-                >
-                  CANCEL
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        <footer className="dashboard-footer">
-          <div>
-            <h3>Ethereal Clinic</h3>
-            <p>© 2024 Ethereal Clinic. All health data is encrypted.</p>
-          </div>
-          <div className="footer-links">
-            <span>Contact</span>
-            <span>Privacy Policy</span>
-            <span>Terms of Service</span>
-            <span>Twitter</span>
-            <span>LinkedIn</span>
-          </div>
-        </footer>
+        <section className="doctor-dashboard-quick-actions">
+          <button type="button" className="doctor-dashboard-quick-action" onClick={() => navigate("/doctor/availability")}>
+            <span>Availability</span>
+            <strong>{availableSlots.length} slots</strong>
+          </button>
+          <button type="button" className="doctor-dashboard-quick-action" onClick={() => navigate("/doctor/appointments")}>
+            <span>Appointments</span>
+            <strong>{totalAppointments} total</strong>
+          </button>
+          <button type="button" className="doctor-dashboard-quick-action" onClick={() => navigate("/doctor/reports")}>
+            <span>Reports</span>
+            <strong>{reports.length} total</strong>
+          </button>
+          <button type="button" className="doctor-dashboard-quick-action" onClick={() => navigate("/doctor/prescriptions")}>
+            <span>Prescriptions</span>
+            <strong>{prescriptions.length} total</strong>
+          </button>
+        </section>
       </main>
     </div>
   );
