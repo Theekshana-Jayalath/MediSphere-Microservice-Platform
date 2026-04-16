@@ -125,23 +125,31 @@ export default function PatientMedicalReports() {
       setDoctorError(null);
       const token = getAuthToken();
 
-      console.log("Fetching patient's doctors from:", `${API_GATEWAY_URL}/api/doctors/my-doctors`);
+      console.log(
+        "Fetching patient's doctors from:",
+        `${API_GATEWAY_URL}/api/doctors/my-doctors/${patientId}`
+      );
 
       // Call the endpoint that gets doctors the patient has appointments with
-      const response = await fetch(`${API_GATEWAY_URL}/api/doctors/my-doctors`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
+      const response = await fetch(
+        `${API_GATEWAY_URL}/api/doctors/my-doctors/${patientId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
+      );
 
       console.log("Response status:", response.status);
 
       const data = await parseResponseData(response);
 
       if (!response.ok) {
-        throw new Error(data?.message || `Failed to fetch doctors: ${response.status}`);
+        throw new Error(
+          data?.message || `Failed to fetch doctors: ${response.status}`
+        );
       }
 
       // Extract doctors array from response
@@ -153,18 +161,22 @@ export default function PatientMedicalReports() {
       } else if (data?.doctors && Array.isArray(data.doctors)) {
         doctorsList = data.doctors;
       }
-      
+
       console.log("Doctors fetched:", doctorsList.length);
       setDoctors(doctorsList);
-      
+
       if (doctorsList.length === 0) {
-        setDoctorError("You don't have any appointments yet. Please book an appointment with a doctor first.");
+        setDoctorError(
+          "You don't have any appointments yet. Please book an appointment with a doctor first."
+        );
       } else {
         setDoctorError(null);
       }
     } catch (error) {
       console.error("Failed to fetch doctors:", error);
-      setDoctorError("Unable to load doctors. Please make sure you're logged in and try again.");
+      setDoctorError(
+        "Unable to load doctors. Please make sure you're logged in and try again."
+      );
       setDoctors([]);
     } finally {
       setLoadingDoctors(false);
@@ -240,7 +252,7 @@ export default function PatientMedicalReports() {
       const url = editingReportId
         ? `${API_GATEWAY_URL}/api/reports/${editingReportId}`
         : `${API_GATEWAY_URL}/api/reports/upload`;
-      
+
       console.log("Submitting to API Gateway:", url);
 
       const response = await fetch(url, {
@@ -369,7 +381,7 @@ export default function PatientMedicalReports() {
 
   const getDoctorName = (doctorId) => {
     if (!doctorId) return "Not assigned";
-    const doctor = doctors.find(d => d._id === doctorId || d.id === doctorId);
+    const doctor = doctors.find((d) => d._id === doctorId || d.id === doctorId);
     if (doctor) {
       return `Dr. ${doctor.fullName || doctor.name || "Unknown"}`;
     }
@@ -586,16 +598,32 @@ export default function PatientMedicalReports() {
                     ) : doctorError ? (
                       <option disabled>{doctorError}</option>
                     ) : doctors.length === 0 ? (
-                      <option disabled>No doctors found. Please book an appointment first.</option>
+                      <option disabled>
+                        No doctors found. Please book an appointment first.
+                      </option>
                     ) : (
                       doctors.map((doctor) => (
-                        <option key={doctor._id || doctor.id} value={doctor._id || doctor.id}>
-                          Dr. {doctor.fullName || doctor.name || doctor.email || "Unknown"} - {doctor.specialization || ""}
+                        <option
+                          key={doctor._id || doctor.id}
+                          value={doctor._id || doctor.id}
+                        >
+                          Dr.{" "}
+                          {doctor.fullName ||
+                            doctor.name ||
+                            doctor.email ||
+                            "Unknown"}{" "}
+                          - {doctor.specialization || ""}
                         </option>
                       ))
                     )}
                   </select>
-                  <small style={{ display: 'block', marginTop: '4px', color: '#6c757d' }}>
+                  <small
+                    style={{
+                      display: "block",
+                      marginTop: "4px",
+                      color: "#6c757d",
+                    }}
+                  >
                     Only the selected doctor will be able to view this report
                   </small>
                 </div>

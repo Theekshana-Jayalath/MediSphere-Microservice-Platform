@@ -12,6 +12,11 @@ const availabilitySlotSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    date: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     day: {
       type: String,
       required: true,
@@ -42,6 +47,11 @@ const availabilitySlotSchema = new mongoose.Schema(
 
 const doctorSchema = new mongoose.Schema(
   {
+    doctorId: {
+      type: String,
+      unique: true,
+      index: true,
+    },
     fullName: {
       type: String,
       required: true,

@@ -12,6 +12,7 @@ import prescriptionRoutes from "./routes/prescriptionRoutes.js";
 import errorHandler from "./middlewares/errorMiddleware.js";
 import doctorRoutes from "./routes/doctorRoutes.js";
 import Doctor from "./models/Doctor.js";
+import Counter from "./models/Counter.js";
 
 dotenv.config();
 
@@ -33,8 +34,6 @@ app.use((req, res, next) => {
 
 connectDB();
 
-// Serve uploaded files (doctor photos, etc.) from /uploads
-app.use("/uploads", express.static("uploads"));
 
 app.get("/", (req, res) => {
   res.json({
@@ -72,6 +71,23 @@ app.post("/api/doctors/login", async (req, res, next) => {
       });
     }
 
+    let doctorId = doctor.doctorId;
+
+    if (!doctorId) {
+      const counter = await Counter.findOneAndUpdate(
+        { name: "doctorId" },
+        { $inc: { seq: 1 } },
+        { upsert: true, returnDocument: "after" }
+      );
+
+      doctorId = `DOC${String(counter.seq).padStart(4, "0")}`;
+
+      await Doctor.updateOne(
+        { _id: doctor._id },
+        { $set: { doctorId } }
+      );
+    }
+
     const token = jwt.sign(
       {
         id: doctor._id,
@@ -88,6 +104,7 @@ app.post("/api/doctors/login", async (req, res, next) => {
       token,
       user: {
         id: doctor._id,
+        doctorId,
         name: doctor.fullName,
         email: doctor.email,
         role: doctor.role || "doctor",
