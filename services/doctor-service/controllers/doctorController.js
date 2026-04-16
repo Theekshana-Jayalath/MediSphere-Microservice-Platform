@@ -1,10 +1,23 @@
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import Doctor from "../models/Doctor.js";
 
 const getSafeDoctor = (doctorDoc) => {
   const doctor = doctorDoc.toObject();
   delete doctor.password;
   return doctor;
+};
+
+const generateDoctorToken = (doctor) => {
+  return jwt.sign(
+    {
+      id: doctor._id,
+      email: doctor.email,
+      role: doctor.role || "doctor",
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
 };
 
 export const registerDoctor = async (req, res, next) => {
@@ -338,6 +351,52 @@ export const deleteDoctor = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: "Doctor deleted successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const loginDoctor = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
+    const doctor = await Doctor.findOne({ email: email.toLowerCase().trim() });
+
+    if (!doctor) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, doctor.password);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token: generateDoctorToken(doctor),
+      user: {
+        id: doctor._id,
+        name: doctor.fullName,
+        email: doctor.email,
+        role: doctor.role || "doctor",
+        approvalStatus: doctor.approvalStatus,
+      },
     });
   } catch (error) {
     next(error);

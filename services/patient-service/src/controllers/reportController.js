@@ -25,7 +25,7 @@ export const uploadReport = async (req, res) => {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    const { title, description, reportType } = req.body;
+    const { title, description, reportType, doctorId } = req.body;
 
     if (!title) {
       return res.status(400).json({ message: "Report title is required" });
@@ -34,6 +34,7 @@ export const uploadReport = async (req, res) => {
     const report = await Report.create({
       patientId: patient._id,
       uploadedBy: req.user.id,
+      doctorId: doctorId || null,
       title,
       description,
       fileUrl: buildPublicFileUrl(req.file.filename),
@@ -114,11 +115,12 @@ export const updateReport = async (req, res) => {
       return res.status(403).json({ message: "Not authorized to update this report" });
     }
 
-    const { title, description, reportType } = req.body;
+    const { title, description, reportType, doctorId } = req.body;
 
     if (title !== undefined) report.title = title;
     if (description !== undefined) report.description = description;
     if (reportType !== undefined) report.reportType = reportType;
+    if (doctorId !== undefined) report.doctorId = doctorId;
 
     if (req.file) {
       if (report.fileUrl) {
