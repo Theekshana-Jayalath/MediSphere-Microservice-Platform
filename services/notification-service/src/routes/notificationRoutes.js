@@ -3,13 +3,12 @@ import { sendAppointmentConfirmedNotification } from "../controllers/notificatio
 
 const router = express.Router();
 
+// Health check
 router.get("/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Notification service is working",
-  });
+  res.json({ success: true, message: "Notification OK" });
 });
 
+// 🔥 MAIN ROUTE
 router.post("/telemedicine-confirmation", sendAppointmentConfirmedNotification);
 
 export default router;
