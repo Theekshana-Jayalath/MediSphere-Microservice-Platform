@@ -22,6 +22,18 @@ const formatDoctorName = (user) => {
   return /^dr\.?\s/i.test(rawName) ? rawName : `Dr. ${rawName}`;
 };
 
+const getDoctorInitials = (name) => {
+  if (!name) return "DR";
+
+  return name
+    .replace(/^dr\.?\s*/i, "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "DR";
+};
+
 const getAppointmentDateValue = (appointment) => {
   return (
     appointment?.appointmentDate ||
@@ -120,6 +132,8 @@ const DoctorDashboard = () => {
 
   const doctorId = storedUser?.id || storedUser?._id || "";
   const doctorName = useMemo(() => formatDoctorName(storedUser), [storedUser]);
+  const doctorDisplayPhoto = doctorProfile?.photo || storedUser?.photo || "";
+  const doctorInitials = useMemo(() => getDoctorInitials(doctorName), [doctorName]);
 
   const calendarMatrix = useMemo(() => {
     const year = calendarDate.getFullYear();
@@ -353,17 +367,39 @@ const DoctorDashboard = () => {
           </div>
 
           <div className="doctor-dashboard-hero-card">
-            <div>
-              <span>Specialization</span>
-              <strong>{doctorProfile?.specialization || storedUser?.specialization || "Doctor"}</strong>
+            <div className="doctor-dashboard-photo-frame">
+              {doctorDisplayPhoto ? (
+                <img
+                  src={doctorDisplayPhoto}
+                  alt={doctorName}
+                  className="doctor-dashboard-photo"
+                />
+              ) : (
+                <div className="doctor-dashboard-photo-placeholder">
+                  <span>{doctorInitials}</span>
+                </div>
+              )}
+
+              <div className="doctor-dashboard-photo-copy">
+                <span>Doctor Profile</span>
+                <strong>{doctorName}</strong>
+                <p>{doctorProfile?.specialization || storedUser?.specialization || "Specialization not set"}</p>
+              </div>
             </div>
-            <div>
-              <span>Base Hospital</span>
-              <strong>{doctorProfile?.baseHospital || storedUser?.baseHospital || "Not set"}</strong>
-            </div>
-            <div>
-              <span>Channeling Hospitals</span>
-              <strong>{availableSlots.length > 0 ? availableSlots[0].hospital : "No slots yet"}</strong>
+
+            <div className="doctor-dashboard-hero-stack">
+              <div>
+                <span>Specialization</span>
+                <strong>{doctorProfile?.specialization || storedUser?.specialization || "Doctor"}</strong>
+              </div>
+              <div>
+                <span>Base Hospital</span>
+                <strong>{doctorProfile?.baseHospital || storedUser?.baseHospital || "Not set"}</strong>
+              </div>
+              <div>
+                <span>Channeling Hospitals</span>
+                <strong>{availableSlots.length > 0 ? availableSlots[0].hospital : "No slots yet"}</strong>
+              </div>
             </div>
           </div>
         </section>
