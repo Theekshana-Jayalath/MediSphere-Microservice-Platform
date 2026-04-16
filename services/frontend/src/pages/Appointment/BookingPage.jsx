@@ -1,6 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-
 import ProgressBar from "../../components/Appointment/ProgressBar";
 import BookingDoctorInfo from "../../components/Appointment/BookingDoctorInfo";
 import ConsultationType from "../../components/Appointment/ConsultationType";
@@ -10,14 +9,21 @@ import "../../styles/appointment.css";
 
 const BookingPage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const doctor = location.state?.doctor;
   const selectedDate = location.state?.selectedDate || '';
-  const navigate = useNavigate();
   const [selectedTime, setSelectedTime] = useState('');
+
+  // Redirect to appointment page if no doctor data
+  useEffect(() => {
+    if (!doctor) {
+      navigate('/appointment');
+    }
+  }, [doctor, navigate]);
 
   const BackButton = () => (
     <button
-      onClick={() => navigate('/')}
+      onClick={() => navigate('/appointment')}
       aria-label="Back to appointments"
       className="inline-flex items-center justify-center"
       style={{ width: 40, height: 40, borderRadius: 10, background: 'white', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 4px 12px rgba(13,20,33,0.06)' }}
@@ -26,12 +32,23 @@ const BookingPage = () => {
     </button>
   );
 
+  // Show loading or redirect while checking
+  if (!doctor) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p>Redirecting to appointment page...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="min-h-screen p-6"
       style={{ backgroundColor: "#f5f3ef" }}
     >
-  <div style={{ maxWidth: "1250px" }} className="mx-auto booking-card-large">
+      <div style={{ maxWidth: "1250px" }} className="mx-auto booking-card-large">
         
         {/* Progress Bar */}
         <div className="pt-6 flex items-center gap-4">
@@ -61,7 +78,7 @@ const BookingPage = () => {
           {/* LEFT COLUMN */}
           <div className="flex flex-col gap-6">
             
-            {/* Doctor Info (already styled inside component) */}
+            {/* Doctor Info */}
             <BookingDoctorInfo doctor={doctor} />
 
             {/* Consultation Type */}
@@ -79,7 +96,12 @@ const BookingPage = () => {
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
               Available Time Slots
             </h3>
-            <TimeSlots selectedDate={selectedDate} selectedTime={selectedTime} setSelectedTime={setSelectedTime} />
+            <TimeSlots 
+              doctor={doctor} 
+              selectedDate={selectedDate} 
+              selectedTime={selectedTime} 
+              setSelectedTime={setSelectedTime} 
+            />
           </div>
 
         </section>
