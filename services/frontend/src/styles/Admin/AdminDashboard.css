@@ -48,25 +48,6 @@
   gap: 14px;
 }
 
-.admin-icon-btn {
-  width: 42px;
-  height: 42px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  cursor: pointer;
-}
-
-.admin-report-btn {
-  border: none;
-  background: #07182e;
-  color: white;
-  padding: 12px 22px;
-  border-radius: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 .admin-profile-box {
   display: flex;
   align-items: center;
@@ -291,27 +272,6 @@
   color: #b45309;
 }
 
-.quick-actions-card {
-  background: #1d2d44;
-  color: white;
-}
-
-.quick-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-}
-
-.quick-actions-grid button {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: white;
-  padding: 22px 10px;
-  border-radius: 16px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
 .chart-card {
   min-height: 420px;
   display: flex;
@@ -512,6 +472,11 @@
   cursor: pointer;
 }
 
+.status.down {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 @media (max-width: 1200px) {
   .admin-stats-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -560,13 +525,8 @@
   .admin-topbar-right {
     width: 100%;
     flex-wrap: wrap;
-    justify-content: space-between;
+    justify-content: flex-end;
   }
-
-  .status.down {
-  background: #fee2e2;
-  color: #b91c1c;
-}
 
   .admin-search-box {
     width: 100%;

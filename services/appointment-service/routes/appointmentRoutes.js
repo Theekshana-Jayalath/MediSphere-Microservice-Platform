@@ -1,17 +1,19 @@
 import express from "express";
 
 import {
+  getAllAppointments,
   searchAppointments,
   getSlots,
   createAppointment,
   paymentSuccess,
   approveAppointment,
   rejectAppointment,
-  cancelAppointment
+  cancelAppointment,
 } from "../controllers/appointmentController.js";
 
 const router = express.Router();
 
+router.get("/", getAllAppointments);
 router.get("/search", searchAppointments);
 router.get("/slots", getSlots);
 

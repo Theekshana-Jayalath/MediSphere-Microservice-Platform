@@ -35,7 +35,8 @@ export default function AdminVerifyAccounts() {
   };
 
   const getDoctorId = (doctor) => doctor?._id || doctor?.id;
-  const getDoctorName = (doctor) => doctor?.fullName || doctor?.name || "Unknown Doctor";
+  const getDoctorName = (doctor) =>
+    doctor?.fullName || doctor?.name || "Unknown Doctor";
   const getDoctorEmail = (doctor) => doctor?.email || "No email";
   const getDoctorSpecialty = (doctor) =>
     doctor?.specialization || doctor?.specialty || "General";
@@ -147,7 +148,8 @@ export default function AdminVerifyAccounts() {
   }, [doctors, specialtyFilter, statusFilter]);
 
   const pendingCount = doctors.filter(
-    (doctor) => String(getDoctorStatus(doctor)).toLowerCase() === "pending_approval"
+    (doctor) =>
+      String(getDoctorStatus(doctor)).toLowerCase() === "pending_approval"
   ).length;
 
   const handleAccept = async (doctor) => {
@@ -173,7 +175,9 @@ export default function AdminVerifyAccounts() {
       const data = await parseResponseData(response);
 
       if (!response.ok) {
-        throw new Error(data?.message || `Failed to approve ${getDoctorName(doctor)}`);
+        throw new Error(
+          data?.message || `Failed to approve ${getDoctorName(doctor)}`
+        );
       }
 
       alert(`Accepted ${getDoctorName(doctor)}`);
@@ -221,7 +225,9 @@ export default function AdminVerifyAccounts() {
       const data = await parseResponseData(response);
 
       if (!response.ok) {
-        throw new Error(data?.message || `Failed to reject ${getDoctorName(doctor)}`);
+        throw new Error(
+          data?.message || `Failed to reject ${getDoctorName(doctor)}`
+        );
       }
 
       alert(`Declined ${getDoctorName(doctor)}`);
@@ -263,26 +269,6 @@ export default function AdminVerifyAccounts() {
           <div className="admin-verify-search">
             <span className="material-symbols-outlined">search</span>
             <input type="text" placeholder="Search applications..." />
-          </div>
-
-          <div className="admin-verify-topbar-right">
-            <button className="icon-btn" type="button">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
-            <button className="icon-btn" type="button">
-              <span className="material-symbols-outlined">mail</span>
-            </button>
-
-            <div className="admin-verify-user">
-              <div>
-                <h4>Dr. Julianne Vane</h4>
-                <p>ADMINISTRATOR</p>
-              </div>
-              <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJIhLMZ7ijMG51dHwiEx6Z9_xmerKrdtV0-_owDqiHOP-QosHL4Ahzq_cUTYNK8EPNmxpv_EilBi-io-ZMjfn35gIpr1V2pTokAaueRp8K5SotbmrjDyKPQ-XfPg_vponqXe8j7W-Z0HmdN5qaUvYvoA1eya677KLCZXzxxyfza1TiaQr1e5uQpZx7m3-d0oCtJ_Jjg4Tnd7dGwpGFv4t_yJtrwsCHt08w-Ue0qb-BNiD-UqXsl4TUMAE_ZaJfWN4ogqTO-U5rSbw"
-                alt="admin"
-              />
-            </div>
           </div>
         </header>
 
@@ -381,13 +367,19 @@ export default function AdminVerifyAccounts() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan="5" style={{ textAlign: "center", padding: "24px" }}>
+                      <td
+                        colSpan="5"
+                        style={{ textAlign: "center", padding: "24px" }}
+                      >
                         Loading doctor applications...
                       </td>
                     </tr>
                   ) : filteredDoctors.length === 0 ? (
                     <tr>
-                      <td colSpan="5" style={{ textAlign: "center", padding: "24px" }}>
+                      <td
+                        colSpan="5"
+                        style={{ textAlign: "center", padding: "24px" }}
+                      >
                         No doctor applications found
                       </td>
                     </tr>
@@ -396,10 +388,17 @@ export default function AdminVerifyAccounts() {
                       <tr key={getDoctorId(doctor)}>
                         <td>
                           <div className="doctor-cell">
-                            <img src={getDoctorImage(doctor)} alt={getDoctorName(doctor)} />
+                            <img
+                              src={getDoctorImage(doctor)}
+                              alt={getDoctorName(doctor)}
+                            />
                             <div>
-                              <p className="doctor-name">{getDoctorName(doctor)}</p>
-                              <p className="doctor-email">{getDoctorEmail(doctor)}</p>
+                              <p className="doctor-name">
+                                {getDoctorName(doctor)}
+                              </p>
+                              <p className="doctor-email">
+                                {getDoctorEmail(doctor)}
+                              </p>
                             </div>
                           </div>
                         </td>
@@ -458,7 +457,8 @@ export default function AdminVerifyAccounts() {
 
             <div className="verify-table-footer">
               <p>
-                Showing {filteredDoctors.length} of {doctors.length} pending applications
+                Showing {filteredDoctors.length} of {doctors.length} pending
+                applications
               </p>
 
               <div className="verify-pagination">
@@ -479,25 +479,6 @@ export default function AdminVerifyAccounts() {
                 </button>
               </div>
             </div>
-          </section>
-
-          <section className="verify-ai-card">
-            <div className="verify-ai-icon">
-              <span className="material-symbols-outlined">psychology</span>
-            </div>
-
-            <div className="verify-ai-text">
-              <h4>Etheris AI Suggestion</h4>
-              <p>
-                We’ve identified 12 applications with high-confidence automated
-                matches from the NPI database. You can bulk-verify these to save
-                approximately 45 minutes of manual review time.
-              </p>
-            </div>
-
-            <button type="button" className="review-btn">
-              Review Matches
-            </button>
           </section>
         </main>
       </div>
