@@ -15,6 +15,11 @@ export default function PatientAppointments() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
 
+  const APPOINTMENT_BASE_URL =
+    import.meta.env.VITE_API_GATEWAY_URL
+      ? `${import.meta.env.VITE_API_GATEWAY_URL}/api/appointments`
+      : "http://localhost:5015/api/appointments";
+
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
   
@@ -34,7 +39,7 @@ export default function PatientAppointments() {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const response = await fetch(`http://localhost:5003/api/appointments/patient/${patientId}`, {
+      const response = await fetch(`${APPOINTMENT_BASE_URL}/patient/${patientId}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -56,7 +61,7 @@ export default function PatientAppointments() {
   const handleReschedule = async (appointmentId, newDate, newTime) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5003/api/appointments/${appointmentId}/reschedule`, {
+      const response = await fetch(`${APPOINTMENT_BASE_URL}/${appointmentId}/reschedule`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -82,7 +87,7 @@ export default function PatientAppointments() {
     if (window.confirm("Are you sure you want to cancel this appointment?")) {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch(`http://localhost:5003/api/appointments/${appointmentId}/cancel`, {
+        const response = await fetch(`${APPOINTMENT_BASE_URL}/${appointmentId}/cancel`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -152,7 +157,6 @@ export default function PatientAppointments() {
           className={`calendar-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${dayAppointments.length > 0 ? 'has-appointments' : ''}`}
           onClick={() => {
             setSelectedCalendarDate(currentDate);
-            // Filter appointments by selected date
             const filtered = appointments.filter(apt => 
               apt.appointmentDate?.split('T')[0] === dateStr
             );
@@ -287,7 +291,6 @@ export default function PatientAppointments() {
         </header>
 
         <div className="patient-appointments-content">
-          {/* Stats Section */}
           <div className="appointments-stats-grid">
             <div className="stat-card">
               <div className="stat-icon blue">
@@ -327,9 +330,7 @@ export default function PatientAppointments() {
             </div>
           </div>
 
-          {/* Main Layout with Calendar and Appointments */}
           <div className="appointments-layout">
-            {/* Calendar Section */}
             <div className="calendar-section">
               <div className="calendar-header">
                 <button onClick={() => changeMonth(-1)}>
@@ -367,7 +368,6 @@ export default function PatientAppointments() {
               )}
             </div>
 
-            {/* Appointments Table Section */}
             <div className="appointments-table-section">
               <div className="table-header">
                 <h3>Appointment Registry</h3>
@@ -377,7 +377,6 @@ export default function PatientAppointments() {
                 </button>
               </div>
 
-              {/* Filter Tabs */}
               {!selectedCalendarDate && (
                 <div className="appointments-filter-tabs">
                   <button className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>
@@ -480,7 +479,6 @@ export default function PatientAppointments() {
         </div>
       </main>
 
-      {/* Reschedule Modal */}
       {showRescheduleModal && selectedAppointment && (
         <div className="modal-overlay" onClick={() => setShowRescheduleModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
