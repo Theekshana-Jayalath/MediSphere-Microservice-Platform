@@ -2,6 +2,81 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Doctor from "../models/Doctor.js";
 
+const WEEKDAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+const parseLocalDate = (dateValue) => {
+  const [year, month, day] = String(dateValue).split("-").map(Number);
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  return new Date(year, month - 1, day);
+};
+
+const getCurrentWeekEnd = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const weekEnd = new Date(today);
+  weekEnd.setDate(today.getDate() + (6 - today.getDay()));
+  weekEnd.setHours(0, 0, 0, 0);
+
+  return { today, weekEnd };
+};
+
+const getDayNameFromDate = (dateValue) => {
+  const parsedDate = parseLocalDate(dateValue);
+
+  if (!parsedDate) {
+    return "";
+  }
+
+  return WEEKDAY_NAMES[parsedDate.getDay()];
+};
+
+const isDateWithinCurrentWeek = (dateValue) => {
+  const parsedDate = parseLocalDate(dateValue);
+
+  if (!parsedDate) {
+    return false;
+  }
+
+  const { today, weekEnd } = getCurrentWeekEnd();
+
+  return parsedDate >= today && parsedDate <= weekEnd;
+};
+
+const validateAvailabilitySchedules = (schedules) => {
+  if (!Array.isArray(schedules)) {
+    return null;
+  }
+
+  for (const schedule of schedules) {
+    if (schedule?.date && !isDateWithinCurrentWeek(schedule.date)) {
+      return "Availability dates must be within the current week.";
+    }
+
+    if (schedule?.date) {
+      const expectedDay = getDayNameFromDate(schedule.date);
+
+      if (schedule.day && expectedDay && schedule.day !== expectedDay) {
+        return "Availability day must match the selected date.";
+      }
+    }
+  }
+
+  return null;
+};
+
 const getSafeDoctor = (doctorDoc) => {
   const doctor = doctorDoc.toObject();
   delete doctor.password;
@@ -34,7 +109,17 @@ export const registerDoctor = async (req, res, next) => {
       baseHospital,
       channelingHospitals,
       consultationFee,
+      availabilitySchedules,
     } = req.body;
+
+    const scheduleError = validateAvailabilitySchedules(availabilitySchedules);
+
+    if (scheduleError) {
+      return res.status(400).json({
+        success: false,
+        message: scheduleError,
+      });
+    }
 
     if (
       !fullName ||
@@ -80,8 +165,8 @@ export const registerDoctor = async (req, res, next) => {
         ? channelingHospitals
         : [],
       consultationFee,
-      availabilitySchedules: Array.isArray(req.body.availabilitySchedules)
-        ? req.body.availabilitySchedules
+      availabilitySchedules: Array.isArray(availabilitySchedules)
+        ? availabilitySchedules
         : [],
       approvalStatus: "pending_approval",
       rejectionReason: "",
@@ -166,6 +251,17 @@ export const updateDoctorProfile = async (req, res, next) => {
       consultationFee: req.body.consultationFee,
       availabilitySchedules: req.body.availabilitySchedules,
     };
+
+    const scheduleError = validateAvailabilitySchedules(
+      req.body.availabilitySchedules
+    );
+
+    if (scheduleError) {
+      return res.status(400).json({
+        success: false,
+        message: scheduleError,
+      });
+    }
 
     Object.keys(updates).forEach((key) => {
       if (updates[key] === undefined) {
@@ -307,6 +403,17 @@ export const updateDoctor = async (req, res, next) => {
       approvalStatus: req.body.approvalStatus,
       rejectionReason: req.body.rejectionReason,
     };
+
+    const scheduleError = validateAvailabilitySchedules(
+      req.body.availabilitySchedules
+    );
+
+    if (scheduleError) {
+      return res.status(400).json({
+        success: false,
+        message: scheduleError,
+      });
+    }
 
     Object.keys(updates).forEach((key) => {
       if (updates[key] === undefined) {
