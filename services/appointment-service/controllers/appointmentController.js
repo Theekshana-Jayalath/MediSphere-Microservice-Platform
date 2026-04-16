@@ -1,6 +1,17 @@
 import Appointment from "../models/appointmentModel.js";
 import { generateSlots } from "../service/slotService.js";
 
+/* GET ALL */
+export async function getAllAppointments(req, res) {
+  try {
+    const appointments = await Appointment.find().sort({ createdAt: -1 });
+    res.status(200).json(appointments);
+  } catch (err) {
+    console.error("Failed to fetch appointments:", err);
+    res.status(500).json({ message: "Failed to fetch appointments" });
+  }
+}
+
 /* SEARCH */
 export async function searchAppointments(req, res) {
   const { doctorName, specialization, hospital, type } = req.query;
@@ -21,8 +32,8 @@ export async function searchAppointments(req, res) {
 export async function getSlots(req, res) {
   const { doctorId, date } = req.query;
 
-  const today = new Date().setHours(0,0,0,0);
-  const selected = new Date(date).setHours(0,0,0,0);
+  const today = new Date().setHours(0, 0, 0, 0);
+  const selected = new Date(date).setHours(0, 0, 0, 0);
 
   if (selected < today) {
     return res.status(400).json({ message: "Past date not allowed" });
@@ -35,13 +46,10 @@ export async function getSlots(req, res) {
 
 /* CREATE */
 export async function createAppointment(req, res) {
-
   try {
-
     const data = req.body;
 
-    // calculate end time
-    const [h,m] = data.startTime.split(":");
+    const [h, m] = data.startTime.split(":");
     const start = parseInt(h) * 60 + parseInt(m);
     const end = start + data.duration;
 
@@ -50,17 +58,15 @@ export async function createAppointment(req, res) {
 
     data.endTime = `${endHour}:${endMin === 0 ? "00" : "30"}`;
 
-    // overlap check
     const booked = await Appointment.find({
       doctorId: data.doctorId,
       appointmentDate: data.appointmentDate,
-      status: { $ne: "CANCELLED" }
+      status: { $ne: "CANCELLED" },
     });
 
     for (let b of booked) {
-
-      const [bh,bm] = b.startTime.split(":");
-      const bStart = parseInt(bh)*60 + parseInt(bm);
+      const [bh, bm] = b.startTime.split(":");
+      const bStart = parseInt(bh) * 60 + parseInt(bm);
       const bEnd = bStart + b.duration;
 
       if (start < bEnd && end > bStart) {
@@ -71,71 +77,66 @@ export async function createAppointment(req, res) {
     const appointment = await Appointment.create(data);
 
     res.status(201).json(appointment);
-
   } catch (err) {
     res.status(500).json(err);
   }
 }
 
 /* PAYMENT */
-export async function paymentSuccess(req,res){
-
+export async function paymentSuccess(req, res) {
   const { id } = req.params;
 
   const updated = await Appointment.findByIdAndUpdate(
     id,
     {
-      paymentStatus:"PAID",
-      status:"PENDING_DOCTOR_APPROVAL"
+      paymentStatus: "PAID",
+      status: "PENDING_DOCTOR_APPROVAL",
     },
-    { new:true }
+    { new: true }
   );
 
   res.json(updated);
 }
 
 /* APPROVE */
-export async function approveAppointment(req,res){
-
+export async function approveAppointment(req, res) {
   const { id } = req.params;
 
   const updated = await Appointment.findByIdAndUpdate(
     id,
-    { status:"CONFIRMED" },
-    { new:true }
+    { status: "CONFIRMED" },
+    { new: true }
   );
 
   res.json(updated);
 }
 
 /* REJECT */
-export async function rejectAppointment(req,res){
-
+export async function rejectAppointment(req, res) {
   const { id } = req.params;
 
   const updated = await Appointment.findByIdAndUpdate(
     id,
-    { status:"REJECTED" },
-    { new:true }
+    { status: "REJECTED" },
+    { new: true }
   );
 
   res.json(updated);
 }
 
 /* CANCEL */
-export async function cancelAppointment(req,res){
-
+export async function cancelAppointment(req, res) {
   const { id } = req.params;
 
   const appointment = await Appointment.findById(id);
 
-  if(!appointment){
-    return res.status(404).json({message:"Not found"})
+  if (!appointment) {
+    return res.status(404).json({ message: "Not found" });
   }
 
   appointment.status = "CANCELLED";
 
   await appointment.save();
 
-  res.json({ message:"Appointment cancelled" });
+  res.json({ message: "Appointment cancelled" });
 }
