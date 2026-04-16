@@ -9,13 +9,27 @@ import {
 
 const getCleanObjectId = (rawId) => {
   const cleanedId = String(rawId || "").replace(/['"]/g, "").trim();
+
   if (!mongoose.Types.ObjectId.isValid(cleanedId)) {
     return null;
   }
+
   return cleanedId;
 };
 
-export const createSession = async (req, res) => {
+const formatSriLankaPhoneNumber = (phoneNumber) => {
+  const cleaned = String(phoneNumber || "").replace(/\s+/g, "").trim();
+
+  if (!cleaned) return "";
+
+  if (cleaned.startsWith("+94")) return cleaned;
+  if (cleaned.startsWith("94")) return `+${cleaned}`;
+  if (cleaned.startsWith("0")) return `+94${cleaned.substring(1)}`;
+
+  return cleaned;
+};
+
+export const createSessionFromConfirmedAppointment = async (req, res) => {
   try {
     const {
       appointmentId,
@@ -28,6 +42,7 @@ export const createSession = async (req, res) => {
       specialty,
       scheduledTime,
       notes,
+      appointmentStatus,
     } = req.body;
 
     if (
@@ -47,12 +62,19 @@ export const createSession = async (req, res) => {
       });
     }
 
+    if (String(appointmentStatus || "").toLowerCase() !== "confirmed") {
+      return res.status(400).json({
+        success: false,
+        message: "Session can only be created for a confirmed appointment",
+      });
+    }
+
     const existingSession = await Session.findOne({ appointmentId });
 
     if (existingSession) {
       return res.status(400).json({
         success: false,
-        message: "A session already exists for this appointmentId",
+        message: "A session already exists for this appointment",
       });
     }
 
@@ -72,18 +94,48 @@ export const createSession = async (req, res) => {
       meetingLink,
       scheduledTime,
       notes,
-      status: "pending",
+      status: "confirmed",
     });
+
+    try {
+      if (!process.env.NOTIFICATION_SERVICE_URL) {
+        console.warn("NOTIFICATION_SERVICE_URL is not set in .env");
+      } else {
+        const payload = {
+          appointmentId: session.appointmentId,
+          patientEmail: session.patientEmail,
+          phoneNumber: formatSriLankaPhoneNumber(session.phoneNumber),
+          patientName: session.patientName,
+          doctorName: session.doctorName,
+          specialty: session.specialty,
+          scheduledTime: session.scheduledTime,
+          meetingLink: session.meetingLink,
+          status: "Confirmed",
+        };
+
+        const response = await axios.post(
+          `${process.env.NOTIFICATION_SERVICE_URL}/api/notifications/telemedicine-confirmation`,
+          payload
+        );
+
+        console.log("Notification sent successfully:", response.data);
+      }
+    } catch (notifyError) {
+      console.error(
+        "Failed to send notification:",
+        notifyError.response?.data || notifyError.message
+      );
+    }
 
     return res.status(201).json({
       success: true,
-      message: "Telemedicine session request created successfully",
+      message: "Session created from confirmed appointment successfully",
       session,
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Failed to create session",
+      message: "Failed to create session from confirmed appointment",
       error: error.message,
     });
   }
@@ -197,89 +249,6 @@ export const updateSession = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to update session",
-      error: error.message,
-    });
-  }
-};
-
-export const confirmSessionByDoctor = async (req, res) => {
-  try {
-    const id = getCleanObjectId(req.params.id);
-    const { doctorId } = req.body;
-
-    if (!id) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid session id",
-      });
-    }
-
-    if (!doctorId) {
-      return res.status(400).json({
-        success: false,
-        message: "doctorId is required",
-      });
-    }
-
-    const session = await Session.findById(id);
-
-    if (!session) {
-      return res.status(404).json({
-        success: false,
-        message: "Session not found",
-      });
-    }
-
-    if (session.doctorId !== doctorId) {
-      return res.status(403).json({
-        success: false,
-        message: "Only the assigned doctor can confirm this session",
-      });
-    }
-
-    session.status = "confirmed";
-    await session.save();
-
-    try {
-      if (!process.env.NOTIFICATION_SERVICE_URL) {
-        console.warn("NOTIFICATION_SERVICE_URL is not set in .env");
-      } else {
-        const payload = {
-          patientEmail: session.patientEmail,
-          email: session.patientEmail,
-          phoneNumber: session.phoneNumber,
-          patientName: session.patientName,
-          doctorName: session.doctorName,
-          specialty: session.specialty,
-          scheduledTime: session.scheduledTime,
-          meetingLink: session.meetingLink,
-          status: "Confirmed",
-          appointmentStatus: "Confirmed",
-        };
-
-        const response = await axios.post(
-          `${process.env.NOTIFICATION_SERVICE_URL}/api/notifications/telemedicine-confirmation`,
-          payload
-        );
-
-        console.log("Notification sent successfully:", response.data);
-      }
-    } catch (notifyError) {
-      console.error(
-        "Failed to send notification:",
-        notifyError.response?.data || notifyError.message
-      );
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Session confirmed successfully",
-      session,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Failed to confirm session",
       error: error.message,
     });
   }
