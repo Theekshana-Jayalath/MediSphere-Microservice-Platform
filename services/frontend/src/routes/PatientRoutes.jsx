@@ -5,6 +5,7 @@ import PatientMedicalReports from "../pages/Patient/PatientMedicalReports";
 import PatientAppointments from "../pages/Patient/PatientAppointments";
 import PatientPayments from "../pages/Patient/PatientPayments";
 import PatientPrescriptions from "../pages/Patient/PatientPrescriptions";
+import PatientSessions from "../pages/Patient/PatientSessions";
 
 const patientRoutes = [
   <Route
@@ -36,6 +37,11 @@ const patientRoutes = [
     key="patient-prescriptions"
     path="/patient/prescriptions"
     element={<PatientPrescriptions />}
+  />,
+  <Route
+    key="patient-sessions"
+    path="/patient/sessions"
+    element={<PatientSessions />}
   />,
 ];
 
