@@ -232,11 +232,11 @@ const PayHereSection = ({
             className="form-input"
             disabled={isProcessing}
           />
-          <span className="input-icon">🔍</span>
+
         </div>
       </div>
 
-      <div className="payment-methods">
+      {/* <div className="payment-methods">
         <p className="methods-title">Available Payment Modes</p>
         <div className="methods-icons">
           {paymentMethods.map((method) => (
@@ -252,20 +252,20 @@ const PayHereSection = ({
           ))}
         </div>
 
-        {/* Show card form when Visa or Mastercard is selected */}
+       
         {(selectedMethod === 'visa' || selectedMethod === 'master') && (
           <CardForm variant={selectedMethod} onDataChange={handlePaymentDataChange} />
         )}
 
-        {/* Show wallet form when FriMi or Genie is selected */}
+        
         {(selectedMethod === 'frimi' || selectedMethod === 'genie') && (
           <WalletForm 
             type={selectedMethod === 'frimi' ? 'FriMi' : 'Genie'} 
             onDataChange={handlePaymentDataChange}
           />
         )}
-      </div>
-
+      </div> */}
+{/* 
       <div className="quick-pay">
         <div 
           className={`toggle-switch ${quickPay ? 'active' : ''}`} 
@@ -275,14 +275,14 @@ const PayHereSection = ({
         </div>
         <span>Remember me for Quick Pay</span>
         <span className="lightning-icon">⚡</span>
-      </div>
+      </div> */}
 
       <button 
         onClick={onProcessPayment} 
         className="pay-now-button"
-        disabled={isProcessing || !selectedMethod || !contact || !payHereReady || (selectedMethod && !isPaymentMethodValid())}
+        disabled={isProcessing}
       >
-        {isProcessing ? "Processing..." : "Pay Now"}
+        {isProcessing ? "Processing..." : "Checkout"}
       </button>
     </div>
   );

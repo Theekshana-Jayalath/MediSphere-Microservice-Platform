@@ -73,6 +73,29 @@ export async function createAppointment(req, res) {
       }
     }
 
+    // Prevent duplicate bookings:
+    // - same doctor, same date, same startTime -> slot already taken
+    // - same doctor, same date, same startTime, same patient -> duplicate booking by same patient
+    if (data.doctorId && data.appointmentDate && data.startTime) {
+      try {
+        const existingSlot = await Appointment.findOne({
+          doctorId: data.doctorId,
+          appointmentDate: data.appointmentDate,
+          startTime: data.startTime,
+          status: { $ne: "CANCELLED" }
+        });
+
+        if (existingSlot) {
+          if (data.patientId && String(existingSlot.patientId) === String(data.patientId)) {
+            return res.status(400).json({ message: "Duplicate booking: patient already booked this exact slot" });
+          }
+          return res.status(400).json({ message: "Time slot already taken for this doctor" });
+        }
+      } catch (err) {
+        console.warn("⚠️ Could not validate existing slot:", err?.message || err);
+      }
+    }
+
     // overlap check
     const booked = await Appointment.find({
       doctorId: data.doctorId,
@@ -123,14 +146,37 @@ export async function paymentSuccess(req,res){
 
   const { id } = req.params;
 
-  const updated = await Appointment.findByIdAndUpdate(
-    id,
-    {
-      paymentStatus:"PAID",
-      status:"PENDING_DOCTOR_APPROVAL"
-    },
-    { new:true }
-  );
+  // Try update by MongoDB _id first
+  let updated = null;
+  try {
+    updated = await Appointment.findByIdAndUpdate(
+      id,
+      {
+        paymentStatus: "PAID",
+        status: "PENDING_DOCTOR_APPROVAL"
+      },
+      { new: true }
+    );
+  } catch (err) {
+    // ignore and try by appointmentId
+    updated = null;
+  }
+
+  if (!updated) {
+    // Try update by appointmentId field
+    updated = await Appointment.findOneAndUpdate(
+      { appointmentId: id },
+      {
+        paymentStatus: "PAID",
+        status: "PENDING_DOCTOR_APPROVAL"
+      },
+      { new: true }
+    );
+  }
+
+  if (!updated) {
+    return res.status(404).json({ message: "Appointment not found" });
+  }
 
   res.json(updated);
 }
@@ -179,4 +225,153 @@ export async function cancelAppointment(req,res){
   await appointment.save();
 
   res.json({ message:"Appointment cancelled" });
+}
+
+// In appointmentController.js - Add these functions
+
+// Update appointment after successful payment
+export async function updatePaymentSuccess(req, res) {
+  const { id } = req.params;
+  const { orderId, paymentStatus, status, paidAt } = req.body;
+
+  console.log("🔵 Updating appointment payment success:", { id, orderId });
+
+  try {
+    let appointment = null;
+    
+    // Try to find by MongoDB _id first
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      appointment = await Appointment.findByIdAndUpdate(
+        id,
+        {
+          paymentStatus: paymentStatus || "PAID",
+          status: status || "CONFIRMED",
+          paymentId: orderId,
+          paidAt: paidAt || new Date()
+        },
+        { new: true }
+      );
+    }
+    
+    // If not found, try by appointmentId
+    if (!appointment) {
+      appointment = await Appointment.findOneAndUpdate(
+        { appointmentId: id },
+        {
+          paymentStatus: paymentStatus || "PAID",
+          status: status || "CONFIRMED",
+          paymentId: orderId,
+          paidAt: paidAt || new Date()
+        },
+        { new: true }
+      );
+    }
+
+    if (!appointment) {
+      console.error("❌ Appointment not found:", id);
+      return res.status(404).json({ 
+        success: false, 
+        message: "Appointment not found" 
+      });
+    }
+
+    console.log("✅ Appointment updated successfully:", {
+      id: appointment.appointmentId,
+      status: appointment.status,
+      paymentStatus: appointment.paymentStatus
+    });
+
+    res.json({
+      success: true,
+      message: "Appointment updated successfully",
+      appointment: appointment
+    });
+
+  } catch (error) {
+    console.error("❌ Update payment success error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Error updating appointment",
+      error: error.message 
+    });
+  }
+}
+
+// Alternative update endpoint
+export async function updatePaymentStatus(req, res) {
+  const { appointmentId, orderId, paymentStatus, status } = req.body;
+
+  console.log("🔵 Alternative payment status update:", { appointmentId, orderId });
+
+  try {
+    const appointment = await Appointment.findOneAndUpdate(
+      { appointmentId: appointmentId },
+      {
+        paymentStatus: paymentStatus || "PAID",
+        status: status || "CONFIRMED",
+        paymentId: orderId,
+        paidAt: new Date()
+      },
+      { new: true }
+    );
+
+    if (!appointment) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Appointment not found" 
+      });
+    }
+
+    console.log("✅ Appointment updated via alternative method");
+
+    res.json({
+      success: true,
+      appointment: appointment
+    });
+
+  } catch (error) {
+    console.error("❌ Alternative update error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Error updating appointment" 
+    });
+  }
+}
+
+// Mark payment as failed
+export async function markPaymentFailed(req, res) {
+  const { id } = req.params;
+  const { orderId, statusCode } = req.body;
+
+  try {
+    let appointment = null;
+    
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+      appointment = await Appointment.findByIdAndUpdate(
+        id,
+        {
+          paymentStatus: "FAILED",
+          paymentId: orderId,
+          failureReason: `Payment failed with status code: ${statusCode}`
+        },
+        { new: true }
+      );
+    } else {
+      appointment = await Appointment.findOneAndUpdate(
+        { appointmentId: id },
+        {
+          paymentStatus: "FAILED",
+          paymentId: orderId,
+          failureReason: `Payment failed with status code: ${statusCode}`
+        },
+        { new: true }
+      );
+    }
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error("Error marking payment failed:", error);
+    res.status(500).json({ success: false });
+  }
 }

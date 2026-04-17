@@ -36,6 +36,46 @@ const BookingPage = () => {
       document.querySelector('.validation-error')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
+    // Validate selected date is not in the past
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (selectedDate && selectedDate < todayStr) {
+      setValidationError('Selected date is in the past. Please choose a future date.');
+      document.querySelector('.validation-error')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    // If booking for today, ensure the selected time is in the future
+    if (selectedDate === todayStr && selectedTime) {
+      // selectedTime format: "h:mm AM/PM - h:mm AM/PM"
+      const startLabel = selectedTime.split('-')[0]?.trim();
+      const parseLabelToDate = (label, dateStr) => {
+        // Reuse parsing logic compatible with TimeSlots.parseTimeToDate
+        const merMatch = label.match(/\b(AM|PM)\b/i);
+        let mer = null;
+        let t = label;
+        if (merMatch) {
+          mer = merMatch[1].toUpperCase();
+          t = t.replace(/\b(AM|PM)\b/i, '').trim();
+        }
+        const parts = t.split(':');
+        let hours = parseInt(parts[0]) || 0;
+        const minutes = parseInt(parts[1]) || 0;
+        if (mer) {
+          if (mer === 'PM' && hours !== 12) hours += 12;
+          if (mer === 'AM' && hours === 12) hours = 0;
+        }
+        const [y, m, d] = dateStr.split('-').map(n => parseInt(n));
+        return new Date(y, m - 1, d, hours, minutes);
+      };
+
+      const selectedStart = parseLabelToDate(startLabel, selectedDate);
+      const now = new Date();
+      if (selectedStart.getTime() <= now.getTime()) {
+        setValidationError('Selected time slot already passed. Please choose a future time.');
+        document.querySelector('.validation-error')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
     
   // Clear error and proceed to payment
     setValidationError('');
