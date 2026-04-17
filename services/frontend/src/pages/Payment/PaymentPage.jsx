@@ -117,8 +117,9 @@ const PaymentPage = () => {
         serviceCharge: serviceCharge,
         tax: tax,
         contact: contact,
-        selectedDate: bookingDetails?.selectedDate,
-        selectedTime: bookingDetails?.selectedTime,
+  selectedDate: bookingDetails?.selectedDate,
+  selectedTime: bookingDetails?.selectedTime,
+  selectedHospital: bookingDetails?.selectedHospital || bookingDetails?.doctor?.baseHospital || bookingDetails?.doctor?.hospital || '',
         timestamp: new Date().toISOString()
       }));
       
@@ -134,13 +135,15 @@ const PaymentPage = () => {
           doctor: bookingDetails?.doctor,
           selectedDate: bookingDetails?.selectedDate,
           selectedTime: bookingDetails?.selectedTime,
+          selectedHospital: bookingDetails?.selectedHospital || bookingDetails?.doctor?.baseHospital || bookingDetails?.doctor?.hospital || '',
           selectedConsultation: bookingDetails?.selectedConsultation,
         }
       };
 
       console.log("📤 Sending to backend:", requestBody);
 
-      const response = await fetch("http://localhost:5003/api/payments/create", {
+  const API_GATEWAY = import.meta.env.VITE_API_GATEWAY_URL || "http://localhost:5015";
+  const response = await fetch(`${API_GATEWAY}/api/payments/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

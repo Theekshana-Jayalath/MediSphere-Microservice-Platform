@@ -45,5 +45,8 @@ export async function generateSlots(doctorId, date) {
 
   });
 
-  return slots.filter(s => !blocked.includes(s));
+  // Return both available slots and blocked slots so callers can make richer decisions
+  const available = slots.filter(s => !blocked.includes(s));
+
+  return { available, blocked };
 }

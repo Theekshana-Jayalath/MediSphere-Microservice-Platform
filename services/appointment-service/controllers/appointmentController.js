@@ -2,10 +2,38 @@ import axios from "axios";
 import Appointment from "../models/appointmentModel.js";
 import { generateSlots } from "../service/slotService.js";
 
+const enrichAppointmentsWithPatientDisplayId = async (appointments) => {
+  const appointmentList = Array.isArray(appointments) ? appointments : [appointments];
 
-/* ---------------------------------------
-   GET ALL APPOINTMENTS
----------------------------------------- */
+  const enriched = await Promise.all(
+    appointmentList.map(async (appointment) => {
+      try {
+        const patientRes = await axios.get(
+          `${process.env.PATIENT_SERVICE_URL}/api/patients/internal/${appointment.patientId}`
+        );
+
+        const patientData = patientRes.data?.data || patientRes.data || {};
+
+        return {
+          ...appointment.toObject(),
+          patientDisplayId:
+            patientData.patientId ||
+            patientData.patientDisplayId ||
+            appointment.patientId,
+        };
+      } catch (error) {
+        return {
+          ...appointment.toObject(),
+          patientDisplayId: appointment.patientId,
+        };
+      }
+    })
+  );
+
+  return enriched;
+};
+
+/* GET ALL */
 export async function getAllAppointments(req, res) {
   try {
     const appointments = await Appointment.find().sort({ createdAt: -1 });
@@ -42,9 +70,7 @@ export async function getAppointmentsByPatient(req, res) {
   }
 }
 
-/* ---------------------------------------
-   SEARCH APPOINTMENTS
----------------------------------------- */
+/* SEARCH */
 export async function searchAppointments(req, res) {
   try {
     const { doctorName, specialization, hospital, type } = req.query;
@@ -106,16 +132,9 @@ export async function getSlots(req, res) {
       });
     }
 
-    const slots = await generateSlots(doctorId, date);
-    res.status(200).json(slots);
-  } catch (error) {
-    console.error("❌ Error getting slots:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to get slots",
-      error: error.message,
-    });
-  }
+  const slots = await generateSlots(doctorId, date);
+
+  res.json(slots);
 }
 
 /* ---------------------------------------
@@ -172,17 +191,10 @@ export async function createAppointment(req, res) {
 
     const docId = data.doctorId;
     if (docId && (!data.doctorName || !data.doctorSpecialty || !data.hospital)) {
-      const doctorServiceBase =
-        process.env.DOCTOR_SERVICE_URL || "http://localhost:6010";
-
+      const doctorServiceBase = process.env.DOCTOR_SERVICE_URL || "http://localhost:6010";
       try {
-        const dresp = await axios.get(
-          `${doctorServiceBase}/api/doctors/${docId}`,
-          { timeout: 5000 }
-        );
-
+        const dresp = await axios.get(`${doctorServiceBase}/api/doctors/${docId}`, { timeout: 5000 });
         const d = dresp.data;
-
         if (d) {
           data.doctorName =
             data.doctorName || d.fullName || d.name || d.displayName || "";
@@ -329,16 +341,13 @@ export async function rescheduleAppointment(req, res) {
       startTime || appointmentTime || appointment.startTime || appointment.appointmentTime;
     const newDuration = Number(duration) || Number(appointment.duration) || 30;
 
-    const [h = "0", m = "0"] = String(newStartTime).split(":");
-    const start = parseInt(h, 10) * 60 + parseInt(m, 10);
-    const end = start + newDuration;
+    const [h, m] = targetStartTime.split(":");
+    const start = parseInt(h) * 60 + parseInt(m);
+    const end = start + duration;
 
     const endHour = Math.floor(end / 60);
     const endMin = end % 60;
-    const endTime = `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(
-      2,
-      "0"
-    )}`;
+    const endTime = `${endHour}:${endMin === 0 ? "00" : "30"}`;
 
     const booked = await Appointment.find({
       _id: { $ne: appointment._id },
