@@ -104,7 +104,8 @@ const BookingPage = () => {
         status: "PENDING"
       };
 
-      const resp = await fetch("http://localhost:5002/api/appointments", {
+  const API_GATEWAY = import.meta.env.VITE_API_GATEWAY_URL || "http://localhost:5015";
+  const resp = await fetch(`${API_GATEWAY}/api/appointments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

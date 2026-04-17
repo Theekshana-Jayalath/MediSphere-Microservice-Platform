@@ -47,7 +47,8 @@ export const createPayment = async (req, res) => {
     // we should NOT create a duplicate appointment — keep the same id.
     if (!appointmentId && !payment.appointmentId) {
       try {
-        const appointmentServiceBase = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
+        // Use API gateway to reach appointment service
+        const appointmentServiceBase = process.env.API_GATEWAY_URL || "http://localhost:5015";
         const bd = payment.bookingDetails || {};
         const doc = bd.doctor || {};
 
@@ -203,8 +204,8 @@ export const handleIPN = async (req, res) => {
 
     console.log("✅ Payment updated to SUCCESS for orderId:", orderId);
 
-    // Create appointment in Appointment Service using saved payment data
-    const appointmentServiceBase = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
+  // Create appointment in Appointment Service using saved payment data via API gateway
+  const appointmentServiceBase = process.env.API_GATEWAY_URL || "http://localhost:5015";
 
     const bd = payment.bookingDetails || {};
     const doc = bd.doctor || {};
@@ -272,7 +273,7 @@ export const getPaymentStatus = async (req, res) => {
       await payment.save();
 
       try {
-        const appointmentServiceBase = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
+  const appointmentServiceBase = process.env.API_GATEWAY_URL || "http://localhost:5015";
         const bd = payment.bookingDetails || {};
         const doc = bd.doctor || {};
 

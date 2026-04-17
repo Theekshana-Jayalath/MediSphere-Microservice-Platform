@@ -142,7 +142,8 @@ const PaymentPage = () => {
 
       console.log("📤 Sending to backend:", requestBody);
 
-      const response = await fetch("http://localhost:5003/api/payments/create", {
+  const API_GATEWAY = import.meta.env.VITE_API_GATEWAY_URL || "http://localhost:5015";
+  const response = await fetch(`${API_GATEWAY}/api/payments/create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

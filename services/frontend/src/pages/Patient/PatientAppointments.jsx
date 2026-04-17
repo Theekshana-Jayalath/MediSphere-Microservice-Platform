@@ -18,7 +18,7 @@ export default function PatientAppointments() {
   const APPOINTMENT_BASE_URL =
     import.meta.env.VITE_API_GATEWAY_URL
       ? `${import.meta.env.VITE_API_GATEWAY_URL}/api/appointments`
-      : "http://localhost:5015/api/appointments";
+  : `${import.meta.env.VITE_API_GATEWAY_URL || "http://localhost:5015"}/api/appointments`;
 
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
