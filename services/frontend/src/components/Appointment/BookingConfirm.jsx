@@ -1,23 +1,47 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 
-// BookingConfirm: navigates to payment page and passes the consultation fee
-const BookingConfirm = ({ doctor }) => {
+const BookingConfirm = ({ doctor, selectedTime, selectedDate, selectedConsultation, selectedType }) => {
   const navigate = useNavigate();
 
-  // Accept several common fee property names from the doctor object
-  const consultationFee =
-    doctor?.fee ?? doctor?.consultationFee ?? doctor?.price ?? 0;
-
-  const handleConfirm = () => {
-    navigate('/payment', { state: { consultationFee, doctor } });
+  const handleConfirmBooking = () => {
+    // Validate consultation type
+    if (!selectedType) {
+      alert("Please select a consultation type before confirming.");
+      return;
+    }
+    
+    // Validate time slot
+    if (!selectedTime) {
+      alert("Please select a time slot before confirming.");
+      return;
+    }
+    
+    navigate("/payment", {
+      state: {
+        bookingDetails: {
+          doctor,
+          selectedDate,
+          selectedTime,
+          selectedConsultation
+        }
+      }
+    });
   };
 
   return (
-    <div className="confirm-booking-wrapper">
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: 10 }}>
-        <button onClick={handleConfirm} className="confirm-booking-btn">Confirm Booking →</button>
-      </div>
+    <div className="booking-confirm-wrapper">
+      <button 
+        onClick={handleConfirmBooking} 
+        className="confirm-booking-btn"
+      >
+        Confirm Booking →
+      </button>
+      {(!selectedType || !selectedTime) && (
+        <p className="confirm-error-message">
+          Please select {!selectedType && !selectedTime ? 'consultation type and time slot' : !selectedType ? 'consultation type' : 'time slot'} before confirming.
+        </p>
+      )}
     </div>
   );
 };

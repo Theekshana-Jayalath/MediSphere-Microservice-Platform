@@ -9,15 +9,15 @@ export default function PatientDashboard() {
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
 
-  const storedPatientProfile = localStorage.getItem("patientProfile");
-  const patientProfile = storedPatientProfile
-    ? JSON.parse(storedPatientProfile)
-    : null;
+  const [patientProfile, setPatientProfile] = useState(() => {
+    const storedPatientProfile = localStorage.getItem("patientProfile");
+    return storedPatientProfile ? JSON.parse(storedPatientProfile) : null;
+  });
 
   const patientName =
     patientProfile?.name || patientProfile?.fullName || user?.name || "Patient";
-  const patientEmail = user?.email || "No email";
-  const patientId = user?.id ? user.id.slice(-6).toUpperCase() : "------";
+  const patientEmail = patientProfile?.email || user?.email || "No email";
+  const patientId = patientProfile?.patientId || user?.patientId || "------";
 
   const [vitals, setVitals] = useState({
     heartRate: "72",
@@ -31,6 +31,39 @@ export default function PatientDashboard() {
       setVitals(JSON.parse(savedVitals));
     }
   }, []);
+
+  useEffect(() => {
+    const fetchPatientProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+
+        if (!token) return;
+        if (patientProfile?.patientId) return;
+
+        const response = await fetch("http://localhost:5015/api/patients/me", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          console.error(data?.message || "Failed to fetch patient profile");
+          return;
+        }
+
+        setPatientProfile(data);
+        localStorage.setItem("patientProfile", JSON.stringify(data));
+      } catch (error) {
+        console.error("Failed to fetch patient profile:", error);
+      }
+    };
+
+    fetchPatientProfile();
+  }, [patientProfile?.patientId]);
 
   const handleVitalChange = (e) => {
     const { name, value } = e.target;
@@ -379,7 +412,9 @@ export default function PatientDashboard() {
               </div>
               <h4>Need care soon?</h4>
               <p>Average wait time: 15 mins</p>
-              <button>Book New Appointment</button>
+              <button onClick={() => navigate("/appointment")}>
+                Book New Appointment
+              </button>
             </div>
           </section>
 

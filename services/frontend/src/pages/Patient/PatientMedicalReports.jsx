@@ -16,24 +16,32 @@ export default function PatientMedicalReports() {
 
   const patientName =
     patientProfile?.name || patientProfile?.fullName || user?.name || "Patient";
-  const patientId = user?.id ? user.id.slice(-6).toUpperCase() : "------";
+  const patientId =
+    patientProfile?.patientId || user?.patientId || "------";
 
-  const REPORTS_BASE_URL = import.meta.env.VITE_PATIENT_SERVICE_URL
-    ? `${import.meta.env.VITE_PATIENT_SERVICE_URL}/api/reports`
-    : "http://localhost:5005/api/reports";
+  const lookupPatientId =
+    patientProfile?.userId || user?.id || patientProfile?._id || "";
+
+  const API_GATEWAY_URL = import.meta.env.VITE_API_GATEWAY_URL
+    ? import.meta.env.VITE_API_GATEWAY_URL
+    : "http://localhost:5015";
 
   const [reportForm, setReportForm] = useState({
     title: "",
     description: "",
     reportType: "LAB_RESULT",
+    doctorId: "",
     file: null,
   });
 
   const [reports, setReports] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(false);
   const [loadingReports, setLoadingReports] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [editingReportId, setEditingReportId] = useState(null);
+  const [doctorError, setDoctorError] = useState(null);
 
   const getAuthToken = () => {
     return (
@@ -50,6 +58,7 @@ export default function PatientMedicalReports() {
       title: "",
       description: "",
       reportType: "LAB_RESULT",
+      doctorId: "",
       file: null,
     });
     setEditingReportId(null);
@@ -73,14 +82,20 @@ export default function PatientMedicalReports() {
   const parseResponseData = async (response) => {
     const contentType = response.headers.get("content-type") || "";
 
-    if (contentType.includes("application/json")) {
-      return await response.json();
-    }
+    try {
+      if (contentType.includes("application/json")) {
+        return await response.json();
+      }
 
-    const text = await response.text();
-    return {
-      message: text || "Unexpected server response",
-    };
+      const text = await response.text();
+      return {
+        message: text || "Unexpected server response",
+      };
+    } catch (error) {
+      return {
+        message: "Unable to parse server response",
+      };
+    }
   };
 
   const fetchReports = async () => {
@@ -89,7 +104,7 @@ export default function PatientMedicalReports() {
 
       const token = getAuthToken();
 
-      const response = await fetch(`${REPORTS_BASE_URL}/me`, {
+      const response = await fetch(`${API_GATEWAY_URL}/api/reports/me`, {
         method: "GET",
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -111,8 +126,79 @@ export default function PatientMedicalReports() {
     }
   };
 
+  const fetchDoctors = async () => {
+    try {
+      setLoadingDoctors(true);
+      setDoctorError(null);
+      const token = getAuthToken();
+
+      if (!lookupPatientId) {
+        setDoctors([]);
+        setDoctorError(
+          "Unable to identify the logged-in patient. Please log in again."
+        );
+        return;
+      }
+
+      console.log(
+        "Fetching patient's doctors from:",
+        `${API_GATEWAY_URL}/api/doctors/my-doctors/${lookupPatientId}`
+      );
+
+      const response = await fetch(
+        `${API_GATEWAY_URL}/api/doctors/my-doctors/${lookupPatientId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
+      );
+
+      console.log("Response status:", response.status);
+
+      const data = await parseResponseData(response);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message || `Failed to fetch doctors: ${response.status}`
+        );
+      }
+
+      let doctorsList = [];
+      if (Array.isArray(data)) {
+        doctorsList = data;
+      } else if (data?.data && Array.isArray(data.data)) {
+        doctorsList = data.data;
+      } else if (data?.doctors && Array.isArray(data.doctors)) {
+        doctorsList = data.doctors;
+      }
+
+      console.log("Doctors fetched:", doctorsList.length);
+      setDoctors(doctorsList);
+
+      if (doctorsList.length === 0) {
+        setDoctorError(
+          "You don't have any appointments yet. Please book an appointment with a doctor first."
+        );
+      } else {
+        setDoctorError(null);
+      }
+    } catch (error) {
+      console.error("Failed to fetch doctors:", error);
+      setDoctorError(
+        "Unable to load doctors. Please make sure you're logged in and try again."
+      );
+      setDoctors([]);
+    } finally {
+      setLoadingDoctors(false);
+    }
+  };
+
   useEffect(() => {
     fetchReports();
+    fetchDoctors();
   }, []);
 
   const handleChange = (e) => {
@@ -130,6 +216,7 @@ export default function PatientMedicalReports() {
       title: report.title || "",
       description: report.description || "",
       reportType: report.reportType || "LAB_RESULT",
+      doctorId: report.doctorId || "",
       file: null,
     });
 
@@ -149,6 +236,11 @@ export default function PatientMedicalReports() {
       return;
     }
 
+    if (!reportForm.doctorId) {
+      alert("Please select a doctor to associate with this report");
+      return;
+    }
+
     if (!editingReportId && !reportForm.file) {
       alert("Please select a file");
       return;
@@ -163,29 +255,40 @@ export default function PatientMedicalReports() {
       formData.append("title", reportForm.title);
       formData.append("description", reportForm.description);
       formData.append("reportType", reportForm.reportType);
+      formData.append("doctorId", reportForm.doctorId);
+
+      console.log("Submitting with doctorId:", reportForm.doctorId);
 
       if (reportForm.file) {
         formData.append("report", reportForm.file);
+        console.log("Submitting file:", reportForm.file.name);
       }
 
-      const response = await fetch(
-        editingReportId
-          ? `${REPORTS_BASE_URL}/${editingReportId}`
-          : `${REPORTS_BASE_URL}/upload`,
-        {
-          method: editingReportId ? "PUT" : "POST",
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: formData,
-        }
-      );
+      const url = editingReportId
+        ? `${API_GATEWAY_URL}/api/reports/${editingReportId}`
+        : `${API_GATEWAY_URL}/api/reports/upload`;
+
+      console.log("Submitting to API Gateway:", url);
+      console.log("Auth token exists:", !!token);
+
+      const response = await fetch(url, {
+        method: editingReportId ? "PUT" : "POST",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      });
+
+      console.log("Upload response status:", response.status);
+      console.log("Upload response ok:", response.ok);
 
       const data = await parseResponseData(response);
+      console.log("Upload response data:", data);
 
       if (!response.ok) {
         throw new Error(
           data?.message ||
+            data?.error ||
             (editingReportId
               ? "Failed to update report"
               : "Failed to upload report")
@@ -194,6 +297,7 @@ export default function PatientMedicalReports() {
 
       resetForm();
       await fetchReports();
+
       alert(
         editingReportId
           ? "Report updated successfully"
@@ -221,7 +325,7 @@ export default function PatientMedicalReports() {
     try {
       const token = getAuthToken();
 
-      const response = await fetch(`${REPORTS_BASE_URL}/${reportId}`, {
+      const response = await fetch(`${API_GATEWAY_URL}/api/reports/${reportId}`, {
         method: "DELETE",
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -297,6 +401,15 @@ export default function PatientMedicalReports() {
     return ext || "FILE";
   };
 
+  const getDoctorName = (doctorId) => {
+    if (!doctorId) return "Not assigned";
+    const doctor = doctors.find((d) => d._id === doctorId || d.id === doctorId);
+    if (doctor) {
+      return `Dr. ${doctor.fullName || doctor.name || "Unknown"}`;
+    }
+    return "Unknown Doctor";
+  };
+
   const filteredReports = useMemo(() => {
     const term = searchText.trim().toLowerCase();
 
@@ -307,15 +420,17 @@ export default function PatientMedicalReports() {
       const description = report?.description?.toLowerCase() || "";
       const type = report?.reportType?.toLowerCase() || "";
       const fileName = report?.fileName?.toLowerCase() || "";
+      const doctorName = getDoctorName(report?.doctorId).toLowerCase();
 
       return (
         title.includes(term) ||
         description.includes(term) ||
         type.includes(term) ||
-        fileName.includes(term)
+        fileName.includes(term) ||
+        doctorName.includes(term)
       );
     });
-  }, [reports, searchText]);
+  }, [reports, searchText, doctors]);
 
   const latestUpload = reports.length > 0 ? reports[0] : null;
 
@@ -346,7 +461,7 @@ export default function PatientMedicalReports() {
               <span className="material-symbols-outlined">search</span>
               <input
                 type="text"
-                placeholder="Search report name or clinic..."
+                placeholder="Search report name, doctor, or clinic..."
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
               />
@@ -491,6 +606,50 @@ export default function PatientMedicalReports() {
                   </select>
                 </div>
 
+                <div className="reports-form-group">
+                  <label>Assign to Doctor</label>
+                  <select
+                    name="doctorId"
+                    value={reportForm.doctorId}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">-- Select a doctor --</option>
+                    {loadingDoctors ? (
+                      <option disabled>Loading doctors...</option>
+                    ) : doctorError ? (
+                      <option disabled>{doctorError}</option>
+                    ) : doctors.length === 0 ? (
+                      <option disabled>
+                        No doctors found. Please book an appointment first.
+                      </option>
+                    ) : (
+                      doctors.map((doctor) => (
+                        <option
+                          key={doctor._id || doctor.id}
+                          value={doctor._id || doctor.id}
+                        >
+                          Dr.{" "}
+                          {doctor.fullName ||
+                            doctor.name ||
+                            doctor.email ||
+                            "Unknown"}{" "}
+                          - {doctor.specialization || ""}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  <small
+                    style={{
+                      display: "block",
+                      marginTop: "4px",
+                      color: "#6c757d",
+                    }}
+                  >
+                    Only the selected doctor will be able to view this report
+                  </small>
+                </div>
+
                 <label
                   className="reports-file-drop"
                   htmlFor="patient-report-file"
@@ -582,6 +741,7 @@ export default function PatientMedicalReports() {
                     <tr>
                       <th>Report Name</th>
                       <th>Category</th>
+                      <th>Assigned Doctor</th>
                       <th>Upload Date</th>
                       <th>Format/Size</th>
                       <th className="actions-head">Actions</th>
@@ -592,7 +752,7 @@ export default function PatientMedicalReports() {
                     {loadingReports ? (
                       <tr>
                         <td
-                          colSpan="5"
+                          colSpan="6"
                           style={{ textAlign: "center", padding: "24px" }}
                         >
                           Loading reports...
@@ -601,7 +761,7 @@ export default function PatientMedicalReports() {
                     ) : filteredReports.length === 0 ? (
                       <tr>
                         <td
-                          colSpan="5"
+                          colSpan="6"
                           style={{ textAlign: "center", padding: "24px" }}
                         >
                           No reports found
@@ -636,6 +796,14 @@ export default function PatientMedicalReports() {
                             >
                               {report.reportType || "OTHER"}
                             </span>
+                          </td>
+
+                          <td>
+                            <div className="report-doctor-cell">
+                              <span className="doctor-badge">
+                                {getDoctorName(report.doctorId)}
+                              </span>
+                            </div>
                           </td>
 
                           <td>

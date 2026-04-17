@@ -8,6 +8,17 @@ const roles = [
   { key: "admin", label: "Admin", icon: "admin_panel_settings" },
 ];
 
+const AUTH_ENDPOINTS = [
+  import.meta.env.VITE_AUTH_API_URL,
+  "http://localhost:5006/api/auth",
+  "http://localhost:5015/api/auth",
+].filter(Boolean);
+
+const DOCTOR_ENDPOINTS = [
+  import.meta.env.VITE_DOCTOR_API_BASE_URL,
+  "http://localhost:6010/api/doctors",
+].filter(Boolean);
+
 export default function Login() {
   const [selectedRole, setSelectedRole] = useState("patient");
   const [showPassword, setShowPassword] = useState(false);
@@ -34,35 +45,71 @@ export default function Login() {
     }
 
     try {
-      const response = await fetch("http://localhost:5006/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
-      });
+      let response = null;
+      let data = null;
+      let lastError = null;
 
-      const data = await response.json();
+      const isDoctorLogin = selectedRole === "doctor";
+      const endpoints = isDoctorLogin ? DOCTOR_ENDPOINTS : AUTH_ENDPOINTS;
+
+      for (const baseUrl of endpoints) {
+        try {
+          response = await fetch(`${baseUrl}/login`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: formData.email,
+              password: formData.password,
+            }),
+          });
+
+          data = await response.json();
+
+          // Stop trying fallbacks when the auth service is reachable.
+          break;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      if (!response) {
+        console.error("Login network error:", lastError);
+        alert("Auth service is not reachable. Please start auth-service and try again.");
+        return;
+      }
 
       if (!response.ok) {
-        alert(data.message || "Login failed");
+        alert(data?.message || "Login failed");
+        return;
+      }
+
+      const role = String(data?.user?.role || "").toUpperCase();
+      const expectedRole = selectedRole.toUpperCase();
+
+      if (role !== expectedRole) {
+        alert(`This account is registered as ${role || "UNKNOWN"}, not ${expectedRole}.`);
         return;
       }
 
       localStorage.setItem("token", data.token);
+      localStorage.setItem("authToken", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
+      // persist patientId for booking/payment flows
+      if (String(data.user?.role || "").toUpperCase() === "PATIENT") {
+        const pid = data.user?.id || data.user?._id || data.user?.patientId;
+        if (pid) localStorage.setItem("patientId", String(pid));
+      }
 
-      if (data.user.role === "PATIENT") {
+      if (role === "PATIENT") {
         navigate("/patient/dashboard");
-      } else if (data.user.role === "DOCTOR") {
+      } else if (role === "DOCTOR") {
         navigate("/doctor/dashboard");
-      } else if (data.user.role === "ADMIN") {
+      } else if (role === "ADMIN") {
         navigate("/admin/dashboard");
       } else {
-        navigate("/home");
+        navigate("/");
       }
     } catch (error) {
       console.error("Login error:", error);

@@ -2,8 +2,11 @@ import fs from "fs";
 import path from "path";
 import Patient from "../models/Patient.js";
 import Report from "../models/Report.js";
+import { fileURLToPath } from "url";
 
-const uploadsDir = path.join(process.cwd(), "src", "uploads");
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDir = path.dirname(currentFilePath);
+const uploadsDir = path.join(currentDir, "..", "uploads");
 
 const buildPublicFileUrl = (filename) => {
   return `/uploads/${filename}`;
@@ -74,6 +77,30 @@ export const getMyReports = async (req, res) => {
     return res.status(200).json(reports);
   } catch (error) {
     console.error("getMyReports error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getReportsByDoctor = async (req, res) => {
+  try {
+    const requestedDoctorId = String(req.params.doctorId || "").trim();
+    const requesterRole = String(req.user?.role || "").toUpperCase();
+    const requesterId = String(req.user?.id || "").trim();
+
+    if (!requestedDoctorId) {
+      return res.status(400).json({ message: "Doctor id is required" });
+    }
+
+    if (requesterRole !== "ADMIN" && requesterId !== requestedDoctorId) {
+      return res.status(403).json({ message: "Forbidden: can only access your own reports" });
+    }
+
+    const reports = await Report.find({ doctorId: requestedDoctorId })
+      .populate("patientId", "name patientId")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json(reports);
+  } catch (error) {
     return res.status(500).json({ message: error.message });
   }
 };

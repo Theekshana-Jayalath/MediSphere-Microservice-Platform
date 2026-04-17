@@ -1,56 +1,65 @@
-
 import React from "react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
+import defaultUserImg from "../../assets/user.png";
 
-const DoctorCard = ({doctor, selectedDate}) => {
-	const navigate = useNavigate();
+const DoctorCard = ({ doctor, selectedDate, setDateError }) => {
+  const navigate = useNavigate();
 
-	const handleBook = () => {
-	navigate('/booking', { state: { doctor, selectedDate } });
-	};
+  const handleBookNow = () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (!selectedDate) {
+      setDateError('Please select an appointment date');
+      return;
+    }
+    // Prevent booking for past dates
+    if (selectedDate < todayStr) {
+      setDateError('Cannot book for a past date');
+      return;
+    }
+    setDateError(false);
+    // Match the route path from appointmentRoutes
+    navigate("/appointment/booking", {
+      state: { 
+        doctor: doctor,
+        selectedDate: selectedDate 
+      }
+    });
+  };
 
-	return (
-		<div className="rounded-2xl shadow-sm p-5 flex gap-5 hover:shadow-md transition h-50 w-full" style={{ backgroundColor: 'var(--ms-primary)' }}>
+  const getImageSrc = () => {
+    if (doctor.image && doctor.image !== "") {
+      return doctor.image;
+    }
+    return defaultUserImg;
+  };
 
-<img
-src={doctor.image}
-className="w-20 h-20 rounded-xl object-cover"
-/>
-
-<div className="flex-1 flex flex-col justify-between">
-
-<div className="flex justify-between">
-<span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: 'var(--ms-light)', color: 'var(--ms-dark)' }}>
-{doctor.specialty}
-</span>
-
-<span className="font-semibold" style={{ color: 'var(--ms-mid)' }}>
-⭐ {doctor.rating}
-</span>
-</div>
-
-<h3 className="text-lg font-semibold mt-2" style={{ color: 'var(--ms-dark)' }}>
-{doctor.name}
-</h3>
-
-<p className="text-sm" style={{ color: 'var(--ms-mid)' }}>
-{doctor.hospital}
-</p>
-
-<div className="flex justify-between items-center mt-3">
-<span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: 'rgba(0,0,0,0.04)', color: 'var(--ms-dark)' }}>
-{doctor.experience}
-</span>
-
-<button type="button" onClick={handleBook} className="ms-btn-primary px-4 py-1 rounded-lg">
-	Book Now
-</button>
-
-</div>
-
-</div>
-</div>
-);
+  return (
+    <div className="doctor-card">
+      <div className="doctor-card-image">
+        <img 
+          src={getImageSrc()} 
+          alt={doctor.name}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = defaultUserImg;
+          }}
+        />
+      </div>
+      <div className="doctor-card-content">
+        <h3 className="doctor-name" title={doctor.name}>
+          {doctor.name}
+        </h3>
+        <p className="doctor-specialty">{doctor.specialty}</p>
+        <p className="doctor-hospital" title={doctor.hospital}>
+          {doctor.hospital}
+        </p>
+        <div className="doctor-experience">{doctor.experience}</div>
+        <button onClick={handleBookNow} className="book-now-btn">
+          Book Now
+        </button>
+      </div>
+    </div>
+  );
 };
 
 export default DoctorCard;
