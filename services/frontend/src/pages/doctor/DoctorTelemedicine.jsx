@@ -9,6 +9,8 @@ import {
 } from "../../services/doctor/telemedicineApi";
 import "../../styles/Doctor/doctorTelemedicine.css";
 import { useNavigate } from "react-router-dom";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const DoctorTelemedicine = () => {
   const navigate = useNavigate();
@@ -26,6 +28,7 @@ const DoctorTelemedicine = () => {
   const [activeFilter, setActiveFilter] = useState("all");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
 
   const getLoggedInUser = () => {
     try {
@@ -177,6 +180,69 @@ const DoctorTelemedicine = () => {
     );
   }, [sessions, activeFilter]);
 
+  const searchedSessions = useMemo(() => {
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) return filteredSessions;
+    return filteredSessions.filter((s) => {
+      const appt = String(s?.appointmentId || "").toLowerCase();
+      const doctor = String(s?.doctorName || "").toLowerCase();
+      const patient = String(s?.patientName || "").toLowerCase();
+      const status = String(s?.status || "").toLowerCase();
+      return (
+        appt.includes(q) ||
+        doctor.includes(q) ||
+        patient.includes(q) ||
+        status.includes(q)
+      );
+    });
+  }, [filteredSessions, query]);
+
+  const downloadPdf = () => {
+    if (!searchedSessions || searchedSessions.length === 0) {
+      alert("No sessions to export.");
+      return;
+    }
+
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const title = "Telemedicine Sessions Report";
+    const generatedAt = new Date().toLocaleString();
+
+    doc.setFontSize(14);
+    doc.text(title, 40, 48);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${generatedAt} — Showing ${searchedSessions.length} session(s)`, 40, 66);
+
+    const columns = [
+      { header: "Appointment ID", dataKey: "appointmentId" },
+      { header: "Doctor", dataKey: "doctorName" },
+      { header: "Patient", dataKey: "patientName" },
+      { header: "Scheduled", dataKey: "scheduledTime" },
+      { header: "Status", dataKey: "status" },
+    ];
+
+    const rows = searchedSessions.map((s) => ({
+      appointmentId: s.appointmentId || s._id || "",
+      doctorName: s.doctorName || "",
+      patientName: s.patientName || "",
+      scheduledTime: s.scheduledTime ? new Date(s.scheduledTime).toLocaleString() : "",
+      status: s.status || "",
+    }));
+
+    autoTable(doc, {
+      startY: 80,
+      head: [columns.map((c) => c.header)],
+      body: rows.map((r) => columns.map((c) => String(r[c.dataKey] || ""))),
+      styles: { fontSize: 10, cellPadding: 6 },
+      headStyles: { fillColor: [243, 246, 251], textColor: 20, halign: "left" },
+      columnStyles: { 0: { cellWidth: 110 } },
+      theme: "striped",
+    });
+
+    const fileName = `telemedicine-sessions-${new Date().toISOString().replace(/[:.]/g, "-")}.pdf`;
+    doc.save(fileName);
+  };
+
   return (
     <div className="doctor-telemedicine-layout">
       <DoctorSidebar />
@@ -191,13 +257,32 @@ const DoctorTelemedicine = () => {
             </p>
           </div>
 
-          <button
-            type="button"
-            className="doctor-telemedicine-refresh-btn"
-            onClick={fetchDoctorSessions}
-          >
-            Refresh
-          </button>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <input
+              type="search"
+              placeholder="Search by appointment, doctor, patient or status"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #e6eef9" }}
+            />
+
+            <button
+              type="button"
+              className="doctor-telemedicine-refresh-btn"
+              onClick={fetchDoctorSessions}
+            >
+              Refresh
+            </button>
+
+            <button
+              type="button"
+              className="doctor-telemedicine-refresh-btn"
+              onClick={downloadPdf}
+              title="Download sessions (PDF)"
+            >
+              Download Report (PDF)
+            </button>
+          </div>
         </div>
 
         {message && <div className="doctor-telemedicine-message">{message}</div>}
@@ -251,13 +336,13 @@ const DoctorTelemedicine = () => {
 
         {loading ? (
           <div className="doctor-telemedicine-empty-box">Loading sessions...</div>
-        ) : filteredSessions.length === 0 ? (
+        ) : searchedSessions.length === 0 ? (
           <div className="doctor-telemedicine-empty-box">
             No sessions found for this doctor.
           </div>
         ) : (
           <section className="doctor-telemedicine-card-grid">
-            {filteredSessions.map((session) => (
+            {searchedSessions.map((session) => (
               <SessionCard
                 key={session._id}
                 session={session}

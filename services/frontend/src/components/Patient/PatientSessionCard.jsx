@@ -18,6 +18,9 @@ const formatDateTime = (dateValue) => {
 const PatientSessionCard = ({ session }) => {
   const status = (session?.status || "scheduled").toLowerCase();
 
+  // 🔥 STATUS LOGIC
+  const isCompleted = status === "completed";
+
   return (
     <div className="patient-session-card">
       <div className="patient-session-card-top">
@@ -35,7 +38,8 @@ const PatientSessionCard = ({ session }) => {
           </p>
 
           <p className="patient-session-meta">
-            <strong>Scheduled:</strong> {formatDateTime(session?.scheduledTime)}
+            <strong>Scheduled:</strong>{" "}
+            {formatDateTime(session?.scheduledTime)}
           </p>
 
           <p className="patient-session-meta">
@@ -43,31 +47,44 @@ const PatientSessionCard = ({ session }) => {
           </p>
 
           <p className="patient-session-meta">
-            <strong>Appointment ID:</strong> {session?.appointmentId || "N/A"}
+            <strong>Appointment ID:</strong>{" "}
+            {session?.appointmentId || "N/A"}
           </p>
         </div>
 
-        <div className={`patient-session-status patient-session-status-${status}`}>
+        <div
+          className={`patient-session-status patient-session-status-${status}`}
+        >
           {status}
         </div>
       </div>
 
+      {/* 🔗 MEETING LINK SECTION */}
       <div className="patient-session-link-box">
         <span className="patient-session-link-label">Meeting Link</span>
+
         {session?.meetingLink ? (
           <a
-            href={session.meetingLink}
+            href={isCompleted ? "#" : session.meetingLink}
             target="_blank"
             rel="noreferrer"
-            className="patient-session-link"
+            className={`patient-session-link ${
+              isCompleted ? "disabled-link" : ""
+            }`}
+            onClick={(e) => {
+              if (isCompleted) e.preventDefault();
+            }}
           >
-            Join Session
+            {isCompleted ? "Session Completed" : "Join Session"}
           </a>
         ) : (
-          <span className="patient-session-no-link">Link not available</span>
+          <span className="patient-session-no-link">
+            Link not available
+          </span>
         )}
       </div>
 
+      {/* 📝 NOTES */}
       {session?.notes && (
         <div className="patient-session-notes">
           <strong>Notes:</strong> {session.notes}
