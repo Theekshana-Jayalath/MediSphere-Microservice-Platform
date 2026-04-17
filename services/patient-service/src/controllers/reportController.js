@@ -15,6 +15,11 @@ const getStoredFilenameFromUrl = (fileUrl = "") => {
 
 export const uploadReport = async (req, res) => {
   try {
+    console.log("uploadReport hit");
+    console.log("Authenticated user:", req.user);
+    console.log("Request body:", req.body);
+    console.log("Request file:", req.file);
+
     const patient = await Patient.findOne({ userId: req.user.id });
 
     if (!patient) {
@@ -49,6 +54,7 @@ export const uploadReport = async (req, res) => {
       report,
     });
   } catch (error) {
+    console.error("uploadReport error:", error);
     return res.status(500).json({ message: error.message });
   }
 };
@@ -67,6 +73,7 @@ export const getMyReports = async (req, res) => {
 
     return res.status(200).json(reports);
   } catch (error) {
+    console.error("getMyReports error:", error);
     return res.status(500).json({ message: error.message });
   }
 };
@@ -90,6 +97,7 @@ export const getReportById = async (req, res) => {
 
     return res.status(200).json(report);
   } catch (error) {
+    console.error("getReportById error:", error);
     return res.status(500).json({ message: error.message });
   }
 };
@@ -112,7 +120,9 @@ export const updateReport = async (req, res) => {
     }
 
     if (report.uploadedBy.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Not authorized to update this report" });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to update this report" });
     }
 
     const { title, description, reportType, doctorId } = req.body;
@@ -145,6 +155,7 @@ export const updateReport = async (req, res) => {
       report,
     });
   } catch (error) {
+    console.error("updateReport error:", error);
     return res.status(500).json({ message: error.message });
   }
 };
@@ -167,7 +178,9 @@ export const deleteReport = async (req, res) => {
     }
 
     if (report.uploadedBy.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Not authorized to delete this report" });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to delete this report" });
     }
 
     if (report.fileUrl) {
@@ -185,6 +198,7 @@ export const deleteReport = async (req, res) => {
       message: "Report deleted successfully",
     });
   } catch (error) {
+    console.error("deleteReport error:", error);
     return res.status(500).json({ message: error.message });
   }
 };
