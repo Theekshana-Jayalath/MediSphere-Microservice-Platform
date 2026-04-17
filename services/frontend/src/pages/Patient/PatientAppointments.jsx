@@ -10,6 +10,7 @@ export default function PatientAppointments() {
   const [filter, setFilter] = useState("all");
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState("");
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -143,9 +144,19 @@ export default function PatientAppointments() {
   };
 
   const handleJoinCall = (appointment) => {
-    if (appointment.appointmentType === "ONLINE") {
+    if (appointment.consultationType === "online") {
       navigate(`/telemedicine/${appointment._id}`);
     }
+  };
+
+  const handleViewDetails = (appointment) => {
+    setSelectedAppointment(appointment);
+    setShowViewModal(true);
+  };
+
+  const closeViewModal = () => {
+    setShowViewModal(false);
+    setSelectedAppointment(null);
   };
 
   const getDaysInMonth = (date) => {
@@ -270,6 +281,24 @@ export default function PatientAppointments() {
 
   const getPaymentStatusColor = (status) => {
     return status === "PAID" ? "green" : "amber";
+  };
+
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getConsultationTypeDisplay = (type) => {
+    if (!type) return "Not specified";
+    if (type.toLowerCase() === "online") return "Online Consultation";
+    if (type.toLowerCase() === "in-person") return "In-Person Visit";
+    return type;
   };
 
   const filterAppointments = () => {
@@ -510,10 +539,11 @@ export default function PatientAppointments() {
                 <table className="appointments-table">
                   <thead>
                     <tr>
-                      <th>Doctor</th>
-                      <th>Specialization</th>
-                      <th>Type</th>
-                      <th>Date & Time</th>
+                      <th>Doctor Name</th>
+                      <th>Doctor Specialty</th>
+                      <th>Hospital</th>
+                      <th>Appointment Date</th>
+                      <th>Appointment Time</th>
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
@@ -528,28 +558,15 @@ export default function PatientAppointments() {
                             </div>
                             <div>
                               <div className="doctor-name">{apt.doctorName}</div>
-                              <div className="hospital-name">{apt.hospital}</div>
                             </div>
                           </div>
                         </td>
-                        <td>{apt.specialization}</td>
+                        <td>{apt.doctorSpecialty || apt.specialization || "N/A"}</td>
+                        <td>{apt.hospital || "N/A"}</td>
                         <td>
-                          <span
-                            className={`appointment-type ${apt.appointmentType?.toLowerCase()}`}
-                          >
-                            {apt.appointmentType === "ONLINE"
-                              ? "Online"
-                              : "In-Person"}
-                          </span>
+                          {new Date(apt.appointmentDate).toLocaleDateString()}
                         </td>
-                        <td>
-                          <div className="date-time">
-                            <div>
-                              {new Date(apt.appointmentDate).toLocaleDateString()}
-                            </div>
-                            <div className="time">{apt.startTime}</div>
-                          </div>
-                        </td>
+                        <td>{apt.appointmentTime || apt.startTime || "N/A"}</td>
                         <td>
                           <span
                             className={`status-badge ${getStatusColor(
@@ -561,11 +578,21 @@ export default function PatientAppointments() {
                         </td>
                         <td>
                           <div className="action-buttons">
+                            <button
+                              className="action-btn view"
+                              onClick={() => handleViewDetails(apt)}
+                              title="View Details"
+                            >
+                              <span className="material-symbols-outlined">
+                                visibility
+                              </span>
+                            </button>
                             {apt.status === "CONFIRMED" &&
-                              apt.appointmentType === "ONLINE" && (
+                              apt.consultationType === "online" && (
                                 <button
                                   className="action-btn join"
                                   onClick={() => handleJoinCall(apt)}
+                                  title="Join Call"
                                 >
                                   <span className="material-symbols-outlined">
                                     videocam
@@ -579,6 +606,7 @@ export default function PatientAppointments() {
                                   setSelectedAppointment(apt);
                                   setShowRescheduleModal(true);
                                 }}
+                                title="Reschedule"
                               >
                                 <span className="material-symbols-outlined">
                                   edit_calendar
@@ -590,6 +618,7 @@ export default function PatientAppointments() {
                                 <button
                                   className="action-btn cancel"
                                   onClick={() => handleCancel(apt._id)}
+                                  title="Cancel"
                                 >
                                   <span className="material-symbols-outlined">
                                     cancel
@@ -608,6 +637,178 @@ export default function PatientAppointments() {
         </div>
       </main>
 
+      {/* Attractive View Details Modal */}
+      {showViewModal && selectedAppointment && (
+        <div className="modal-overlay" onClick={closeViewModal}>
+          <div className="appointment-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={closeViewModal}>
+              <span className="material-symbols-outlined">close</span>
+            </button>
+            
+            <div className="modal-header-section">
+              <div className="header-icon">
+                <span className="material-symbols-outlined">event_available</span>
+              </div>
+              <h2>Appointment Details</h2>
+              <p>Complete information about your medical appointment</p>
+            </div>
+
+            <div className="modal-details-grid">
+              <div className="detail-card">
+                <div className="detail-icon">
+                  <span className="material-symbols-outlined">receipt_long</span>
+                </div>
+                <div className="detail-content">
+                  <label>Appointment ID</label>
+                  <p>{selectedAppointment.appointmentId || selectedAppointment._id}</p>
+                </div>
+              </div>
+
+              <div className="detail-card">
+                <div className="detail-icon">
+                  <span className="material-symbols-outlined">badge</span>
+                </div>
+                <div className="detail-content">
+                  <label>Doctor Name</label>
+                  <p>{selectedAppointment.doctorName || "N/A"}</p>
+                </div>
+              </div>
+
+              <div className="detail-card">
+                <div className="detail-icon">
+                  <span className="material-symbols-outlined">science</span>
+                </div>
+                <div className="detail-content">
+                  <label>Doctor Specialty</label>
+                  <p>{selectedAppointment.doctorSpecialty || selectedAppointment.specialization || "N/A"}</p>
+                </div>
+              </div>
+
+              <div className="detail-card">
+                <div className="detail-icon">
+                  <span className="material-symbols-outlined">local_hospital</span>
+                </div>
+                <div className="detail-content">
+                  <label>Hospital</label>
+                  <p>{selectedAppointment.hospital || "N/A"}</p>
+                </div>
+              </div>
+
+              <div className="detail-card">
+                <div className="detail-icon">
+                  <span className="material-symbols-outlined">videocam</span>
+                </div>
+                <div className="detail-content">
+                  <label>Appointment Type</label>
+                  <p>{getConsultationTypeDisplay(selectedAppointment.consultationType)}</p>
+                </div>
+              </div>
+
+              <div className="detail-card">
+                <div className="detail-icon">
+                  <span className="material-symbols-outlined">calendar_today</span>
+                </div>
+                <div className="detail-content">
+                  <label>Appointment Date</label>
+                  <p>{new Date(selectedAppointment.appointmentDate).toLocaleDateString("en-US", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}</p>
+                </div>
+              </div>
+
+              <div className="detail-card">
+                <div className="detail-icon">
+                  <span className="material-symbols-outlined">schedule</span>
+                </div>
+                <div className="detail-content">
+                  <label>Appointment Time</label>
+                  <p>{selectedAppointment.appointmentTime || selectedAppointment.startTime || "N/A"}</p>
+                </div>
+              </div>
+
+              <div className="detail-card">
+                <div className="detail-icon">
+                  <span className="material-symbols-outlined">hourglass_top</span>
+                </div>
+                <div className="detail-content">
+                  <label>Duration</label>
+                  <p>{selectedAppointment.duration || "30"} minutes</p>
+                </div>
+              </div>
+
+              <div className="detail-card">
+                <div className="detail-icon">
+                  <span className="material-symbols-outlined">info</span>
+                </div>
+                <div className="detail-content">
+                  <label>Status</label>
+                  <span className={`status-badge ${getStatusColor(selectedAppointment.status)}`}>
+                    {getStatusText(selectedAppointment.status)}
+                  </span>
+                </div>
+              </div>
+
+              {selectedAppointment.paymentStatus && (
+                <div className="detail-card">
+                  <div className="detail-icon">
+                    <span className="material-symbols-outlined">payments</span>
+                  </div>
+                  <div className="detail-content">
+                    <label>Payment Status</label>
+                    <span className={`payment-status ${getPaymentStatusColor(selectedAppointment.paymentStatus)}`}>
+                      {selectedAppointment.paymentStatus}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {selectedAppointment.amount && (
+                <div className="detail-card highlight">
+                  <div className="detail-icon">
+                    <span className="material-symbols-outlined">currency_rupee</span>
+                  </div>
+                  <div className="detail-content">
+                    <label>Amount</label>
+                    <p className="amount-text">LKR {selectedAppointment.amount.toLocaleString()}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="detail-card">
+                <div className="detail-icon">
+                  <span className="material-symbols-outlined">create</span>
+                </div>
+                <div className="detail-content">
+                  <label>Created At</label>
+                  <p>{formatDateTime(selectedAppointment.createdAt)}</p>
+                </div>
+              </div>
+
+              <div className="detail-card">
+                <div className="detail-icon">
+                  <span className="material-symbols-outlined">update</span>
+                </div>
+                <div className="detail-content">
+                  <label>Last Updated</label>
+                  <p>{formatDateTime(selectedAppointment.updatedAt)}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer-actions">
+              <button className="close-modal-btn" onClick={closeViewModal}>
+                <span className="material-symbols-outlined">close</span>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reschedule Modal */}
       {showRescheduleModal && selectedAppointment && (
         <div
           className="modal-overlay"
