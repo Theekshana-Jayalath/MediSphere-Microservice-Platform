@@ -1,3 +1,7 @@
+// Force DNS to use Google DNS (required for MongoDB Atlas on Windows)
+import dns from 'dns';
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -7,13 +11,22 @@ import connectDB from "./config/db.js";
 import prescriptionRoutes from "./routes/prescriptionRoutes.js";
 import errorHandler from "./middlewares/errorMiddleware.js";
 import doctorRoutes from "./routes/doctorRoutes.js";
+import appointmentProxyRoutes from "./routes/appointmentProxyRoutes.js";
+import reportProxyRoutes from "./routes/reportProxyRoutes.js";
 import Doctor from "./models/Doctor.js";
+import Counter from "./models/Counter.js";
 
 dotenv.config();
 
 const app = express();
 
-app.use(cors());
+// Allow only frontend origin for security; enable credentials if needed
+app.use(
+  cors({
+    origin: process.env.FRONTEND_ORIGIN || "http://localhost:5173",
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use((req, res, next) => {
@@ -22,6 +35,7 @@ app.use((req, res, next) => {
 });
 
 connectDB();
+
 
 app.get("/", (req, res) => {
   res.json({
@@ -59,6 +73,23 @@ app.post("/api/doctors/login", async (req, res, next) => {
       });
     }
 
+    let doctorId = doctor.doctorId;
+
+    if (!doctorId) {
+      const counter = await Counter.findOneAndUpdate(
+        { name: "doctorId" },
+        { $inc: { seq: 1 } },
+        { upsert: true, returnDocument: "after" }
+      );
+
+      doctorId = `DOC${String(counter.seq).padStart(4, "0")}`;
+
+      await Doctor.updateOne(
+        { _id: doctor._id },
+        { $set: { doctorId } }
+      );
+    }
+
     const token = jwt.sign(
       {
         id: doctor._id,
@@ -75,6 +106,7 @@ app.post("/api/doctors/login", async (req, res, next) => {
       token,
       user: {
         id: doctor._id,
+        doctorId,
         name: doctor.fullName,
         email: doctor.email,
         role: doctor.role || "doctor",
@@ -88,6 +120,8 @@ app.post("/api/doctors/login", async (req, res, next) => {
 
 app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/doctors", doctorRoutes);
+app.use("/api/appointments", appointmentProxyRoutes);
+app.use("/api/reports", reportProxyRoutes);
 
 app.use(errorHandler);
 

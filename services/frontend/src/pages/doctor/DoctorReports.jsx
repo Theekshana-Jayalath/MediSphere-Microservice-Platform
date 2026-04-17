@@ -2,9 +2,26 @@ import { useEffect, useMemo, useState } from "react";
 import DoctorSidebar from "../../components/doctor/DoctorSidebar";
 import {
   getMyReports,
-  deleteReport,
 } from "../../services/doctor/reportApi.js";
 import "../../styles/Doctor/doctorReports.css";
+
+const extractReports = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return payload.data;
+  }
+
+  if (Array.isArray(payload?.reports)) {
+    return payload.reports;
+  }
+
+  return [];
+};
+
+const getReportId = (report) => report?._id || report?.id;
 
 const DoctorReports = () => {
   const [reports, setReports] = useState([]);
@@ -21,13 +38,13 @@ const DoctorReports = () => {
       setError("");
 
       const response = await getMyReports();
-      const fetchedReports = Array.isArray(response) ? response : [];
+      const fetchedReports = extractReports(response);
 
       setReports(fetchedReports);
 
       if (selectedReport) {
         const updatedSelectedReport = fetchedReports.find(
-          (report) => report._id === selectedReport._id
+          (report) => getReportId(report) === getReportId(selectedReport)
         );
 
         setSelectedReport(updatedSelectedReport || null);
@@ -94,30 +111,36 @@ const DoctorReports = () => {
     });
   }, [reports, activeType, searchTerm]);
 
-  const handleDelete = async (reportId) => {
-    try {
-      setMessage("");
-      setError("");
-
-      const response = await deleteReport(reportId);
-
-      if (selectedReport && selectedReport._id === reportId) {
-        setSelectedReport(null);
-      }
-
-      await fetchReports();
-      setMessage(response.message || "Report deleted successfully.");
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to delete report.");
-    }
-  };
-
   const handleDownload = (report) => {
     const downloadUrl = report?.fileUrl || report?.s3Url;
 
     if (downloadUrl) {
-      window.open(downloadUrl, "_blank");
-      setMessage(`Opening ${report.fileName || report.title}...`);
+      const resolvedUrl = downloadUrl.startsWith("http")
+        ? downloadUrl
+        : `${window.location.origin}${downloadUrl.startsWith("/") ? "" : "/"}${downloadUrl}`;
+
+      fetch(resolvedUrl)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Unable to download the report file.");
+          }
+
+          return response.blob();
+        })
+        .then((blob) => {
+          const objectUrl = window.URL.createObjectURL(blob);
+          const anchor = document.createElement("a");
+          anchor.href = objectUrl;
+          anchor.download = report.fileName || report.title || "report.pdf";
+          document.body.appendChild(anchor);
+          anchor.click();
+          anchor.remove();
+          window.URL.revokeObjectURL(objectUrl);
+          setMessage(`Downloading ${report.fileName || report.title}...`);
+        })
+        .catch(() => {
+          setError("Report file could not be downloaded. Please try again.");
+        });
     } else {
       setError("No downloadable file URL found for this report.");
     }
@@ -202,7 +225,7 @@ const DoctorReports = () => {
               <div className="reports-list">
                 {filteredReports.length > 0 ? (
                   filteredReports.map((report) => (
-                    <div className="report-item-card" key={report._id}>
+                    <div className="report-item-card" key={getReportId(report)}>
                       <div className="report-item-top">
                         <div className="report-file-icon">📄</div>
 
@@ -251,13 +274,6 @@ const DoctorReports = () => {
                           Download
                         </button>
 
-                        <button
-                          type="button"
-                          className="report-delete-btn"
-                          onClick={() => handleDelete(report._id)}
-                        >
-                          Delete
-                        </button>
                       </div>
                     </div>
                   ))
@@ -335,13 +351,6 @@ const DoctorReports = () => {
                     Download Report
                   </button>
 
-                  <button
-                    type="button"
-                    className="report-delete-btn"
-                    onClick={() => handleDelete(selectedReport._id)}
-                  >
-                    Delete Report
-                  </button>
                 </div>
               </div>
             ) : (

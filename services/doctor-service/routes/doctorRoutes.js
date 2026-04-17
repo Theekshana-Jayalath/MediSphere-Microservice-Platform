@@ -6,6 +6,7 @@ import {
   getDoctorApprovalStatus,
   updateDoctorProfile,
   getAllDoctors,
+  getPublicDoctors,
   getPendingDoctors,
   approveDoctor,
   rejectDoctor,
@@ -18,8 +19,11 @@ const router = express.Router();
 
 router.post("/register", registerDoctor);
 router.post("/login", loginDoctor);
+// Public route returning approved doctors (root path)
+router.get('/', getPublicDoctors);
 
-router.get("/", protect, authorizeRoles("admin", "ADMIN"), getAllDoctors);
+// Admin-only: all doctors at /all
+router.get("/all", protect, authorizeRoles("admin", "ADMIN"), getAllDoctors);
 router.get("/pending", protect, authorizeRoles("admin", "ADMIN"), getPendingDoctors);
 router.get("/status/:id", getDoctorApprovalStatus);
 router.get("/:id", getDoctorById);

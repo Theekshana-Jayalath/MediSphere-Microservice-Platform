@@ -4,7 +4,7 @@
   --ms-light: #c7d9e5;
   --ms-accent: #f5efeb;
   --ms-primary: #ffffff;
-  --ms-success: #3bb273;
+  --ms-success: #287347;
   --ms-shadow: 0 12px 28px rgba(29, 45, 68, 0.08);
 }
 
@@ -124,7 +124,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: linear-gradient(135deg, rgba(199, 217, 229, 0.3), rgba(245, 239, 235, 0.9));
+  background: linear-gradient(135deg, rgba(64, 148, 204, 0.3), rgba(245, 239, 235, 0.9));
   border-radius: 20px;
   padding: 14px;
   box-shadow: var(--ms-shadow);
@@ -151,8 +151,45 @@
 
 .doctor-mini-card p {
   margin: 4px 0 0;
-  color: #7a8797;
+  color: #28466c;
   font-size: 0.82rem;
+}
+
+.doctor-id-badge {
+  margin-top: 8px;
+  padding: 4px 8px;
+  display: inline-block;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #3bb273, #2f8f64);
+  color: #ffffff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.doctor-logout-btn {
+  margin-top: 14px;
+  width: 100%;
+  border: 1px solid rgba(29, 45, 68, 0.16);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--ms-dark);
+  border-radius: 14px;
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.doctor-logout-btn:hover {
+  background: #f7dede;
+  border-color: #d88f8f;
+  color: #8c1f1f;
 }
 
 @media (max-width: 1100px) {

@@ -281,7 +281,7 @@ const DoctorDashboard = () => {
         const doctorRequests = doctorId ? getDoctorById(doctorId) : Promise.resolve(null);
         const appointmentsRequest = doctorId
           ? getAppointmentsByDoctorId(doctorId)
-          : getAllAppointments();
+          : getAllAppointments(doctorId);
         const reportsRequest = getMyReports();
         const prescriptionsRequest = doctorId
           ? getPrescriptionsByDoctor(doctorId)
