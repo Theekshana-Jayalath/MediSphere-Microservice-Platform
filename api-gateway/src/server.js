@@ -9,6 +9,8 @@ import axios from "axios";
 dotenv.config();
 
 const app = express();
+const defaultTelemedicineServiceUrl = "http://localhost:6001";
+const defaultNotificationServiceUrl = "http://localhost:6002";
 
 app.use(cors());
 
@@ -229,12 +231,20 @@ app.use("/api/admin", (req, res) =>
 
 // ✅ Add Telemedicine
 app.use("/api/telemedicine", (req, res) =>
-  forwardRequest(req, res, process.env.TELEMEDICINE_SERVICE_URL)
+  forwardRequest(
+    req,
+    res,
+    process.env.TELEMEDICINE_SERVICE_URL || defaultTelemedicineServiceUrl
+  )
 );
 
 // ✅ Add Notification
 app.use("/api/notifications", (req, res) =>
-  forwardRequest(req, res, process.env.NOTIFICATION_SERVICE_URL)
+  forwardRequest(
+    req,
+    res,
+    process.env.NOTIFICATION_SERVICE_URL || defaultNotificationServiceUrl
+  )
 );
 
 const PORT = process.env.PORT || 5015;
