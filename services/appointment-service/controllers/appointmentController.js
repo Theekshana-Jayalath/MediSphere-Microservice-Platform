@@ -1,3 +1,4 @@
+import axios from "axios";
 import Appointment from "../models/appointmentModel.js";
 import { generateSlots } from "../service/slotService.js";
 import axios from "axios";
