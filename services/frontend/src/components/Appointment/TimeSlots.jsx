@@ -33,7 +33,7 @@ const buildSlots = (start, end, slotDurationMinutes = 120) => {
   return slots;
 };
 
-const TimeSlots = ({ doctor = null, selectedDate = '', selectedTime = '', setSelectedTime }) => {
+const TimeSlots = ({ doctor = null, selectedDate = '', selectedTime = '', setSelectedTime, setSelectedHospital }) => {
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -219,7 +219,12 @@ const TimeSlots = ({ doctor = null, selectedDate = '', selectedTime = '', setSel
               <button
                 key={`${label}-${idx}`}
                 className={`timeslot-btn ${isSelected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
-                onClick={() => !disabled && setSelectedTime && setSelectedTime(label)}
+                onClick={() => {
+                  if (disabled) return;
+                  if (setSelectedTime) setSelectedTime(label);
+                  // also inform parent of the hospital for this slot
+                  if (setSelectedHospital) setSelectedHospital(slot.hospital || (doctor?.baseHospital || doctor?.hospital || ''));
+                }}
                 disabled={disabled}
               >
                 <div className="timeslot-time">{label}</div>

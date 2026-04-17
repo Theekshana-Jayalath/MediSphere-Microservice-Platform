@@ -30,7 +30,8 @@ export const createPayment = async (req, res) => {
       currency: "LKR",
       status: "PENDING",
       contact
-      // bookingDetails: bookingDetails || {}
+  ,
+  bookingDetails: bookingDetails || {}
     });
 
     await payment.save();
@@ -50,7 +51,8 @@ export const createPayment = async (req, res) => {
           doctorId: payment.doctorId,
           doctorName: doc.fullName || doc.name || "",
           doctorSpecialty: doc.specialization || doc.specialty || "",
-          hospital: doc.baseHospital || doc.hospital || "",
+          // Prefer hospital chosen at booking time (selectedHospital), fallback to doctor's base/hospital
+          hospital: bd.selectedHospital || doc.baseHospital || doc.hospital || "",
           appointmentDate: bd.selectedDate || bd.appointmentDate || "",
           appointmentTime: bd.selectedTime || bd.appointmentTime || bd.startTime || "",
           startTime: bd.selectedTime || bd.startTime || "",
@@ -208,7 +210,7 @@ export const handleIPN = async (req, res) => {
       doctorId: payment.doctorId,
       doctorName: doc.fullName || doc.name || doc.fullName || doc.displayName || "",
       doctorSpecialty: doc.specialization || doc.specialty || "",
-      hospital: doc.baseHospital || doc.hospital || "",
+  hospital: bd.selectedHospital || doc.baseHospital || doc.hospital || "",
       appointmentDate: bd.selectedDate || bd.appointmentDate || "",
       appointmentTime: bd.selectedTime || bd.appointmentTime || bd.startTime || "",
       // include startTime and duration which appointment controller expects for overlap checks
@@ -278,7 +280,7 @@ export const getPaymentStatus = async (req, res) => {
           doctorId: payment.doctorId,
           doctorName: doc.fullName || doc.name || doc.displayName || "",
           doctorSpecialty: doc.specialization || doc.specialty || "",
-          hospital: doc.baseHospital || doc.hospital || "",
+          hospital: bd.selectedHospital || doc.baseHospital || doc.hospital || "",
           appointmentDate: bd.selectedDate || bd.appointmentDate || "",
           appointmentTime: bd.selectedTime || bd.appointmentTime || bd.startTime || "",
           startTime: bd.selectedTime || bd.startTime || "",

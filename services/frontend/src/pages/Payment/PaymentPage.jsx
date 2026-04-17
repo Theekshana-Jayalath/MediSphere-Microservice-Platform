@@ -117,8 +117,9 @@ const PaymentPage = () => {
         serviceCharge: serviceCharge,
         tax: tax,
         contact: contact,
-        selectedDate: bookingDetails?.selectedDate,
-        selectedTime: bookingDetails?.selectedTime,
+  selectedDate: bookingDetails?.selectedDate,
+  selectedTime: bookingDetails?.selectedTime,
+  selectedHospital: bookingDetails?.selectedHospital || bookingDetails?.doctor?.baseHospital || bookingDetails?.doctor?.hospital || '',
         timestamp: new Date().toISOString()
       }));
       
@@ -134,6 +135,7 @@ const PaymentPage = () => {
           doctor: bookingDetails?.doctor,
           selectedDate: bookingDetails?.selectedDate,
           selectedTime: bookingDetails?.selectedTime,
+          selectedHospital: bookingDetails?.selectedHospital || bookingDetails?.doctor?.baseHospital || bookingDetails?.doctor?.hospital || '',
           selectedConsultation: bookingDetails?.selectedConsultation,
         }
       };

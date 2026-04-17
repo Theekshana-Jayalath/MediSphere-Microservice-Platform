@@ -11,6 +11,7 @@ const BookingPage = () => {
   const doctor = location.state?.doctor;
   const selectedDate = location.state?.selectedDate || '';
   const [selectedTime, setSelectedTime] = useState('');
+  const [selectedHospital, setSelectedHospital] = useState('');
   const [selectedConsultation, setSelectedConsultation] = useState(null);
   const [selectedType, setSelectedType] = useState(null);
   const [validationError, setValidationError] = useState('');
@@ -93,7 +94,7 @@ const BookingPage = () => {
         doctorId: doctor._id || doctor.id,
         doctorName: doctor.fullName || doctor.name || "",
         doctorSpecialty: doctor.specialization || doctor.specialty || "",
-        hospital: doctor.baseHospital || doctor.hospital || "",
+        hospital: selectedHospital || doctor.baseHospital || doctor.hospital || "",
         appointmentDate: selectedDate,
         appointmentTime: selectedTime,
         startTime: selectedTime,
@@ -123,12 +124,13 @@ const BookingPage = () => {
       const created = await resp.json();
 
       // Navigate to payment with bookingDetails including created appointmentId
-      navigate("/payment", {
+  navigate("/payment", {
         state: {
           bookingDetails: {
             doctor,
             selectedDate,
             selectedTime,
+    selectedHospital,
             selectedConsultation,
             consultationFee: consultationFee,
             appointmentId: created.appointmentId || created._id
@@ -193,6 +195,7 @@ const BookingPage = () => {
                 selectedDate={selectedDate} 
                 selectedTime={selectedTime} 
                 setSelectedTime={setSelectedTime} 
+                setSelectedHospital={setSelectedHospital}
               />
             </div>
           </div>
