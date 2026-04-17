@@ -1,9 +1,14 @@
-// models/appointmentModel.js
 import mongoose from "mongoose";
 
 const appointmentSchema = new mongoose.Schema({
   appointmentId: { type: String, required: true, unique: true },
   patientId: { type: String, required: true },
+
+  // ✅ ADD THESE 3 FIELDS
+  patientName: { type: String, required: true },
+  patientEmail: { type: String, required: true },
+  phoneNumber: { type: String, required: true },
+
   doctorId: { type: String, required: true },
   doctorName: { type: String, required: true },
   doctorSpecialty: { type: String, required: true },

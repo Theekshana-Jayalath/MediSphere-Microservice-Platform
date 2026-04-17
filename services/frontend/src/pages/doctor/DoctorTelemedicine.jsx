@@ -24,21 +24,48 @@ const DoctorTelemedicine = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  let user = null;
-  try {
-    user = JSON.parse(localStorage.getItem("user")) || null;
-  } catch {
-    user = null;
-  }
+  const getLoggedInUser = () => {
+    try {
+      return JSON.parse(localStorage.getItem("user")) || null;
+    } catch {
+      return null;
+    }
+  };
 
-  const doctorId =
-    user?.doctorId || user?._id || user?.id || "";
+  const user = getLoggedInUser();
+
+  const doctorId = String(
+    user?.doctorId || user?._id || user?.id || ""
+  ).trim();
+
+  const normalizeId = (value) => String(value || "").trim();
+
+  const buildDoctorSummary = (doctorSessions) => ({
+    total: doctorSessions.length,
+    scheduled: doctorSessions.filter((s) => s.status === "scheduled").length,
+    started: doctorSessions.filter((s) => s.status === "started").length,
+    completed: doctorSessions.filter((s) => s.status === "completed").length,
+    cancelled: doctorSessions.filter((s) => s.status === "cancelled").length,
+  });
 
   const fetchDoctorSessions = async () => {
     try {
       setLoading(true);
       setError("");
       setMessage("");
+
+      if (!doctorId) {
+        setSessions([]);
+        setSummary({
+          total: 0,
+          scheduled: 0,
+          started: 0,
+          completed: 0,
+          cancelled: 0,
+        });
+        setError("Doctor ID not found in localStorage user object.");
+        return;
+      }
 
       const [sessionsRes, summaryRes] = await Promise.all([
         getAllSessions(),
@@ -47,25 +74,41 @@ const DoctorTelemedicine = () => {
 
       const allSessions = Array.isArray(sessionsRes?.sessions)
         ? sessionsRes.sessions
+        : Array.isArray(sessionsRes?.data?.sessions)
+        ? sessionsRes.data.sessions
+        : Array.isArray(sessionsRes)
+        ? sessionsRes
         : [];
 
-      const doctorSessions = allSessions.filter(
-        (session) => String(session?.doctorId) === String(doctorId)
-      );
+      console.log("Logged in user:", user);
+      console.log("Doctor ID used for filtering:", doctorId);
+      console.log("All sessions from API:", allSessions);
+      console.log("Session summary response:", summaryRes);
+
+      const doctorSessions = allSessions.filter((session) => {
+        const sessionDoctorId = normalizeId(session?.doctorId);
+        return sessionDoctorId === doctorId;
+      });
+
+      console.log("Filtered doctor sessions:", doctorSessions);
 
       setSessions(doctorSessions);
-      setSummary(summaryRes?.summary || {
-        total: doctorSessions.length,
-        scheduled: doctorSessions.filter((s) => s.status === "scheduled").length,
-        started: doctorSessions.filter((s) => s.status === "started").length,
-        completed: doctorSessions.filter((s) => s.status === "completed").length,
-        cancelled: doctorSessions.filter((s) => s.status === "cancelled").length,
-      });
+      setSummary(buildDoctorSummary(doctorSessions));
     } catch (err) {
-      console.error(err);
+      console.error("Failed to load telemedicine sessions:", err);
       setError(
-        err?.response?.data?.message || "Failed to load telemedicine sessions."
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to load telemedicine sessions."
       );
+      setSessions([]);
+      setSummary({
+        total: 0,
+        scheduled: 0,
+        started: 0,
+        completed: 0,
+        cancelled: 0,
+      });
     } finally {
       setLoading(false);
     }
@@ -85,9 +128,9 @@ const DoctorTelemedicine = () => {
       setMessage("Session started successfully.");
       await fetchDoctorSessions();
     } catch (err) {
-      console.error(err);
+      console.error("Failed to start session:", err);
       setError(
-        err?.response?.data?.message || "Failed to start session."
+        err?.response?.data?.message || err?.message || "Failed to start session."
       );
     } finally {
       setUpdatingId("");
@@ -104,9 +147,11 @@ const DoctorTelemedicine = () => {
       setMessage("Session marked as completed successfully.");
       await fetchDoctorSessions();
     } catch (err) {
-      console.error(err);
+      console.error("Failed to complete session:", err);
       setError(
-        err?.response?.data?.message || "Failed to complete session."
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to complete session."
       );
     } finally {
       setUpdatingId("");
@@ -115,6 +160,7 @@ const DoctorTelemedicine = () => {
 
   const filteredSessions = useMemo(() => {
     if (activeFilter === "all") return sessions;
+
     return sessions.filter(
       (session) => (session?.status || "").toLowerCase() === activeFilter
     );
@@ -129,7 +175,8 @@ const DoctorTelemedicine = () => {
           <div>
             <h1 className="doctor-telemedicine-title">Telemedicine Sessions</h1>
             <p className="doctor-telemedicine-subtitle">
-              View your scheduled consultations, start video sessions, and mark them as completed.
+              View your scheduled consultations, start video sessions, and mark
+              them as completed.
             </p>
           </div>
 
@@ -148,19 +195,19 @@ const DoctorTelemedicine = () => {
         <section className="doctor-telemedicine-summary-grid">
           <div className="doctor-telemedicine-summary-card">
             <span>Total Sessions</span>
-            <strong>{sessions.length}</strong>
+            <strong>{summary.total}</strong>
           </div>
           <div className="doctor-telemedicine-summary-card">
             <span>Scheduled</span>
-            <strong>{sessions.filter((s) => s.status === "scheduled").length}</strong>
+            <strong>{summary.scheduled}</strong>
           </div>
           <div className="doctor-telemedicine-summary-card">
             <span>Started</span>
-            <strong>{sessions.filter((s) => s.status === "started").length}</strong>
+            <strong>{summary.started}</strong>
           </div>
           <div className="doctor-telemedicine-summary-card">
             <span>Completed</span>
-            <strong>{sessions.filter((s) => s.status === "completed").length}</strong>
+            <strong>{summary.completed}</strong>
           </div>
         </section>
 
