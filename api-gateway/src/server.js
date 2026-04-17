@@ -8,7 +8,10 @@ dotenv.config();
 const app = express();
 
 app.use(cors());
+
+// Keep JSON parsing for normal requests
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
   console.log("Gateway received:", req.method, req.url);
@@ -23,24 +26,61 @@ const forwardRequest = async (req, res, targetBaseUrl) => {
   try {
     const targetUrl = `${targetBaseUrl}${req.originalUrl}`;
 
+    const headers = {
+      ...(req.headers.authorization
+        ? { Authorization: req.headers.authorization }
+        : {}),
+      ...(req.headers["content-type"]
+        ? { "Content-Type": req.headers["content-type"] }
+        : {}),
+    };
+
     const response = await axios({
       method: req.method,
       url: targetUrl,
       data: req.body,
-      headers: {
-        ...(req.headers.authorization
-          ? { Authorization: req.headers.authorization }
-          : {}),
-        ...(req.headers["content-type"]
-          ? { "Content-Type": req.headers["content-type"] }
-          : {}),
-      },
+      headers,
       validateStatus: () => true,
     });
 
     return res.status(response.status).json(response.data);
   } catch (error) {
     console.error("Gateway forward error:", error.message);
+    return res.status(500).json({
+      message: "Gateway forwarding failed",
+      error: error.message,
+    });
+  }
+};
+
+// Special forwarder for multipart/form-data uploads
+const forwardMultipartRequest = async (req, res, targetBaseUrl) => {
+  try {
+    const targetUrl = `${targetBaseUrl}${req.originalUrl}`;
+
+    const headers = {
+      ...(req.headers.authorization
+        ? { Authorization: req.headers.authorization }
+        : {}),
+      ...(req.headers["content-type"]
+        ? { "Content-Type": req.headers["content-type"] }
+        : {}),
+    };
+
+    const response = await axios({
+      method: req.method,
+      url: targetUrl,
+      data: req,
+      headers,
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+      responseType: "json",
+      validateStatus: () => true,
+    });
+
+    return res.status(response.status).json(response.data);
+  } catch (error) {
+    console.error("Gateway multipart forward error:", error.message);
     return res.status(500).json({
       message: "Gateway forwarding failed",
       error: error.message,
@@ -149,9 +189,16 @@ app.use("/api/patients", (req, res) =>
   forwardRequest(req, res, process.env.PATIENT_SERVICE_URL)
 );
 
-app.use("/api/reports", (req, res) =>
-  forwardRequest(req, res, process.env.PATIENT_SERVICE_URL)
-);
+// Use multipart forwarder for reports upload/update requests with files
+app.use("/api/reports", (req, res) => {
+  const contentType = req.headers["content-type"] || "";
+
+  if (contentType.includes("multipart/form-data")) {
+    return forwardMultipartRequest(req, res, process.env.PATIENT_SERVICE_URL);
+  }
+
+  return forwardRequest(req, res, process.env.PATIENT_SERVICE_URL);
+});
 
 app.use("/api/doctors", (req, res) =>
   forwardRequest(req, res, process.env.DOCTOR_SERVICE_URL)

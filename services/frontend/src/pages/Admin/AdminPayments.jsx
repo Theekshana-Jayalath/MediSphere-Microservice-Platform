@@ -70,16 +70,21 @@ export default function AdminPayments() {
   }, [payments, search]);
 
   const stats = useMemo(() => {
+    const isSuccessfulPayment = (payment) => {
+      const status = String(payment.status || "").toUpperCase();
+      return status === "PAID" || status === "SUCCESS";
+    };
+
     const totalRevenue = payments
-      .filter((p) => String(p.status).toUpperCase() === "PAID")
+      .filter((p) => isSuccessfulPayment(p))
       .reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
     const pendingPayouts = payments
-      .filter((p) => String(p.status).toUpperCase() === "PENDING")
+      .filter((p) => String(p.status || "").toUpperCase() === "PENDING")
       .reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
-    const successfulTransactions = payments.filter(
-      (p) => String(p.status).toUpperCase() === "PAID"
+    const successfulTransactions = payments.filter((p) =>
+      isSuccessfulPayment(p)
     ).length;
 
     const currentMonth = new Date().getMonth();
@@ -94,7 +99,7 @@ export default function AdminPayments() {
       .filter((p) => {
         const d = new Date(p.createdAt);
         return (
-          String(p.status).toUpperCase() === "PAID" &&
+          isSuccessfulPayment(p) &&
           d.getMonth() === currentMonth &&
           d.getFullYear() === currentYear
         );
@@ -105,7 +110,7 @@ export default function AdminPayments() {
       .filter((p) => {
         const d = new Date(p.createdAt);
         return (
-          String(p.status).toUpperCase() === "PAID" &&
+          isSuccessfulPayment(p) &&
           d.getMonth() === previousMonth &&
           d.getFullYear() === previousYear
         );
@@ -140,7 +145,7 @@ export default function AdminPayments() {
 
   const getStatusClass = (status) => {
     const value = String(status || "").toUpperCase();
-    if (value === "PAID") return "status-badge paid";
+    if (value === "PAID" || value === "SUCCESS") return "status-badge paid";
     if (value === "PENDING") return "status-badge pending";
     return "status-badge";
   };
@@ -183,9 +188,7 @@ export default function AdminPayments() {
             </div>
             <p>Current Month Revenue</p>
             <h3>{formatCurrency(stats.currentMonthRevenue, "LKR")}</h3>
-            <small>
-              Growth: {Number(stats.growth).toFixed(1)}%
-            </small>
+            <small>Growth: {Number(stats.growth).toFixed(1)}%</small>
           </div>
 
           <div className="metric-card">

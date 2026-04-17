@@ -1,6 +1,132 @@
+import axios from "axios";
 import Appointment from "../models/appointmentModel.js";
 import { generateSlots } from "../service/slotService.js";
-import axios from "axios";
+
+const enrichAppointmentsWithPatientDisplayId = async (appointments) => {
+  const appointmentList = Array.isArray(appointments) ? appointments : [appointments];
+
+  const enriched = await Promise.all(
+    appointmentList.map(async (appointment) => {
+      try {
+        const patientRes = await axios.get(
+          `${process.env.PATIENT_SERVICE_URL}/api/patients/internal/${appointment.patientId}`
+        );
+
+        const patientData = patientRes.data?.data || patientRes.data || {};
+
+        return {
+          ...appointment.toObject(),
+          patientDisplayId:
+            patientData.patientId ||
+            patientData.patientDisplayId ||
+            appointment.patientId,
+        };
+      } catch (error) {
+        return {
+          ...appointment.toObject(),
+          patientDisplayId: appointment.patientId,
+        };
+      }
+    })
+  );
+
+  return enriched;
+};
+
+/* GET ALL */
+export async function getAllAppointments(req, res) {
+  try {
+    const appointments = await Appointment.find().sort({ createdAt: -1 });
+    const enrichedAppointments =
+      await enrichAppointmentsWithPatientDisplayId(appointments);
+
+    res.status(200).json(enrichedAppointments);
+  } catch (err) {
+    console.error("Failed to fetch appointments:", err);
+    res.status(500).json({ message: "Failed to fetch appointments" });
+  }
+}
+
+/* GET BY PATIENT */
+export async function getAppointmentsByPatient(req, res) {
+  try {
+    const { patientId } = req.params;
+
+    const appointments = await Appointment.find({ patientId }).sort({
+      appointmentDate: -1,
+      createdAt: -1,
+    });
+
+    const enrichedAppointments =
+      await enrichAppointmentsWithPatientDisplayId(appointments);
+
+    res.status(200).json(enrichedAppointments);
+  } catch (err) {
+    console.error("Failed to fetch patient appointments:", err);
+    res.status(500).json({ message: "Failed to fetch patient appointments" });
+  }
+}
+
+/* LIST */
+export async function getAllAppointments(req, res) {
+  try {
+    const appointments = await Appointment.find({}).sort({ createdAt: -1 });
+    return res.json(appointments);
+  } catch (error) {
+    console.error("Error fetching all appointments:", error);
+    return res.status(500).json({ message: "Failed to fetch appointments" });
+  }
+}
+
+/* BY PATIENT */
+export async function getAppointmentsByPatient(req, res) {
+  try {
+    const { patientId } = req.params;
+
+    const appointments = await Appointment.find({ patientId }).sort({
+      appointmentDate: -1,
+      startTime: -1,
+    });
+
+    return res.json(appointments);
+  } catch (error) {
+    console.error("Error fetching patient appointments:", error);
+    return res.status(500).json({ message: "Failed to fetch patient appointments" });
+  }
+}
+
+/* RESCHEDULE */
+export async function rescheduleAppointment(req, res) {
+  try {
+    const { id } = req.params;
+    const { appointmentDate, startTime, duration } = req.body;
+
+    const appointment = await Appointment.findById(id);
+
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    if (appointmentDate !== undefined) appointment.appointmentDate = appointmentDate;
+    if (startTime !== undefined) appointment.startTime = startTime;
+    if (duration !== undefined) appointment.duration = Number(duration);
+
+    if (appointment.startTime && appointment.duration) {
+      const [h = "0", m = "0"] = String(appointment.startTime).split(":");
+      const start = parseInt(h, 10) * 60 + parseInt(m, 10);
+      const end = start + Number(appointment.duration);
+      const endHour = Math.floor(end / 60);
+      const endMinute = end % 60;
+      appointment.endTime = `${endHour}:${endMinute === 0 ? "00" : (endMinute < 10 ? `0${endMinute}` : endMinute)}`;
+    }
+
+    await appointment.save();
+    return res.json(appointment);
+  } catch (error) {
+    console.error("Error rescheduling appointment:", error);
+    return res.status(500).json({ message: "Failed to reschedule appointment" });
+  }
+}
 
 /* SEARCH */
 export async function searchAppointments(req, res) {
@@ -14,8 +140,9 @@ export async function searchAppointments(req, res) {
   if (type) query.appointmentType = type;
 
   const results = await Appointment.find(query);
+  const enrichedResults = await enrichAppointmentsWithPatientDisplayId(results);
 
-  res.json(results);
+  res.json(enrichedResults);
 }
 
 /* SLOTS */
@@ -142,6 +269,60 @@ export async function createAppointment(req, res) {
       return res.status(400).json({ success: false, message: 'Validation failed', details });
     }
     res.status(500).json({ success: false, message: err?.message || 'Internal error', details: err });
+  }
+}
+
+/* RESCHEDULE */
+export async function rescheduleAppointment(req, res) {
+  try {
+    const { id } = req.params;
+    const { appointmentDate, startTime } = req.body;
+
+    const appointment = await Appointment.findById(id);
+
+    if (!appointment) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    const targetDate = appointmentDate || appointment.appointmentDate;
+    const targetStartTime = startTime || appointment.startTime;
+    const duration = appointment.duration;
+
+    const [h, m] = targetStartTime.split(":");
+    const start = parseInt(h) * 60 + parseInt(m);
+    const end = start + duration;
+
+    const endHour = Math.floor(end / 60);
+    const endMin = end % 60;
+    const endTime = `${endHour}:${endMin === 0 ? "00" : "30"}`;
+
+    const booked = await Appointment.find({
+      _id: { $ne: id },
+      doctorId: appointment.doctorId,
+      appointmentDate: targetDate,
+      status: { $ne: "CANCELLED" },
+    });
+
+    for (let b of booked) {
+      const [bh, bm] = b.startTime.split(":");
+      const bStart = parseInt(bh) * 60 + parseInt(bm);
+      const bEnd = bStart + b.duration;
+
+      if (start < bEnd && end > bStart) {
+        return res.status(400).json({ message: "Time overlap" });
+      }
+    }
+
+    appointment.appointmentDate = targetDate;
+    appointment.startTime = targetStartTime;
+    appointment.endTime = endTime;
+
+    await appointment.save();
+
+    res.status(200).json(appointment);
+  } catch (err) {
+    console.error("Failed to reschedule appointment:", err);
+    res.status(500).json({ message: "Failed to reschedule appointment" });
   }
 }
 
