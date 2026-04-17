@@ -2,6 +2,44 @@ import Appointment from "../models/appointmentModel.js";
 import { generateSlots } from "../service/slotService.js";
 import axios from "axios";
 
+const normalizeAppointmentTime = (appointment) => {
+  return (
+    appointment?.appointmentTime ||
+    appointment?.startTime ||
+    "00:00"
+  );
+};
+
+const sortAppointmentsDesc = (appointments) => {
+  return [...appointments].sort(
+    (left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0)
+  );
+};
+
+/* LIST ALL */
+export async function getAllAppointments(req, res) {
+  try {
+    const appointments = await Appointment.find().sort({ createdAt: -1 });
+
+    res.status(200).json(appointments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
+/* LIST BY PATIENT */
+export async function getAppointmentsByPatient(req, res) {
+  try {
+    const appointments = await Appointment.find({ patientId: req.params.patientId }).sort({
+      createdAt: -1,
+    });
+
+    res.status(200).json(appointments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
 /* SEARCH */
 export async function searchAppointments(req, res) {
   const { doctorName, specialization, hospital, type } = req.query;
@@ -179,4 +217,31 @@ export async function cancelAppointment(req,res){
   await appointment.save();
 
   res.json({ message:"Appointment cancelled" });
+}
+
+/* RESCHEDULE */
+export async function rescheduleAppointment(req, res) {
+  try {
+    const { id } = req.params;
+    const { appointmentDate, appointmentTime, startTime, status } = req.body;
+
+    const updatedAppointment = await Appointment.findByIdAndUpdate(
+      id,
+      {
+        ...(appointmentDate !== undefined ? { appointmentDate } : {}),
+        ...(appointmentTime !== undefined ? { appointmentTime } : {}),
+        ...(startTime !== undefined ? { startTime } : {}),
+        ...(status !== undefined ? { status } : {}),
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedAppointment) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    res.json(updatedAppointment);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 }
