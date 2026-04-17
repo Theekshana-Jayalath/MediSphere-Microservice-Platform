@@ -29,9 +29,13 @@ export async function getSlots(req, res) {
     return res.status(400).json({ message: "Past date not allowed" });
   }
 
-  const slots = await generateSlots(doctorId, date);
-
-  res.json(slots);
+  try {
+    const { available, blocked } = await generateSlots(doctorId, date);
+    res.json({ available, blocked });
+  } catch (err) {
+    console.error("Error generating slots:", err);
+    res.status(500).json({ message: "Could not generate slots" });
+  }
 }
 
 /* CREATE */

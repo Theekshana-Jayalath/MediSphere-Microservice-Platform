@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { getSlots as fetchSlots } from "../../services/doctor/appointmentApi.js";
 
 // Helper: format Date to hh:mm AM/PM
 const formatTime = (date) => {
@@ -174,8 +175,32 @@ const TimeSlots = ({ doctor = null, selectedDate = '', selectedTime = '', setSel
     if (doctor && selectedDate) {
       setLoading(true);
       const generatedSlots = buildAllSlots();
-      setSlots(generatedSlots);
-      setLoading(false);
+      // Fetch blocked slots from backend for this doctor/date
+      (async () => {
+        try {
+          const payload = await fetchSlots(doctor._id || doctor.id || doctor.doctorId || doctor?.id, selectedDate);
+          const blockedRaw = (payload && payload.blocked) || [];
+
+          // normalize blocked times into date ranges (start/end)
+          const blockedSet = new Set(blockedRaw.map(s => String(s).trim()));
+
+          // Filter out built slots that overlap any blocked slot (by start time)
+          const filtered = generatedSlots.filter(slot => {
+            // slot.start is a Date; format as H:MM (24h) like '9:00' or '14:30'
+            const h = slot.start.getHours();
+            const m = slot.start.getMinutes();
+            const label = `${h}:${m === 0 ? '00' : '30'}`;
+            return !blockedSet.has(label);
+          });
+
+          setSlots(filtered);
+        } catch (err) {
+          console.warn('Could not fetch blocked slots, showing local slots', err);
+          setSlots(generatedSlots);
+        } finally {
+          setLoading(false);
+        }
+      })();
     }
   }, [doctor, selectedDate]);
 
