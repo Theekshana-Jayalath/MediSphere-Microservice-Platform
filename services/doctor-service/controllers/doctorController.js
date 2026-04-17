@@ -1,6 +1,82 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Doctor from "../models/Doctor.js";
+import Counter from "../models/Counter.js";
+
+const WEEKDAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+const parseLocalDate = (dateValue) => {
+  const [year, month, day] = String(dateValue).split("-").map(Number);
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  return new Date(year, month - 1, day);
+};
+
+const getCurrentWeekEnd = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const weekEnd = new Date(today);
+  weekEnd.setDate(today.getDate() + (6 - today.getDay()));
+  weekEnd.setHours(0, 0, 0, 0);
+
+  return { today, weekEnd };
+};
+
+const getDayNameFromDate = (dateValue) => {
+  const parsedDate = parseLocalDate(dateValue);
+
+  if (!parsedDate) {
+    return "";
+  }
+
+  return WEEKDAY_NAMES[parsedDate.getDay()];
+};
+
+const isDateWithinCurrentWeek = (dateValue) => {
+  const parsedDate = parseLocalDate(dateValue);
+
+  if (!parsedDate) {
+    return false;
+  }
+
+  const { today, weekEnd } = getCurrentWeekEnd();
+
+  return parsedDate >= today && parsedDate <= weekEnd;
+};
+
+const validateAvailabilitySchedules = (schedules) => {
+  if (!Array.isArray(schedules)) {
+    return null;
+  }
+
+  for (const schedule of schedules) {
+    if (schedule?.date && !isDateWithinCurrentWeek(schedule.date)) {
+      return "Availability dates must be within the current week.";
+    }
+
+    if (schedule?.date) {
+      const expectedDay = getDayNameFromDate(schedule.date);
+
+      if (schedule.day && expectedDay && schedule.day !== expectedDay) {
+        return "Availability day must match the selected date.";
+      }
+    }
+  }
+
+  return null;
+};
 
 const getSafeDoctor = (doctorDoc) => {
   const doctor = doctorDoc.toObject();
@@ -20,6 +96,16 @@ const generateDoctorToken = (doctor) => {
   );
 };
 
+const generateDoctorId = async () => {
+  const counter = await Counter.findOneAndUpdate(
+    { name: "doctorId" },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+
+  return `DOC${String(counter.seq).padStart(4, "0")}`;
+};
+
 export const registerDoctor = async (req, res, next) => {
   try {
     const {
@@ -34,7 +120,17 @@ export const registerDoctor = async (req, res, next) => {
       baseHospital,
       channelingHospitals,
       consultationFee,
+      availabilitySchedules,
     } = req.body;
+
+    const scheduleError = validateAvailabilitySchedules(availabilitySchedules);
+
+    if (scheduleError) {
+      return res.status(400).json({
+        success: false,
+        message: scheduleError,
+      });
+    }
 
     if (
       !fullName ||
@@ -65,8 +161,10 @@ export const registerDoctor = async (req, res, next) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const doctorId = await generateDoctorId();
 
     const doctor = await Doctor.create({
+      doctorId,
       fullName,
       email: email.toLowerCase(),
       password: hashedPassword,
@@ -80,8 +178,8 @@ export const registerDoctor = async (req, res, next) => {
         ? channelingHospitals
         : [],
       consultationFee,
-      availabilitySchedules: Array.isArray(req.body.availabilitySchedules)
-        ? req.body.availabilitySchedules
+      availabilitySchedules: Array.isArray(availabilitySchedules)
+        ? availabilitySchedules
         : [],
       approvalStatus: "pending_approval",
       rejectionReason: "",
@@ -89,6 +187,7 @@ export const registerDoctor = async (req, res, next) => {
     });
 
     console.log("Doctor registered successfully:", doctor._id);
+    console.log("Assigned doctor ID:", doctor.doctorId);
 
     return res.status(201).json({
       success: true,
@@ -125,7 +224,7 @@ export const getDoctorById = async (req, res, next) => {
 export const getDoctorApprovalStatus = async (req, res, next) => {
   try {
     const doctor = await Doctor.findById(req.params.id).select(
-      "approvalStatus rejectionReason fullName email"
+      "doctorId approvalStatus rejectionReason fullName email"
     );
 
     if (!doctor) {
@@ -166,6 +265,17 @@ export const updateDoctorProfile = async (req, res, next) => {
       consultationFee: req.body.consultationFee,
       availabilitySchedules: req.body.availabilitySchedules,
     };
+
+    const scheduleError = validateAvailabilitySchedules(
+      req.body.availabilitySchedules
+    );
+
+    if (scheduleError) {
+      return res.status(400).json({
+        success: false,
+        message: scheduleError,
+      });
+    }
 
     Object.keys(updates).forEach((key) => {
       if (updates[key] === undefined) {
@@ -324,6 +434,17 @@ export const updateDoctor = async (req, res, next) => {
       rejectionReason: req.body.rejectionReason,
     };
 
+    const scheduleError = validateAvailabilitySchedules(
+      req.body.availabilitySchedules
+    );
+
+    if (scheduleError) {
+      return res.status(400).json({
+        success: false,
+        message: scheduleError,
+      });
+    }
+
     Object.keys(updates).forEach((key) => {
       if (updates[key] === undefined) {
         delete updates[key];
@@ -408,6 +529,7 @@ export const loginDoctor = async (req, res, next) => {
       token: generateDoctorToken(doctor),
       user: {
         id: doctor._id,
+        doctorId: doctor.doctorId,
         name: doctor.fullName,
         email: doctor.email,
         role: doctor.role || "doctor",

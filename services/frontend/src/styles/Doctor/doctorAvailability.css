@@ -179,6 +179,20 @@
   box-shadow: 0 0 0 4px rgba(52, 73, 102, 0.08);
 }
 
+.availability-field select:disabled {
+  background: #f5f1ec;
+  color: #75839a;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.field-hint {
+  margin-top: 8px;
+  font-size: 0.84rem;
+  color: var(--ms-text-soft);
+  line-height: 1.5;
+}
+
 .availability-submit-btn {
   height: 54px;
   border: none;

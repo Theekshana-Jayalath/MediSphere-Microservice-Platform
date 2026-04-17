@@ -1,15 +1,27 @@
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import { registerDoctor } from "../../services/doctor/doctorService.js";
 import "../../styles/Doctor/doctorRegister.css";
 
 let DoctorRegisterForm = () => {
+  let specializationOptions = [
+    "Cardiologist",
+    "Neurologist",
+    "Dermatologist",
+    "Nephrologist",
+    "Gastroenterologist",
+    "Radiologist",
+    "Oncologist",
+    "Endocrinologist",
+    "Pulmonologist",
+    "Rheumatologist",
+  ];
+
   let [formData, setFormData] = useState({
     fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
     phone: "",
-    photo: "",
     specialization: "",
     licenseNumber: "",
     experienceYears: "",
@@ -22,10 +34,6 @@ let DoctorRegisterForm = () => {
   let [isSubmitting, setIsSubmitting] = useState(false);
   let [successMessage, setSuccessMessage] = useState("");
   let [serverError, setServerError] = useState("");
-  let [photoPreview, setPhotoPreview] = useState("");
-  let [isDragging, setIsDragging] = useState(false);
-
-  let fileInputRef = useRef(null);
 
   let handleChange = (event) => {
     let { name, value } = event.target;
@@ -39,97 +47,6 @@ let DoctorRegisterForm = () => {
       ...previousErrors,
       [name]: "",
     }));
-  };
-
-  let convertFileToBase64 = (file) => {
-    return new Promise((resolve, reject) => {
-      let reader = new FileReader();
-
-      reader.readAsDataURL(file);
-
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
-  let handlePhotoFile = async (file) => {
-    if (!file) return;
-
-    let allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
-    let maxSize = 5 * 1024 * 1024;
-
-    if (!allowedTypes.includes(file.type)) {
-      setErrors((previousErrors) => ({
-        ...previousErrors,
-        photo: "Only JPG, JPEG, and PNG files are allowed",
-      }));
-      return;
-    }
-
-    if (file.size > maxSize) {
-      setErrors((previousErrors) => ({
-        ...previousErrors,
-        photo: "Image size must be less than 5MB",
-      }));
-      return;
-    }
-
-    try {
-      let base64Image = await convertFileToBase64(file);
-
-      setFormData((previousData) => ({
-        ...previousData,
-        photo: base64Image,
-      }));
-
-      setPhotoPreview(base64Image);
-
-      setErrors((previousErrors) => ({
-        ...previousErrors,
-        photo: "",
-      }));
-    } catch (error) {
-      setErrors((previousErrors) => ({
-        ...previousErrors,
-        photo: "Failed to process image",
-      }));
-    }
-  };
-
-  let handlePhotoChange = async (event) => {
-    let file = event.target.files[0];
-    await handlePhotoFile(file);
-  };
-
-  let handleDrop = async (event) => {
-    event.preventDefault();
-    setIsDragging(false);
-
-    let file = event.dataTransfer.files[0];
-    await handlePhotoFile(file);
-  };
-
-  let handleDragOver = (event) => {
-    event.preventDefault();
-    setIsDragging(true);
-  };
-
-  let handleDragLeave = (event) => {
-    event.preventDefault();
-    setIsDragging(false);
-  };
-
-  let removePhoto = () => {
-    setFormData((previousData) => ({
-      ...previousData,
-      photo: "",
-    }));
-
-    setPhotoPreview("");
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
   };
 
   let validateForm = () => {
@@ -223,7 +140,6 @@ let DoctorRegisterForm = () => {
         email: formData.email.trim(),
         password: formData.password,
         phone: formData.phone.trim(),
-        photo: formData.photo,
         specialization: formData.specialization.trim(),
         licenseNumber: formData.licenseNumber.trim(),
         experienceYears: Number(formData.experienceYears),
@@ -249,7 +165,6 @@ let DoctorRegisterForm = () => {
           password: "",
           confirmPassword: "",
           phone: "",
-          photo: "",
           specialization: "",
           licenseNumber: "",
           experienceYears: "",
@@ -257,13 +172,7 @@ let DoctorRegisterForm = () => {
           channelingHospitals: "",
           consultationFee: "",
         });
-
-        setPhotoPreview("");
         setErrors({});
-
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
       }
     } catch (error) {
       console.error("Registration error:", error);
@@ -392,69 +301,6 @@ let DoctorRegisterForm = () => {
                   )}
                 </div>
 
-                <div className="doctor-register-field full-width">
-                  <label>Profile Photo</label>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".jpg,.jpeg,.png"
-                    onChange={handlePhotoChange}
-                    className="doctor-register-file-input"
-                  />
-
-                  <div
-                    className={`doctor-register-upload-box ${
-                      isDragging ? "dragging" : ""
-                    }`}
-                    onClick={() => fileInputRef.current?.click()}
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                  >
-                    {!photoPreview ? (
-                      <div className="doctor-register-upload-content">
-                        <div className="doctor-register-upload-icon">☁</div>
-                        <h4>Drop files here</h4>
-                        <p>JPG, JPEG, PNG up to 5MB</p>
-                      </div>
-                    ) : (
-                      <div className="doctor-register-photo-preview-wrapper">
-                        <img
-                          src={photoPreview}
-                          alt="Doctor preview"
-                          className="doctor-register-photo-preview"
-                        />
-                        <div className="doctor-register-photo-actions">
-                          <button
-                            type="button"
-                            className="doctor-register-photo-btn"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              fileInputRef.current?.click();
-                            }}
-                          >
-                            Change
-                          </button>
-                          <button
-                            type="button"
-                            className="doctor-register-photo-btn remove"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              removePhoto();
-                            }}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {errors.photo && (
-                    <span className="field-error">{errors.photo}</span>
-                  )}
-                </div>
               </div>
             </div>
 
@@ -466,13 +312,18 @@ let DoctorRegisterForm = () => {
               <div className="doctor-register-grid two-columns">
                 <div className="doctor-register-field">
                   <label>Specialization</label>
-                  <input
-                    type="text"
+                  <select
                     name="specialization"
                     value={formData.specialization}
                     onChange={handleChange}
-                    placeholder="Cardiologist"
-                  />
+                  >
+                    <option value="">Select specialization</option>
+                    {specializationOptions.map((specialization) => (
+                      <option key={specialization} value={specialization}>
+                        {specialization}
+                      </option>
+                    ))}
+                  </select>
                   {errors.specialization && (
                     <span className="field-error">{errors.specialization}</span>
                   )}
