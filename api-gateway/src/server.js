@@ -27,6 +27,13 @@ app.get("/", (req, res) => {
 
 const forwardRequest = async (req, res, targetBaseUrl) => {
   try {
+    if (!targetBaseUrl) {
+      return res.status(500).json({
+        success: false,
+        message: "Target service URL is not configured in API Gateway .env",
+      });
+    }
+
     const targetUrl = `${targetBaseUrl}${req.originalUrl}`;
 
     const headers = {
@@ -50,6 +57,7 @@ const forwardRequest = async (req, res, targetBaseUrl) => {
   } catch (error) {
     console.error("Gateway forward error:", error.message);
     return res.status(500).json({
+      success: false,
       message: "Gateway forwarding failed",
       error: error.message,
     });
@@ -217,6 +225,16 @@ app.use("/api/payments", (req, res) =>
 
 app.use("/api/admin", (req, res) =>
   forwardRequest(req, res, process.env.ADMIN_SERVICE_URL)
+);
+
+// ✅ Add Telemedicine
+app.use("/api/telemedicine", (req, res) =>
+  forwardRequest(req, res, process.env.TELEMEDICINE_SERVICE_URL)
+);
+
+// ✅ Add Notification
+app.use("/api/notifications", (req, res) =>
+  forwardRequest(req, res, process.env.NOTIFICATION_SERVICE_URL)
 );
 
 const PORT = process.env.PORT || 5015;

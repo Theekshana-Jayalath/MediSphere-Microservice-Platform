@@ -78,7 +78,14 @@ export default function PatientSidebar({
           <span>Prescriptions</span>
         </a>
 
-        <a href="#" className="nav-item">
+        <a
+          href="/patient/sessions"
+          className={`nav-item ${activeItem === "sessions" ? "active" : ""}`}
+          onClick={(e) => {
+            e.preventDefault();
+            navigate("/patient/sessions");
+          }}
+        >
           <span className="material-symbols-outlined">videocam</span>
           <span>Video Consultations</span>
         </a>

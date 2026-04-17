@@ -5,7 +5,6 @@ import patientRoutes from "./routes/PatientRoutes.jsx";
 import adminRoutes from "./routes/AdminRoutes.jsx";
 import doctorRoutes from "./routes/DoctorRoutes.jsx";
 
-
 function App() {
   return (
     <Router>

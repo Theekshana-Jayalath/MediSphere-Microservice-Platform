@@ -1,0 +1,231 @@
+.patient-sessions-page {
+  min-height: 100vh;
+  padding: 32px;
+  background: linear-gradient(135deg, #f8fbff 0%, #eef7ff 100%);
+}
+
+.patient-sessions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.patient-sessions-title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.patient-sessions-subtitle {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 15px;
+}
+
+.patient-sessions-refresh-btn {
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.patient-sessions-error {
+  padding: 14px 16px;
+  border-radius: 14px;
+  margin-bottom: 20px;
+  font-weight: 500;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.patient-sessions-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.patient-sessions-summary-card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  border: 1px solid #e2e8f0;
+}
+
+.patient-sessions-summary-card span {
+  display: block;
+  color: #64748b;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.patient-sessions-summary-card strong {
+  font-size: 28px;
+  color: #0f172a;
+}
+
+.patient-sessions-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.patient-sessions-filter-row button {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  padding: 10px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.patient-sessions-filter-row button.active {
+  background: #0f172a;
+  color: #fff;
+  border-color: #0f172a;
+}
+
+.patient-sessions-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 20px;
+}
+
+.patient-session-card {
+  background: #fff;
+  border-radius: 22px;
+  padding: 22px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
+}
+
+.patient-session-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.patient-session-badge {
+  display: inline-block;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+}
+
+.patient-session-doctor-name {
+  margin: 0 0 10px;
+  font-size: 22px;
+  color: #0f172a;
+}
+
+.patient-session-meta {
+  margin: 6px 0;
+  color: #475569;
+  font-size: 14px;
+}
+
+.patient-session-status {
+  align-self: flex-start;
+  text-transform: capitalize;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.patient-session-status-scheduled {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.patient-session-status-started {
+  background: #ecfeff;
+  color: #0f766e;
+}
+
+.patient-session-status-completed {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.patient-session-status-cancelled {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.patient-session-link-box {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.patient-session-link-label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.patient-session-link {
+  color: #2563eb;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.patient-session-link:hover {
+  text-decoration: underline;
+}
+
+.patient-session-no-link {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.patient-session-notes {
+  color: #334155;
+  background: #f8fafc;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.patient-sessions-empty-box {
+  background: #fff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 20px;
+  padding: 40px 24px;
+  text-align: center;
+  color: #64748b;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .patient-sessions-page {
+    padding: 20px;
+  }
+
+  .patient-sessions-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .patient-session-card-top {
+    flex-direction: column;
+  }
+}
