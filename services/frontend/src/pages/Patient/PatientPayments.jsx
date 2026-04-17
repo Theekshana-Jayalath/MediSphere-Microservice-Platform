@@ -10,6 +10,8 @@ export default function PatientPayments() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [showModal, setShowModal] = useState(false);
   const itemsPerPage = 4;
 
   const storedUser = localStorage.getItem("user");
@@ -182,6 +184,17 @@ export default function PatientPayments() {
     });
   };
 
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   const formatAmount = (amount) => {
     return `LKR ${Number(amount || 0).toLocaleString("en-US", {
       minimumFractionDigits: 2,
@@ -325,6 +338,16 @@ export default function PatientPayments() {
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
+  };
+
+  const handleViewDetails = (payment) => {
+    setSelectedPayment(payment);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedPayment(null);
   };
 
   return (
@@ -471,10 +494,9 @@ export default function PatientPayments() {
                   <thead>
                     <tr>
                       <th>Date</th>
-                      <th>Practitioner</th>
-                      <th>Service Type</th>
                       <th className="text-right">Amount</th>
                       <th className="text-center">Status</th>
+                      <th className="text-center">Payment Method</th>
                       <th className="text-right">Actions</th>
                     </tr>
                   </thead>
@@ -484,17 +506,6 @@ export default function PatientPayments() {
                         <td className="date-cell">
                           {formatDate(payment.createdAt)}
                         </td>
-                        <td>
-                          <div className="practitioner-info">
-                            <div className="doctor-avatar">
-                              {getDoctorInitials(payment.doctorName)}
-                            </div>
-                            <span className="doctor-name">
-                              {payment.doctorName}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="service-type">{payment.serviceType}</td>
                         <td className="amount-cell text-right">
                           {formatAmount(payment.amount)}
                         </td>
@@ -507,13 +518,19 @@ export default function PatientPayments() {
                             {normalizePaymentStatus(payment.status)}
                           </span>
                         </td>
+                        <td className="text-center">
+                          <span className="payment-method-badge">
+                            {payment.paymentMethod || "PayHere"}
+                          </span>
+                        </td>
                         <td className="actions-cell text-right">
                           <button
-                            className="action-btn receipt-btn"
-                            title="View Receipt"
+                            className="action-btn view-btn"
+                            title="View Details"
+                            onClick={() => handleViewDetails(payment)}
                           >
                             <span className="material-symbols-outlined">
-                              receipt_long
+                              visibility
                             </span>
                           </button>
                         </td>
@@ -573,6 +590,73 @@ export default function PatientPayments() {
           <p>Powered by Ethereal AI Health Intelligence</p>
         </footer>
       </main>
+
+      {/* Modal Popup for Payment Details - Centered */}
+      {showModal && selectedPayment && (
+        <div className="payment-modal-overlay" onClick={closeModal}>
+          <div className="payment-modal-container" onClick={(e) => e.stopPropagation()}>
+            <div className="payment-modal">
+              <div className="payment-modal-header">
+                <h3>Payment Details</h3>
+                <button className="modal-close-btn" onClick={closeModal}>
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+              <div className="payment-modal-content">
+                <div className="detail-row">
+                  <span className="detail-label">Transaction ID:</span>
+                  <span className="detail-value">{selectedPayment._id}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Appointment ID:</span>
+                  <span className="detail-value">{selectedPayment.appointmentId || "N/A"}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Date:</span>
+                  <span className="detail-value">{formatDateTime(selectedPayment.createdAt)}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Doctor Name:</span>
+                  <span className="detail-value">{selectedPayment.doctorName || "N/A"}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Service Type:</span>
+                  <span className="detail-value">{selectedPayment.serviceType || "N/A"}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Amount:</span>
+                  <span className="detail-value amount">{formatAmount(selectedPayment.amount)}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Payment Method:</span>
+                  <span className="detail-value">{selectedPayment.paymentMethod || "PayHere"}</span>
+                </div>
+                <div className="detail-row">
+                  <span className="detail-label">Status:</span>
+                  <span className={`detail-value status-badge ${getStatusBadgeClass(selectedPayment.status)}`}>
+                    {normalizePaymentStatus(selectedPayment.status)}
+                  </span>
+                </div>
+                {selectedPayment.transactionId && (
+                  <div className="detail-row">
+                    <span className="detail-label">Transaction Reference:</span>
+                    <span className="detail-value">{selectedPayment.transactionId}</span>
+                  </div>
+                )}
+                <div className="detail-row">
+                  <span className="detail-label">Last Updated:</span>
+                  <span className="detail-value">{formatDateTime(selectedPayment.updatedAt)}</span>
+                </div>
+              </div>
+              <div className="payment-modal-footer">
+                <button className="modal-close-button" onClick={closeModal}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

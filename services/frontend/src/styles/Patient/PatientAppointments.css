@@ -662,6 +662,16 @@
   color: white;
 }
 
+.action-btn.view {
+  background: rgba(75, 95, 126, 0.1);
+  color: #4b5f7e;
+}
+
+.action-btn.view:hover {
+  background: #4b5f7e;
+  color: white;
+}
+
 .loading-state, .empty-state {
   text-align: center;
   padding: 60px 20px;
@@ -689,21 +699,251 @@
   cursor: pointer;
 }
 
-/* Modal Styles */
+/* Modal Overlay */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
 }
 
+/* Attractive Appointment Details Modal */
+.appointment-detail-modal {
+  background: linear-gradient(135deg, #ffffff 0%, #fef8f4 100%);
+  border-radius: 32px;
+  width: 90%;
+  max-width: 750px;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  animation: modalSlideUp 0.4s cubic-bezier(0.34, 1.2, 0.64, 1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  background: rgba(7, 24, 46, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+  backdrop-filter: blur(4px);
+}
+
+.modal-close-btn:hover {
+  background: #ba1a1a;
+  transform: rotate(90deg);
+}
+
+.modal-close-btn:hover span {
+  color: white;
+}
+
+.modal-close-btn span {
+  font-size: 22px;
+  color: #07182e;
+  transition: all 0.3s ease;
+}
+
+.modal-header-section {
+  text-align: center;
+  padding: 32px 32px 24px;
+  background: linear-gradient(135deg, #07182e 0%, #1d2d44 100%);
+  border-radius: 32px 32px 0 0;
+  color: white;
+}
+
+.header-icon {
+  width: 70px;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  backdrop-filter: blur(10px);
+}
+
+.header-icon span {
+  font-size: 36px;
+  color: white;
+}
+
+.modal-header-section h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  letter-spacing: -0.5px;
+}
+
+.modal-header-section p {
+  font-size: 14px;
+  opacity: 0.8;
+  margin: 0;
+}
+
+.modal-details-grid {
+  padding: 24px 32px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.detail-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  background: white;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(197, 198, 205, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.detail-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  border-color: rgba(7, 24, 46, 0.2);
+}
+
+.detail-card.highlight {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e8f4f8 100%);
+  border: 1px solid rgba(7, 24, 46, 0.2);
+}
+
+.detail-icon {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #dbe8ff 0%, #e8f1fa 100%);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.detail-icon span {
+  font-size: 24px;
+  color: #07182e;
+}
+
+.detail-content {
+  flex: 1;
+}
+
+.detail-content label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #75777e;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+}
+
+.detail-content p {
+  font-size: 15px;
+  font-weight: 600;
+  color: #07182e;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.detail-content .amount-text {
+  font-size: 20px;
+  font-weight: 800;
+  color: #07182e;
+}
+
+.detail-content .status-badge {
+  display: inline-block;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.detail-content .payment-status {
+  display: inline-block;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.detail-content .payment-status.green {
+  background: rgba(76, 175, 80, 0.12);
+  color: #2e7d32;
+}
+
+.detail-content .payment-status.amber {
+  background: rgba(255, 152, 0, 0.12);
+  color: #ed6c02;
+}
+
+.modal-footer-actions {
+  padding: 20px 32px 32px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid rgba(197, 198, 205, 0.2);
+  background: rgba(254, 248, 244, 0.5);
+  border-radius: 0 0 32px 32px;
+}
+
+.close-modal-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: #07182e;
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.close-modal-btn:hover {
+  background: #1d2d44;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(7, 24, 46, 0.3);
+}
+
+.close-modal-btn span {
+  font-size: 18px;
+}
+
+/* Reschedule Modal */
 .modal-content {
   background: white;
   border-radius: 20px;
@@ -807,6 +1047,25 @@
   cursor: not-allowed;
 }
 
+/* Scrollbar styling for modal */
+.appointment-detail-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.appointment-detail-modal::-webkit-scrollbar-track {
+  background: #f0ece8;
+  border-radius: 10px;
+}
+
+.appointment-detail-modal::-webkit-scrollbar-thumb {
+  background: #c5c6cd;
+  border-radius: 10px;
+}
+
+.appointment-detail-modal::-webkit-scrollbar-thumb:hover {
+  background: #a0a1a8;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .appointments-stats-grid {
@@ -829,5 +1088,38 @@
   
   .action-buttons {
     flex-direction: column;
+  }
+  
+  .modal-details-grid {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+  
+  .modal-header-section h2 {
+    font-size: 22px;
+  }
+  
+  .header-icon {
+    width: 55px;
+    height: 55px;
+  }
+  
+  .header-icon span {
+    font-size: 28px;
+  }
+  
+  .modal-close-btn {
+    top: 15px;
+    right: 18px;
+    width: 35px;
+    height: 35px;
+  }
+  
+  .modal-footer-actions {
+    padding: 16px 20px 24px;
+  }
+  
+  .close-modal-btn {
+    padding: 10px 22px;
   }
 }
