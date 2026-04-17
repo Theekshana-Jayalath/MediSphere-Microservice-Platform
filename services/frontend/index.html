@@ -3,13 +3,90 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MEDISPHERE</title>
-
-    <!-- PayHere Sandbox -->
-    <script src="https://sandbox.payhere.lk/lib/payhere.js"></script>
+    <title>MEDISPHERE - Healthcare Appointment Booking</title>
+    
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    
+    <!-- CORRECTED PayHere Script URL - removed /lib/ -->
+    <script type="text/javascript" src="https://www.payhere.lk/lib/payhere.js"></script>
+    
+    <style>
+      .payhere-loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 99999;
+      }
+      .payhere-loading.active {
+        display: flex;
+      }
+      .payhere-loading-content {
+        background: white;
+        padding: 20px 40px;
+        border-radius: 12px;
+        font-family: sans-serif;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    
+    <div id="payhere-loading" class="payhere-loading">
+      <div class="payhere-loading-content">
+        <p>Redirecting to secure payment gateway...</p>
+      </div>
+    </div>
+    
     <script type="module" src="/src/main.jsx"></script>
+    
+    <script>
+      // PayHere event handlers
+      window.addEventListener('load', function() {
+        console.log('Page loaded, checking for PayHere...');
+        
+        // Poll for PayHere object
+        let attempts = 0;
+        const checkPayHere = setInterval(function() {
+          attempts++;
+          if (window.payhere) {
+            console.log('✅ PayHere loaded successfully after', attempts, 'attempts');
+            
+            // Setup global event handlers
+            window.payhere.onStart = function() {
+              console.log('PayHere payment started');
+              document.getElementById('payhere-loading')?.classList.add('active');
+            };
+            
+            window.payhere.onCompleted = function(orderId) {
+              console.log('PayHere payment completed:', orderId);
+              document.getElementById('payhere-loading')?.classList.remove('active');
+            };
+            
+            window.payhere.onDismissed = function() {
+              console.log('PayHere payment dismissed');
+              document.getElementById('payhere-loading')?.classList.remove('active');
+            };
+            
+            window.payhere.onError = function(error) {
+              console.log('PayHere error:', error);
+              document.getElementById('payhere-loading')?.classList.remove('active');
+            };
+            
+            clearInterval(checkPayHere);
+          } else if (attempts >= 20) {
+            console.error('❌ PayHere failed to load after 10 seconds');
+            clearInterval(checkPayHere);
+          } else {
+            console.log('⏳ Waiting for PayHere to load... attempt', attempts);
+          }
+        }, 500);
+      });
+    </script>
   </body>
 </html>

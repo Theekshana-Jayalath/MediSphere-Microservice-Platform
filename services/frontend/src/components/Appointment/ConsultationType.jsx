@@ -1,28 +1,52 @@
 import React, { useState } from "react";
 
-const ConsultationType = () => {
-  const [selected, setSelected] = useState("online");
+const ConsultationType = ({ onSelect, selectedType, setSelectedType }) => {
+  const consultationTypes = [
+    {
+      id: "online",
+      name: "Online Video",
+      description: "Secure telehealth session",
+      icon: "💻",
+      color: "#4A90E2"
+    },
+    {
+      id: "inperson",
+      name: "In-Person",
+      description: "At our central clinic",
+      icon: "🏥",
+      color: "#2C3E50"
+    }
+  ];
 
-  const Card = ({ id, title, subtitle, price, icon }) => (
-    <div
-      className={`consultation-box ${selected === id ? "active" : ""}`}
-      onClick={() => setSelected(id)}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: '#f3f6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</div>
-        <div>
-          <h4 style={{ margin: 0 }}>{title}</h4>
-          <p style={{ margin: 0, fontSize: 13, color: 'var(--ms-mid)' }}>{subtitle}</p>
-        </div>
-      </div>
-      <div style={{ fontWeight: 600 }}>{price}</div>
-    </div>
-  );
+  const handleSelect = (type) => {
+    setSelectedType(type.id);
+    if (onSelect) {
+      onSelect(type);
+    }
+  };
 
   return (
-    <div className="consultation-wrapper">
-      <Card id="online" title="Online Video" subtitle="Secure telehealth session" icon="📹" />
-      <Card id="clinic" title="In-Person" subtitle="At our central clinic" icon="🏥" />
+    <div className="consultation-types-container">
+      {consultationTypes.map((type) => (
+        <button
+          key={type.id}
+          className={`consultation-type-btn ${selectedType === type.id ? 'active' : ''}`}
+          onClick={() => handleSelect(type)}
+        >
+          <div className="consultation-type-btn-content">
+            <div className="consultation-type-icon" style={{ backgroundColor: `${type.color}15` }}>
+              <span>{type.icon}</span>
+            </div>
+            <div className="consultation-type-info">
+              <div className="consultation-type-name">{type.name}</div>
+              <div className="consultation-type-description">{type.description}</div>
+            </div>
+            {selectedType === type.id && (
+              <div className="consultation-type-check">✓</div>
+            )}
+          </div>
+        </button>
+      ))}
     </div>
   );
 };

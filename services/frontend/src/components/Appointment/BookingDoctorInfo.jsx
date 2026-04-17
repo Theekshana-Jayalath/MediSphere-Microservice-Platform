@@ -1,31 +1,36 @@
 import React from "react";
+import defaultUserImg from "../../assets/user.png";
 
 const BookingDoctorInfo = ({ doctor }) => {
+  if (!doctor) return null;
+
   return (
     <div className="booking-doctor-card">
-      <img
-        src={doctor?.image || "https://randomuser.me/api/portraits/men/32.jpg"}
-        alt="doctor"
-        className="booking-doctor-img"
-      />
+      <div className="booking-doctor-avatar">
+        <img 
+          src={doctor?.image || defaultUserImg} 
+          alt={doctor?.name || 'Doctor'}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = defaultUserImg;
+          }}
+        />
+      </div>
 
       <div className="booking-doctor-details">
         <div className="booking-doctor-header">
-          <h2>Dr. Julian Vance</h2>
-          <span className="doctor-tag">Senior Cardiologist</span>
+          <h2>{doctor.name}</h2>
+          <span className="doctor-specialty-tag">{doctor.specialty}</span>
         </div>
 
-        <p className="doctor-description">
-          Expert in non-invasive cardiology and preventative heart care. Dr.
-          Vance has over 15 years of experience at leading medical
-          institutions, specializing in complex cardiac diagnostics.
+        <p className="doctor-bio">
+          {doctor.raw?.about || `Expert in ${doctor.specialty} with extensive clinical experience.`}
         </p>
 
-        <div className="doctor-meta" style={{ display: 'flex', gap: '12px', marginTop: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span>⭐ 4.9</span>
-          <span>15+ Years Exp</span>
-          <span>English, Spanish</span>
-          <span>Board Certified</span>
+        <div className="doctor-stats">
+          <span className="stat-item">⭐ {doctor.rating || '4.8'}</span>
+          <span className="stat-item">{doctor.experience || '10+ Years'} Exp</span>
+          <span className="stat-item">🏥 {doctor.hospital}</span>
         </div>
       </div>
     </div>

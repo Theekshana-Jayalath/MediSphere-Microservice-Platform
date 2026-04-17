@@ -1,72 +1,84 @@
 import { useState, useEffect } from "react";
 import DoctorSidebar from "../../components/doctor/DoctorSidebar";
+import { getAppointmentsByDoctorId } from "../../services/doctor/appointmentApi.js";
 import "../../styles/mySchedule.css";
+
+const safeParseJSON = (value) => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
+const extractAppointments = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.data?.data)) return payload.data.data;
+  return [];
+};
+
+const normalizeStatus = (status) => {
+  const value = String(status || "").trim().toLowerCase();
+
+  if (["confirmed", "approved", "accepted"].includes(value)) return "confirmed";
+  if (["completed", "done"].includes(value)) return "completed";
+  if (["cancelled", "canceled", "rejected"].includes(value)) return "cancelled";
+  return "pending";
+};
+
+const normalizeAppointmentType = (appointment) => {
+  const rawType = String(
+    appointment?.appointmentType || appointment?.consultationType || appointment?.type || "In-Person"
+  )
+    .trim()
+    .toLowerCase();
+
+  if (["online", "video", "video call"].includes(rawType)) {
+    return "Video Call";
+  }
+
+  if (rawType === "physical") {
+    return "In-Person";
+  }
+
+  return appointment?.appointmentType || appointment?.consultationType || appointment?.type || "In-Person";
+};
+
+const buildScheduleRecord = (appointment) => {
+  const startTime =
+    appointment?.appointmentTime ||
+    appointment?.startTime ||
+    appointment?.time ||
+    "00:00";
+
+  return {
+    id: appointment?.appointmentId || appointment?._id || appointment?.id,
+    date: appointment?.appointmentDate || appointment?.date || "",
+    time: startTime,
+    endTime: appointment?.endTime || startTime,
+    patientName:
+      appointment?.patientName ||
+      appointment?.patient?.name ||
+      appointment?.patient?.fullName ||
+      "Unknown Patient",
+    type: normalizeAppointmentType(appointment),
+    reason: appointment?.reason || appointment?.consultationReason || "Consultation",
+    hospital: appointment?.hospital || "Not specified",
+    location:
+      normalizeAppointmentType(appointment) === "Video Call"
+        ? "Online"
+        : appointment?.location || appointment?.hospital || "Not specified",
+    status: normalizeStatus(appointment?.status),
+  };
+};
 
 const MySchedule = () => {
   const [viewMode, setViewMode] = useState("month"); // month, week, day
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [appointments, setAppointments] = useState([
-    {
-      id: "APT001",
-      date: "2026-03-30",
-      time: "09:00",
-      endTime: "09:30",
-      patientName: "Eleanor Fitzgerald",
-      type: "In-Person",
-      reason: "Follow-up: Hypertension Management",
-      hospital: "MediSphere Main Clinic",
-      location: "Room 101",
-      status: "confirmed",
-    },
-    {
-      id: "APT002",
-      date: "2026-03-30",
-      time: "10:00",
-      endTime: "10:30",
-      patientName: "Marcus Thorne",
-      type: "Video Call",
-      reason: "Telehealth: Chest Pain Inquiry",
-      hospital: "Virtual",
-      location: "Online",
-      status: "confirmed",
-    },
-    {
-      id: "APT003",
-      date: "2026-03-30",
-      time: "11:00",
-      endTime: "11:45",
-      patientName: "Sarah Jenkins",
-      type: "In-Person",
-      reason: "Initial Consultation: Arrhythmia",
-      hospital: "MediSphere Main Clinic",
-      location: "Room 102",
-      status: "confirmed",
-    },
-    {
-      id: "APT004",
-      date: "2026-03-31",
-      time: "14:00",
-      endTime: "14:30",
-      patientName: "Linda Wu",
-      type: "In-Person",
-      reason: "Follow-up Consultation",
-      hospital: "MediSphere Main Clinic",
-      location: "Room 101",
-      status: "pending",
-    },
-    {
-      id: "APT005",
-      date: "2026-04-01",
-      time: "10:00",
-      endTime: "10:30",
-      patientName: "Kevin Miller",
-      type: "Video Call",
-      reason: "Routine Medication Review",
-      hospital: "Virtual",
-      location: "Online",
-      status: "confirmed",
-    },
-  ]);
+  const [appointments, setAppointments] = useState([]);
+  const [isLoadingAppointments, setIsLoadingAppointments] = useState(true);
+  const [scheduleError, setScheduleError] = useState("");
 
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -74,8 +86,54 @@ const MySchedule = () => {
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const fetchScheduleAppointments = async () => {
+      try {
+        setIsLoadingAppointments(true);
+        setScheduleError("");
+
+        const user = safeParseJSON(localStorage.getItem("user") || "") || {};
+        const doctorUserId = user?.id || user?._id || "";
+
+        if (!doctorUserId) {
+          if (isMounted) {
+            setAppointments([]);
+            setScheduleError("Doctor session not found. Please login again.");
+          }
+          return;
+        }
+
+        const response = await getAppointmentsByDoctorId(doctorUserId);
+        const fetchedAppointments = extractAppointments(response).map(buildScheduleRecord);
+
+        if (isMounted) {
+          setAppointments(fetchedAppointments);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setAppointments([]);
+          setScheduleError(
+            error?.response?.data?.message || "Failed to load schedule appointments."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingAppointments(false);
+        }
+      }
+    };
+
+    fetchScheduleAppointments();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     generateCalendarDays();
-  }, [currentDate]);
+  }, [currentDate, appointments]);
 
   const generateCalendarDays = () => {
     const year = currentDate.getFullYear();
@@ -199,6 +257,9 @@ const MySchedule = () => {
           <h1>My Schedule</h1>
           <p>Manage your appointments and availability</p>
         </div>
+
+        {scheduleError && <div className="appointments-error-message">{scheduleError}</div>}
+        {isLoadingAppointments && <div className="appointments-empty-state">Loading appointments...</div>}
 
         <div className="schedule-controls">
           <div className="view-modes">

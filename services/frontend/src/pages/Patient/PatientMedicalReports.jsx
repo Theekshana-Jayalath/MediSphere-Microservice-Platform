@@ -19,7 +19,9 @@ export default function PatientMedicalReports() {
   const patientId =
     patientProfile?.patientId || user?.patientId || "------";
 
-  // Use API Gateway for all backend calls
+  const lookupPatientId =
+    patientProfile?.userId || user?.id || patientProfile?._id || "";
+
   const API_GATEWAY_URL = import.meta.env.VITE_API_GATEWAY_URL
     ? import.meta.env.VITE_API_GATEWAY_URL
     : "http://localhost:5015";
@@ -80,14 +82,20 @@ export default function PatientMedicalReports() {
   const parseResponseData = async (response) => {
     const contentType = response.headers.get("content-type") || "";
 
-    if (contentType.includes("application/json")) {
-      return await response.json();
-    }
+    try {
+      if (contentType.includes("application/json")) {
+        return await response.json();
+      }
 
-    const text = await response.text();
-    return {
-      message: text || "Unexpected server response",
-    };
+      const text = await response.text();
+      return {
+        message: text || "Unexpected server response",
+      };
+    } catch (error) {
+      return {
+        message: "Unable to parse server response",
+      };
+    }
   };
 
   const fetchReports = async () => {
@@ -96,7 +104,6 @@ export default function PatientMedicalReports() {
 
       const token = getAuthToken();
 
-      // Call API Gateway instead of direct patient service
       const response = await fetch(`${API_GATEWAY_URL}/api/reports/me`, {
         method: "GET",
         headers: {
@@ -125,26 +132,40 @@ export default function PatientMedicalReports() {
       setDoctorError(null);
       const token = getAuthToken();
 
-      console.log("Fetching patient's doctors from:", `${API_GATEWAY_URL}/api/doctors/my-doctors`);
+      if (!lookupPatientId) {
+        setDoctors([]);
+        setDoctorError(
+          "Unable to identify the logged-in patient. Please log in again."
+        );
+        return;
+      }
 
-      // Call the endpoint that gets doctors the patient has appointments with
-      const response = await fetch(`${API_GATEWAY_URL}/api/doctors/my-doctors`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
+      console.log(
+        "Fetching patient's doctors from:",
+        `${API_GATEWAY_URL}/api/doctors/my-doctors/${lookupPatientId}`
+      );
+
+      const response = await fetch(
+        `${API_GATEWAY_URL}/api/doctors/my-doctors/${lookupPatientId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
+      );
 
       console.log("Response status:", response.status);
 
       const data = await parseResponseData(response);
 
       if (!response.ok) {
-        throw new Error(data?.message || `Failed to fetch doctors: ${response.status}`);
+        throw new Error(
+          data?.message || `Failed to fetch doctors: ${response.status}`
+        );
       }
 
-      // Extract doctors array from response
       let doctorsList = [];
       if (Array.isArray(data)) {
         doctorsList = data;
@@ -153,18 +174,22 @@ export default function PatientMedicalReports() {
       } else if (data?.doctors && Array.isArray(data.doctors)) {
         doctorsList = data.doctors;
       }
-      
+
       console.log("Doctors fetched:", doctorsList.length);
       setDoctors(doctorsList);
-      
+
       if (doctorsList.length === 0) {
-        setDoctorError("You don't have any appointments yet. Please book an appointment with a doctor first.");
+        setDoctorError(
+          "You don't have any appointments yet. Please book an appointment with a doctor first."
+        );
       } else {
         setDoctorError(null);
       }
     } catch (error) {
       console.error("Failed to fetch doctors:", error);
-      setDoctorError("Unable to load doctors. Please make sure you're logged in and try again.");
+      setDoctorError(
+        "Unable to load doctors. Please make sure you're logged in and try again."
+      );
       setDoctors([]);
     } finally {
       setLoadingDoctors(false);
@@ -231,17 +256,20 @@ export default function PatientMedicalReports() {
       formData.append("description", reportForm.description);
       formData.append("reportType", reportForm.reportType);
       formData.append("doctorId", reportForm.doctorId);
+
       console.log("Submitting with doctorId:", reportForm.doctorId);
 
       if (reportForm.file) {
         formData.append("report", reportForm.file);
+        console.log("Submitting file:", reportForm.file.name);
       }
 
       const url = editingReportId
         ? `${API_GATEWAY_URL}/api/reports/${editingReportId}`
         : `${API_GATEWAY_URL}/api/reports/upload`;
-      
+
       console.log("Submitting to API Gateway:", url);
+      console.log("Auth token exists:", !!token);
 
       const response = await fetch(url, {
         method: editingReportId ? "PUT" : "POST",
@@ -251,11 +279,16 @@ export default function PatientMedicalReports() {
         body: formData,
       });
 
+      console.log("Upload response status:", response.status);
+      console.log("Upload response ok:", response.ok);
+
       const data = await parseResponseData(response);
+      console.log("Upload response data:", data);
 
       if (!response.ok) {
         throw new Error(
           data?.message ||
+            data?.error ||
             (editingReportId
               ? "Failed to update report"
               : "Failed to upload report")
@@ -264,6 +297,7 @@ export default function PatientMedicalReports() {
 
       resetForm();
       await fetchReports();
+
       alert(
         editingReportId
           ? "Report updated successfully"
@@ -369,7 +403,7 @@ export default function PatientMedicalReports() {
 
   const getDoctorName = (doctorId) => {
     if (!doctorId) return "Not assigned";
-    const doctor = doctors.find(d => d._id === doctorId || d.id === doctorId);
+    const doctor = doctors.find((d) => d._id === doctorId || d.id === doctorId);
     if (doctor) {
       return `Dr. ${doctor.fullName || doctor.name || "Unknown"}`;
     }
@@ -586,16 +620,32 @@ export default function PatientMedicalReports() {
                     ) : doctorError ? (
                       <option disabled>{doctorError}</option>
                     ) : doctors.length === 0 ? (
-                      <option disabled>No doctors found. Please book an appointment first.</option>
+                      <option disabled>
+                        No doctors found. Please book an appointment first.
+                      </option>
                     ) : (
                       doctors.map((doctor) => (
-                        <option key={doctor._id || doctor.id} value={doctor._id || doctor.id}>
-                          Dr. {doctor.fullName || doctor.name || doctor.email || "Unknown"} - {doctor.specialization || ""}
+                        <option
+                          key={doctor._id || doctor.id}
+                          value={doctor._id || doctor.id}
+                        >
+                          Dr.{" "}
+                          {doctor.fullName ||
+                            doctor.name ||
+                            doctor.email ||
+                            "Unknown"}{" "}
+                          - {doctor.specialization || ""}
                         </option>
                       ))
                     )}
                   </select>
-                  <small style={{ display: 'block', marginTop: '4px', color: '#6c757d' }}>
+                  <small
+                    style={{
+                      display: "block",
+                      marginTop: "4px",
+                      color: "#6c757d",
+                    }}
+                  >
                     Only the selected doctor will be able to view this report
                   </small>
                 </div>

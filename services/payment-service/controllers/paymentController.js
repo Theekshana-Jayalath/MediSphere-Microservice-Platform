@@ -15,6 +15,7 @@ export const createPayment = async (req, res) => {
       bookingDetails,
     } = req.body;
 
+    // Validate required fields
     if (!appointmentId || !patientId || !doctorId || !amount || !contact) {
       console.error("❌ Missing required fields");
       return res.status(400).json({
@@ -26,6 +27,7 @@ export const createPayment = async (req, res) => {
     const orderId = "ORDER_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6);
     console.log("🆕 Created orderId:", orderId);
 
+    // Create payment record
     const payment = new Payment({
       orderId,
       appointmentId,
@@ -39,11 +41,13 @@ export const createPayment = async (req, res) => {
     });
 
     await payment.save();
+    console.log("💾 Payment saved to database");
 
+    // If the caller already provided an appointmentId (appointment created earlier),
+    // we should NOT create a duplicate appointment — keep the same id.
     if (!appointmentId && !payment.appointmentId) {
       try {
-        const appointmentServiceBase =
-          process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
+        const appointmentServiceBase = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
         const bd = payment.bookingDetails || {};
         const doc = bd.doctor || {};
 
@@ -65,15 +69,10 @@ export const createPayment = async (req, res) => {
         };
 
         console.log("📤 Creating initial appointment (PENDING) via Appointment Service:", appointmentPayload);
-
-        const resp = await axios.post(
-          `${appointmentServiceBase}/api/appointments`,
-          appointmentPayload,
-          {
-            headers: { "Content-Type": "application/json" },
-            timeout: 8000,
-          }
-        );
+        const resp = await axios.post(`${appointmentServiceBase}/api/appointments`, appointmentPayload, {
+          headers: { "Content-Type": "application/json" },
+          timeout: 8000
+        });
 
         console.log("✅ Initial appointment created:", resp.data);
         if (resp.data && (resp.data._id || resp.data.appointmentId)) {
@@ -90,36 +89,32 @@ export const createPayment = async (req, res) => {
     const formattedAmount = Number(amount).toFixed(2);
     console.log("💰 Amount:", formattedAmount);
 
+    // Get merchant credentials
     const merchantId = process.env.PAYHERE_MERCHANT_ID;
     const merchantSecret = process.env.PAYHERE_MERCHANT_SECRET;
-
+    
     console.log("🏪 Merchant ID:", merchantId);
-
+    
     if (!merchantId || !merchantSecret) {
       console.error("❌ Missing PayHere credentials in .env");
-      return res.status(500).json({
-        success: false,
-        message: "Payment gateway configuration error",
+      return res.status(500).json({ 
+        success: false, 
+        message: "Payment gateway configuration error" 
       });
     }
 
-    const hash = generateHash(
-      merchantId,
-      orderId,
-      formattedAmount,
-      "LKR",
-      merchantSecret
-    );
+    const hash = generateHash(merchantId, orderId, formattedAmount, "LKR", merchantSecret);
     console.log("🔐 Generated hash:", hash);
 
+    // Extract name from contact or use default
     let firstName = "Test";
     let lastName = "User";
     let email = "test@example.com";
     let phone = "0712345678";
-
-    if (contact.includes("@")) {
+    
+    if (contact.includes('@')) {
       email = contact;
-      firstName = contact.split("@")[0];
+      firstName = contact.split('@')[0];
     } else {
       phone = contact;
       firstName = "Patient";
@@ -131,7 +126,7 @@ export const createPayment = async (req, res) => {
       cancel_url: process.env.PAYHERE_CANCEL_URL,
       notify_url: process.env.PAYHERE_NOTIFY_URL,
       order_id: orderId,
-      items: `Appointment Booking - ${bookingDetails?.doctor?.name || "Doctor Consultation"}`,
+      items: `Appointment Booking - ${bookingDetails?.doctor?.name || 'Doctor Consultation'}`,
       currency: "LKR",
       amount: formattedAmount,
       first_name: firstName,
@@ -146,37 +141,40 @@ export const createPayment = async (req, res) => {
       delivery_country: "",
       custom_1: "appointment_payment",
       custom_2: patientId,
-      hash: hash,
+      hash: hash
     };
 
     console.log("✅ Sending payhere data:", payhere);
-
-    res.json({
-      success: true,
-      payhere: payhere,
+    
+    res.json({ 
+      success: true, 
+      payhere: payhere 
     });
+    
   } catch (error) {
     console.error("❌ Create payment error:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message,
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
     });
   }
 };
 
 export const handleIPN = async (req, res) => {
-  console.log("IPN received", req.body);
-
-  const body = req.body;
-  const orderId = body.order_id || body.orderId;
-  const statusCode = body.status_code || body.status || body.payment_status;
-
-  if (!orderId) {
-    console.error("⚠️ IPN missing order_id");
-    return res.status(400).send("Missing order_id");
-  }
+  console.log("📨 IPN received:", req.body);
 
   try {
+    const body = req.body || {};
+
+    const orderId = body.order_id || body.orderId;
+    const statusCode = body.status_code || body.status || body.payment_status;
+
+    // Find the payment by orderId
+    if (!orderId) {
+      console.error("⚠️ IPN missing order_id");
+      return res.status(400).send("Missing order_id");
+    }
+
     const payment = await Payment.findOne({ orderId });
 
     if (!payment) {
@@ -184,11 +182,11 @@ export const handleIPN = async (req, res) => {
       return res.status(404).send("Payment not found");
     }
 
-    const isSuccess = String(statusCode) === "2" ||
-      String(body.status).toLowerCase() === "paid" ||
-      String(body.status).toLowerCase() === "success";
+    // PayHere uses status_code: 2 = success
+    const isSuccess = String(statusCode) === "2" || String(body.status).toLowerCase() === "paid" || String(body.status).toLowerCase() === "success";
 
     if (!isSuccess) {
+      // mark as failed
       payment.status = "FAILED";
       payment.transactionId = body.payment_id || body.transaction_id || payment.transactionId;
       await payment.save();
@@ -196,18 +194,21 @@ export const handleIPN = async (req, res) => {
       return res.status(200).send("OK");
     }
 
+    // Update payment record to SUCCESS
     payment.status = "SUCCESS";
-    payment.transactionId = body.payment_id || body.transaction_id || payment.transactionId || body.paymentId || body.payhere_payment_id;
+    payment.transactionId = body.payment_id || body.transaction_id || payment.transactionId || (body.paymentId || body.payhere_payment_id);
     payment.updatedAt = new Date();
     await payment.save();
 
     console.log("✅ Payment updated to SUCCESS for orderId:", orderId);
 
+    // Create appointment in Appointment Service using saved payment data
     const appointmentServiceBase = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
 
     const bd = payment.bookingDetails || {};
     const doc = bd.doctor || {};
 
+    // Map bookingDetails -> appointment payload expected by appointment service
     const appointmentPayload = {
       appointmentId: payment.appointmentId || `APT_${Date.now()}`,
       patientId: payment.patientId,
@@ -221,20 +222,16 @@ export const handleIPN = async (req, res) => {
       duration: bd.duration || 30,
       consultationType: bd.selectedConsultation || bd.consultationType || "",
       amount: payment.amount || 0,
-      paymentId: payment._id.toString(),
+      paymentId: payment._id.toString()
     };
 
     console.log("📤 Creating appointment via Appointment Service:", appointmentPayload);
 
     try {
-      const resp = await axios.post(
-        `${appointmentServiceBase}/api/appointments`,
-        appointmentPayload,
-        {
-          headers: { "Content-Type": "application/json" },
-          timeout: 10000,
-        }
-      );
+      const resp = await axios.post(`${appointmentServiceBase}/api/appointments`, appointmentPayload, {
+        headers: { "Content-Type": "application/json" },
+        timeout: 10000
+      });
 
       console.log("✅ Appointment created:", resp.data);
 
@@ -248,9 +245,10 @@ export const handleIPN = async (req, res) => {
       console.error("❌ Failed to create appointment after payment success:", err?.response?.data || err.message || err);
       return res.status(500).send("Appointment creation failed");
     }
+
   } catch (error) {
-    console.error("IPN processing error:", error);
-    res.sendStatus(200);
+    console.error("❌ IPN handler error:", error);
+    return res.status(500).send("IPN processing error");
   }
 };
 
@@ -258,14 +256,16 @@ export const getPaymentStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
     const payment = await Payment.findOne({ orderId });
-
+    
     if (!payment) {
       return res.status(404).json({ success: false, message: "Payment not found" });
     }
-
+    
+    // If payment still PENDING, attempt to finalize appointment as a fallback.
     if (payment.status === "PENDING") {
       console.log("🔁 Pending payment detected. Attempting to finalize appointment (no origin check).");
 
+      // Mark payment SUCCESS and try to update existing appointment first
       payment.status = "SUCCESS";
       payment.updatedAt = new Date();
       await payment.save();
@@ -288,19 +288,16 @@ export const getPaymentStatus = async (req, res) => {
           duration: bd.duration || bd.selectedConsultation?.duration || 30,
           consultationType: bd.selectedConsultation?.type || bd.selectedConsultation || "Consultation",
           amount: payment.amount || 0,
-          paymentId: payment._id.toString(),
+          paymentId: payment._id.toString()
         };
 
+        // Try to update an existing appointment via payment endpoint
         try {
           const targetId = payment.appointmentId || appointmentPayload.appointmentId;
-          const updateResp = await axios.put(
-            `${appointmentServiceBase}/api/appointments/${encodeURIComponent(targetId)}/payment`,
-            {},
-            {
-              headers: { "Content-Type": "application/json" },
-              timeout: 8000,
-            }
-          );
+          const updateResp = await axios.put(`${appointmentServiceBase}/api/appointments/${encodeURIComponent(targetId)}/payment`, {}, { 
+            headers: { "Content-Type": "application/json" }, 
+            timeout: 8000 
+          });
           console.log("✅ (fallback) Appointment updated via payment endpoint:", updateResp.data);
           if (updateResp.data && (updateResp.data._id || updateResp.data.appointmentId)) {
             payment.appointmentId = updateResp.data.appointmentId || payment.appointmentId;
@@ -308,14 +305,11 @@ export const getPaymentStatus = async (req, res) => {
           }
         } catch (updateErr) {
           console.warn("⚠️ (fallback) Could not update appointment, creating a new one:", updateErr?.response?.data || updateErr.message || updateErr);
-          const resp = await axios.post(
-            `${appointmentServiceBase}/api/appointments`,
-            appointmentPayload,
-            {
-              headers: { "Content-Type": "application/json" },
-              timeout: 10000,
-            }
-          );
+          // Create appointment via Appointment Service
+          const resp = await axios.post(`${appointmentServiceBase}/api/appointments`, appointmentPayload, { 
+            headers: { "Content-Type": "application/json" }, 
+            timeout: 10000 
+          });
           console.log("✅ (fallback) Appointment created:", resp.data);
           if (resp.data && (resp.data._id || resp.data.appointmentId)) {
             payment.appointmentId = resp.data.appointmentId || payment.appointmentId;
@@ -338,7 +332,7 @@ export const getPaymentByAppointment = async (req, res) => {
   try {
     const { appointmentId } = req.params;
     if (!appointmentId) {
-      return res.status(400).json({ success: false, message: "Missing appointmentId" });
+      return res.status(400).json({ success: false, message: 'Missing appointmentId' });
     }
 
     const payment = await Payment.findOne({ appointmentId });
@@ -346,14 +340,9 @@ export const getPaymentByAppointment = async (req, res) => {
       return res.json({ success: true, exists: false });
     }
 
-    return res.json({
-      success: true,
-      exists: true,
-      status: payment.status,
-      payment,
-    });
+    return res.json({ success: true, exists: true, status: payment.status, payment });
   } catch (error) {
-    console.error("❌ getPaymentByAppointment error:", error);
+    console.error('❌ getPaymentByAppointment error:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };

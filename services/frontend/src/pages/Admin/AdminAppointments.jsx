@@ -52,6 +52,21 @@ export default function AdminAppointments() {
     fetchAppointments();
   }, [APPOINTMENTS_API]);
 
+  const getDisplayPatientId = (appointment) => {
+    return (
+      appointment.patientPatientId ||
+      appointment.patientDisplayId ||
+      appointment.patientCode ||
+      appointment.patientCodeId ||
+      appointment.patientRegNo ||
+      appointment.patient?.patientId ||
+      appointment.patient?.patientCode ||
+      appointment.patient?.patientDisplayId ||
+      appointment.patientId ||
+      "-"
+    );
+  };
+
   const filteredAppointments = useMemo(() => {
     const q = search.trim().toLowerCase();
 
@@ -59,7 +74,7 @@ export default function AdminAppointments() {
 
     return appointments.filter((appointment) => {
       return (
-        String(appointment.patientId || "").toLowerCase().includes(q) ||
+        String(getDisplayPatientId(appointment)).toLowerCase().includes(q) ||
         String(appointment.doctorName || "").toLowerCase().includes(q) ||
         String(appointment.appointmentType || "").toLowerCase().includes(q) ||
         String(appointment.status || "").toLowerCase().includes(q) ||
@@ -147,6 +162,94 @@ export default function AdminAppointments() {
     return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
   };
 
+  const handleExportData = () => {
+    const rows = filteredAppointments.map((appointment) => ({
+      patientId: getDisplayPatientId(appointment),
+      doctorId: appointment.doctorId || "",
+      doctorName: appointment.doctorName || "",
+      specialization: appointment.specialization || "",
+      hospital: appointment.hospital || "",
+      appointmentType: appointment.appointmentType || "",
+      appointmentDate: appointment.appointmentDate
+        ? new Date(appointment.appointmentDate).toLocaleDateString()
+        : "",
+      startTime: appointment.startTime || "",
+      endTime: appointment.endTime || "",
+      duration: appointment.duration || "",
+      status: appointment.status || "",
+      paymentStatus: appointment.paymentStatus || "",
+      createdAt: appointment.createdAt
+        ? new Date(appointment.createdAt).toLocaleString()
+        : "",
+      appointmentId: appointment._id || "",
+    }));
+
+    const headers = [
+      "Patient ID",
+      "Doctor ID",
+      "Doctor Name",
+      "Specialization",
+      "Hospital",
+      "Appointment Type",
+      "Appointment Date",
+      "Start Time",
+      "End Time",
+      "Duration",
+      "Status",
+      "Payment Status",
+      "Created At",
+      "Appointment ID",
+    ];
+
+    const escapeCSV = (value) => {
+      const stringValue = String(value ?? "");
+      if (
+        stringValue.includes(",") ||
+        stringValue.includes('"') ||
+        stringValue.includes("\n")
+      ) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) =>
+        [
+          row.patientId,
+          row.doctorId,
+          row.doctorName,
+          row.specialization,
+          row.hospital,
+          row.appointmentType,
+          row.appointmentDate,
+          row.startTime,
+          row.endTime,
+          row.duration,
+          row.status,
+          row.paymentStatus,
+          row.createdAt,
+          row.appointmentId,
+        ]
+          .map(escapeCSV)
+          .join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const date = new Date().toISOString().split("T")[0];
+
+    link.href = url;
+    link.setAttribute("download", `appointments-registry-${date}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="admin-appointments-page">
       <AdminSidebar activeItem="appointments" />
@@ -161,25 +264,6 @@ export default function AdminAppointments() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-          </div>
-
-          <div className="appointments-topbar-right">
-            <button className="top-icon-btn" type="button">
-              <span className="material-symbols-outlined">notifications</span>
-              <span className="notif-dot"></span>
-            </button>
-
-            <button className="top-icon-btn" type="button">
-              <span className="material-symbols-outlined">settings</span>
-            </button>
-
-            <div className="admin-user-box">
-              <div className="admin-user-text">
-                <p>Admin User</p>
-                <span>Administrator</span>
-              </div>
-              <div className="admin-user-avatar">A</div>
-            </div>
           </div>
         </header>
 
@@ -242,7 +326,11 @@ export default function AdminAppointments() {
                 Filter
               </button>
 
-              <button type="button" className="primary-btn">
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={handleExportData}
+              >
                 <span className="material-symbols-outlined">download</span>
                 Export Data
               </button>
@@ -277,7 +365,9 @@ export default function AdminAppointments() {
                       return (
                         <tr key={appointment._id}>
                           <td>
-                            <p className="main-text">{appointment.patientId || "-"}</p>
+                            <p className="main-text">
+                              {getDisplayPatientId(appointment)}
+                            </p>
                           </td>
 
                           <td>
@@ -325,7 +415,9 @@ export default function AdminAppointments() {
                                   : "paid"
                               }`}
                             >
-                              {formatStatus(appointment.paymentStatus || "UNKNOWN")}
+                              {formatStatus(
+                                appointment.paymentStatus || "UNKNOWN"
+                              )}
                             </span>
                           </td>
 
@@ -347,12 +439,15 @@ export default function AdminAppointments() {
 
               <div className="table-footer">
                 <p>
-                  Showing {filteredAppointments.length} of {appointments.length} appointments
+                  Showing {filteredAppointments.length} of {appointments.length}{" "}
+                  appointments
                 </p>
 
                 <div className="pagination">
                   <button type="button">
-                    <span className="material-symbols-outlined">chevron_left</span>
+                    <span className="material-symbols-outlined">
+                      chevron_left
+                    </span>
                   </button>
                   <button type="button" className="active">
                     1
@@ -360,35 +455,14 @@ export default function AdminAppointments() {
                   <button type="button">2</button>
                   <button type="button">3</button>
                   <button type="button">
-                    <span className="material-symbols-outlined">chevron_right</span>
+                    <span className="material-symbols-outlined">
+                      chevron_right
+                    </span>
                   </button>
                 </div>
               </div>
             </>
           )}
-        </section>
-
-        <section className="forecast-card">
-          <div className="forecast-icon">
-            <span className="material-symbols-outlined">auto_awesome</span>
-          </div>
-
-          <div>
-            <h4>Clinic Demand Forecast</h4>
-            <p>
-              This view is generated from your real appointments collection. It
-              currently uses fields like patientId, doctorName, specialization,
-              hospital, appointmentType, appointmentDate, startTime, endTime,
-              status, and paymentStatus.
-            </p>
-
-            <div className="forecast-actions">
-              <button type="button">Apply Recommendation</button>
-              <button type="button" className="muted">
-                Dismiss
-              </button>
-            </div>
-          </div>
         </section>
       </main>
 
@@ -416,7 +490,7 @@ export default function AdminAppointments() {
               <div className="detail-grid">
                 <div className="detail-item">
                   <label>Patient ID</label>
-                  <p>{selectedAppointment.patientId || "-"}</p>
+                  <p>{getDisplayPatientId(selectedAppointment)}</p>
                 </div>
 
                 <div className="detail-item">
@@ -472,7 +546,9 @@ export default function AdminAppointments() {
                 <div className="detail-item">
                   <label>Payment Status</label>
                   <p>
-                    {formatStatus(selectedAppointment.paymentStatus || "UNKNOWN")}
+                    {formatStatus(
+                      selectedAppointment.paymentStatus || "UNKNOWN"
+                    )}
                   </p>
                 </div>
 
