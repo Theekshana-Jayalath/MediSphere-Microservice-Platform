@@ -306,18 +306,116 @@ export async function paymentSuccess(req,res){
   res.json(updated);
 }
 
-/* APPROVE */
-export async function approveAppointment(req,res){
+/* ---------------------------------------
+   APPROVE APPOINTMENT
+---------------------------------------- */
+export async function approveAppointment(req, res) {
+  try {
+    const { id } = req.params;
 
-  const { id } = req.params;
+    let updated = null;
 
-  const updated = await Appointment.findByIdAndUpdate(
-    id,
-    { status:"CONFIRMED" },
-    { new:true }
-  );
+    if (/^[0-9a-fA-F]{24}$/.test(id)) {
+      updated = await Appointment.findByIdAndUpdate(
+        id,
+        { status: "CONFIRMED" },
+        { new: true }
+      );
+    }
 
-  res.json(updated);
+    if (!updated) {
+      updated = await Appointment.findOneAndUpdate(
+        { appointmentId: id },
+        { status: "CONFIRMED" },
+        { new: true }
+      );
+    }
+
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found",
+      });
+    }
+
+    try {
+      const telemedicineBase =
+        process.env.TELEMEDICINE_SERVICE_URL || "http://localhost:6001";
+
+      // 🔥 FETCH PATIENT DETAILS FROM USER SERVICE
+      let patientName = "";
+      let patientEmail = "";
+      let patientPhone = "";
+
+      try {
+        const userServiceBase =
+          process.env.PATIENT_SERVICE_URL || "http://localhost:5005";
+        const pres = await axios.get(
+          ${userServiceBase}/api/patients/internal/${updated.patientId}
+        );
+
+        const patient = pres.data;
+
+        patientName = patient.name || patient.fullName || "";
+        patientEmail = patient.email || "";
+        patientPhone = patient.phone || patient.phoneNumber || "";
+      } catch (err) {
+        console.warn("⚠️ Could not fetch patient details:", err.message);
+      }
+
+      // 🔥 PAYLOAD
+      const telemedicinePayload = {
+        appointmentId: updated.appointmentId || updated._id.toString(),
+        doctorId: updated.doctorId,
+        doctorName: updated.doctorName || "Unknown Doctor",
+        doctorEmail: updated.doctorEmail || "",
+        patientId: updated.patientId,
+        patientName: patientName || "Patient",
+        patientEmail: patientEmail || "",
+        patientPhone: patientPhone || "",
+        specialty:
+          updated.doctorSpecialty || updated.specialization || "General",
+        scheduledTime: new Date(updated.appointmentDate),
+        appointmentStatus: "CONFIRMED",
+        notes: "",
+      };
+
+      console.log("Telemedicine payload:", telemedicinePayload);
+
+      const telemedicineResponse = await axios.post(
+        ${telemedicineBase}/api/telemedicine,
+        telemedicinePayload,
+        { timeout: 8000 }
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Appointment approved and session created successfully",
+        appointment: updated,
+        telemedicine: telemedicineResponse.data,
+      });
+    } catch (teleErr) {
+      console.error(
+        "❌ Telemedicine session creation failed:",
+        teleErr.response?.data || teleErr.message
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Appointment approved, but telemedicine session creation failed",
+        appointment: updated,
+        telemedicineError: teleErr.response?.data || teleErr.message,
+      });
+    }
+  } catch (error) {
+    console.error("❌ Approve appointment error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to approve appointment",
+      error: error.message,
+    });
+  }
 }
 
 /* REJECT */
