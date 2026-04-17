@@ -8,18 +8,48 @@ import {
   completeSession,
   deleteSession,
   getSessionSummary,
-} from "../controllers/sessionController.js";
-import authMiddleware from "../middleware/authMiddleware.js";
+} from "../controllers/telemedicineController.js";
 
 const router = express.Router();
 
-router.post("/sessions/from-confirmed-appointment", createSessionFromConfirmedAppointment);
-router.get("/sessions", getAllSessions);
-router.get("/sessions/summary", getSessionSummary);
-router.get("/sessions/:id", getSessionById);
-router.put("/sessions/:id", updateSession);
-router.patch("/sessions/:id/start", authMiddleware, startSession);
-router.patch("/sessions/:id/complete", authMiddleware, completeSession);
-router.delete("/sessions/:id", deleteSession);
+/**
+ * CREATE SESSION (Triggered after doctor confirms appointment)
+ */
+router.post("/", createSessionFromConfirmedAppointment);
+
+/**
+ * GET ALL SESSIONS
+ */
+router.get("/", getAllSessions);
+
+/**
+ * GET SUMMARY (dashboard / analytics)
+ */
+router.get("/summary", getSessionSummary);
+
+/**
+ * GET SINGLE SESSION
+ */
+router.get("/:id", getSessionById);
+
+/**
+ * UPDATE SESSION
+ */
+router.put("/:id", updateSession);
+
+/**
+ * START SESSION
+ */
+router.patch("/:id/start", startSession);
+
+/**
+ * COMPLETE SESSION
+ */
+router.patch("/:id/complete", completeSession);
+
+/**
+ * DELETE SESSION
+ */
+router.delete("/:id", deleteSession);
 
 export default router;

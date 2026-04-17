@@ -91,12 +91,13 @@ export const createSessionFromConfirmedAppointment = async (req, res) => {
       patientName,
       patientEmail,
       patientPhone,
-      specialty,
+      specialty: specialty || "",
       roomName,
       meetingLink,
       scheduledTime,
       notes: notes || "",
       status: "scheduled",
+      isActive: true,
     });
 
     try {
@@ -246,12 +247,14 @@ export const updateSession = async (req, res) => {
 
     if (status !== undefined) {
       const allowedStatuses = ["scheduled", "started", "completed", "cancelled"];
+
       if (!allowedStatuses.includes(status)) {
         return res.status(400).json({
           success: false,
           message: "Invalid status value",
         });
       }
+
       session.status = status;
     }
 
@@ -291,20 +294,6 @@ export const startSession = async (req, res) => {
       });
     }
 
-    if (!req.user || req.user.role !== "doctor") {
-      return res.status(403).json({
-        success: false,
-        message: "Only doctors can start sessions",
-      });
-    }
-
-    if (String(session.doctorId) !== String(req.user.id)) {
-      return res.status(403).json({
-        success: false,
-        message: "You can only start your own session",
-      });
-    }
-
     if (session.status !== "scheduled") {
       return res.status(400).json({
         success: false,
@@ -314,6 +303,7 @@ export const startSession = async (req, res) => {
 
     session.status = "started";
     session.startedAt = new Date();
+    session.isActive = true;
 
     await session.save();
 
@@ -351,20 +341,6 @@ export const completeSession = async (req, res) => {
       });
     }
 
-    if (!req.user || req.user.role !== "doctor") {
-      return res.status(403).json({
-        success: false,
-        message: "Only doctors can complete sessions",
-      });
-    }
-
-    if (String(session.doctorId) !== String(req.user.id)) {
-      return res.status(403).json({
-        success: false,
-        message: "You can only complete your own session",
-      });
-    }
-
     if (session.status === "completed") {
       return res.status(400).json({
         success: false,
@@ -376,6 +352,13 @@ export const completeSession = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Cancelled session cannot be completed",
+      });
+    }
+
+    if (session.status !== "started" && session.status !== "scheduled") {
+      return res.status(400).json({
+        success: false,
+        message: "Only scheduled or started sessions can be completed",
       });
     }
 
