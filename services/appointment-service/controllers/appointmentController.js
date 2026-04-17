@@ -1,11 +1,46 @@
+import axios from "axios";
 import Appointment from "../models/appointmentModel.js";
 import { generateSlots } from "../service/slotService.js";
+
+const enrichAppointmentsWithPatientDisplayId = async (appointments) => {
+  const appointmentList = Array.isArray(appointments) ? appointments : [appointments];
+
+  const enriched = await Promise.all(
+    appointmentList.map(async (appointment) => {
+      try {
+        const patientRes = await axios.get(
+          `${process.env.PATIENT_SERVICE_URL}/api/patients/internal/${appointment.patientId}`
+        );
+
+        const patientData = patientRes.data?.data || patientRes.data || {};
+
+        return {
+          ...appointment.toObject(),
+          patientDisplayId:
+            patientData.patientId ||
+            patientData.patientDisplayId ||
+            appointment.patientId,
+        };
+      } catch (error) {
+        return {
+          ...appointment.toObject(),
+          patientDisplayId: appointment.patientId,
+        };
+      }
+    })
+  );
+
+  return enriched;
+};
 
 /* GET ALL */
 export async function getAllAppointments(req, res) {
   try {
     const appointments = await Appointment.find().sort({ createdAt: -1 });
-    res.status(200).json(appointments);
+    const enrichedAppointments =
+      await enrichAppointmentsWithPatientDisplayId(appointments);
+
+    res.status(200).json(enrichedAppointments);
   } catch (err) {
     console.error("Failed to fetch appointments:", err);
     res.status(500).json({ message: "Failed to fetch appointments" });
@@ -22,7 +57,10 @@ export async function getAppointmentsByPatient(req, res) {
       createdAt: -1,
     });
 
-    res.status(200).json(appointments);
+    const enrichedAppointments =
+      await enrichAppointmentsWithPatientDisplayId(appointments);
+
+    res.status(200).json(enrichedAppointments);
   } catch (err) {
     console.error("Failed to fetch patient appointments:", err);
     res.status(500).json({ message: "Failed to fetch patient appointments" });
@@ -41,8 +79,9 @@ export async function searchAppointments(req, res) {
   if (type) query.appointmentType = type;
 
   const results = await Appointment.find(query);
+  const enrichedResults = await enrichAppointmentsWithPatientDisplayId(results);
 
-  res.json(results);
+  res.json(enrichedResults);
 }
 
 /* SLOTS */
