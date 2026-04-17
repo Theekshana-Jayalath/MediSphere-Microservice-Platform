@@ -19,7 +19,9 @@ export default function PatientMedicalReports() {
   const patientId =
     patientProfile?.patientId || user?.patientId || "------";
 
-  // Use API Gateway for all backend calls
+  const lookupPatientId =
+    patientProfile?.userId || user?.id || patientProfile?._id || "";
+
   const API_GATEWAY_URL = import.meta.env.VITE_API_GATEWAY_URL
     ? import.meta.env.VITE_API_GATEWAY_URL
     : "http://localhost:5015";
@@ -80,14 +82,20 @@ export default function PatientMedicalReports() {
   const parseResponseData = async (response) => {
     const contentType = response.headers.get("content-type") || "";
 
-    if (contentType.includes("application/json")) {
-      return await response.json();
-    }
+    try {
+      if (contentType.includes("application/json")) {
+        return await response.json();
+      }
 
-    const text = await response.text();
-    return {
-      message: text || "Unexpected server response",
-    };
+      const text = await response.text();
+      return {
+        message: text || "Unexpected server response",
+      };
+    } catch (error) {
+      return {
+        message: "Unable to parse server response",
+      };
+    }
   };
 
   const fetchReports = async () => {
@@ -96,7 +104,6 @@ export default function PatientMedicalReports() {
 
       const token = getAuthToken();
 
-      // Call API Gateway instead of direct patient service
       const response = await fetch(`${API_GATEWAY_URL}/api/reports/me`, {
         method: "GET",
         headers: {
@@ -125,14 +132,21 @@ export default function PatientMedicalReports() {
       setDoctorError(null);
       const token = getAuthToken();
 
+      if (!lookupPatientId) {
+        setDoctors([]);
+        setDoctorError(
+          "Unable to identify the logged-in patient. Please log in again."
+        );
+        return;
+      }
+
       console.log(
         "Fetching patient's doctors from:",
-        `${API_GATEWAY_URL}/api/doctors/my-doctors/${patientId}`
+        `${API_GATEWAY_URL}/api/doctors/my-doctors/${lookupPatientId}`
       );
 
-      // Call the endpoint that gets doctors the patient has appointments with
       const response = await fetch(
-        `${API_GATEWAY_URL}/api/doctors/my-doctors/${patientId}`,
+        `${API_GATEWAY_URL}/api/doctors/my-doctors/${lookupPatientId}`,
         {
           method: "GET",
           headers: {
@@ -152,7 +166,6 @@ export default function PatientMedicalReports() {
         );
       }
 
-      // Extract doctors array from response
       let doctorsList = [];
       if (Array.isArray(data)) {
         doctorsList = data;
@@ -243,10 +256,12 @@ export default function PatientMedicalReports() {
       formData.append("description", reportForm.description);
       formData.append("reportType", reportForm.reportType);
       formData.append("doctorId", reportForm.doctorId);
+
       console.log("Submitting with doctorId:", reportForm.doctorId);
 
       if (reportForm.file) {
         formData.append("report", reportForm.file);
+        console.log("Submitting file:", reportForm.file.name);
       }
 
       const url = editingReportId
@@ -254,6 +269,7 @@ export default function PatientMedicalReports() {
         : `${API_GATEWAY_URL}/api/reports/upload`;
 
       console.log("Submitting to API Gateway:", url);
+      console.log("Auth token exists:", !!token);
 
       const response = await fetch(url, {
         method: editingReportId ? "PUT" : "POST",
@@ -263,11 +279,16 @@ export default function PatientMedicalReports() {
         body: formData,
       });
 
+      console.log("Upload response status:", response.status);
+      console.log("Upload response ok:", response.ok);
+
       const data = await parseResponseData(response);
+      console.log("Upload response data:", data);
 
       if (!response.ok) {
         throw new Error(
           data?.message ||
+            data?.error ||
             (editingReportId
               ? "Failed to update report"
               : "Failed to upload report")
@@ -276,6 +297,7 @@ export default function PatientMedicalReports() {
 
       resetForm();
       await fetchReports();
+
       alert(
         editingReportId
           ? "Report updated successfully"
