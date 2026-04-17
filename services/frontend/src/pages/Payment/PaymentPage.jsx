@@ -73,11 +73,7 @@ const PaymentPage = () => {
   const handlePay = async () => {
     console.log("🔵 Starting payment process...");
     
-    if (!selectedMethod) {
-      alert("Please select a payment method");
-      return;
-    }
-
+    // Basic validation
     if (!contact || contact.trim() === "") {
       alert("Please enter mobile number or email");
       return;
@@ -100,9 +96,36 @@ const PaymentPage = () => {
 
     try {
       const patientId = localStorage.getItem("patientId") || "temp_patient_" + Date.now();
+      // Persist patientId so subsequent pages (payment redirect / success) can read it
+      try {
+        localStorage.setItem('patientId', patientId);
+      } catch (e) {
+        console.warn('Could not persist patientId to localStorage', e);
+      }
+      const appointmentId = bookingDetails?.appointmentId || "APT_" + Date.now();
+      
+      // 🔑 IMPORTANT: Store appointment ID and data in localStorage
+      // This will be used by PaymentRedirect page to update appointment status
+      localStorage.setItem('pendingAppointmentId', appointmentId);
+      localStorage.setItem('appointmentData', JSON.stringify({
+        appointmentId: appointmentId,
+        patientId: patientId,
+        doctorId: bookingDetails?.doctor?.id || bookingDetails?.doctor?._id,
+        doctorName: bookingDetails?.doctor?.name || bookingDetails?.doctor?.fullName,
+        amount: totalAmount,
+        consultationFee: consultationFee,
+        serviceCharge: serviceCharge,
+        tax: tax,
+        contact: contact,
+        selectedDate: bookingDetails?.selectedDate,
+        selectedTime: bookingDetails?.selectedTime,
+        timestamp: new Date().toISOString()
+      }));
+      
+      console.log("💾 Stored pending appointment data:", appointmentId);
       
       const requestBody = {
-        appointmentId: bookingDetails?.appointmentId || "APT_" + Date.now(),
+        appointmentId: appointmentId,
         patientId: patientId,
         doctorId: bookingDetails?.doctor?.id || bookingDetails?.doctor?._id,
         amount: totalAmount,
@@ -151,8 +174,8 @@ const PaymentPage = () => {
           address: data.payhere.address,
           city: data.payhere.city,
           country: data.payhere.country,
-          custom_1: data.payhere.custom_1,
-          custom_2: data.payhere.custom_2
+          custom_1: appointmentId,  // Pass appointmentId in custom_1
+          custom_2: patientId       // Pass patientId in custom_2
         };
         
         console.log("Payment object:", payment);
@@ -167,10 +190,16 @@ const PaymentPage = () => {
         
         // Don't set isProcessing false here - wait for onCompleted or onError
       } else {
+        // If payment creation fails, clear the stored data
+        localStorage.removeItem('pendingAppointmentId');
+        localStorage.removeItem('appointmentData');
         throw new Error(data.message || "Failed to create payment");
       }
     } catch (error) {
       console.error("❌ Payment error:", error);
+      // Clear stored data on error
+      localStorage.removeItem('pendingAppointmentId');
+      localStorage.removeItem('appointmentData');
       alert("Payment failed: " + error.message);
       setIsProcessing(false);
     }
@@ -187,7 +216,12 @@ const PaymentPage = () => {
         </div>
 
         <div className="payment-grid">
-          <PaymentSummary consultationFee={consultationFee} />
+          <PaymentSummary 
+            consultationFee={consultationFee}
+            serviceCharge={serviceCharge}
+            tax={tax}
+            totalAmount={totalAmount}
+          />
           <PayHereSection
             onSelectMethod={handleSelectMethod}
             selectedMethod={selectedMethod}
@@ -196,9 +230,10 @@ const PaymentPage = () => {
             onProcessPayment={handlePay}
             isProcessing={isProcessing}
             payHereReady={payHereReady}
+            totalAmount={totalAmount}
           />
         </div>
-
+        
         {isProcessing && (
           <div className="payment-overlay">
             <div className="payment-modal">
@@ -214,7 +249,11 @@ const PaymentPage = () => {
                   page.
                 </p>
                 <button 
-                  onClick={() => setIsProcessing(false)}
+                  onClick={() => {
+                    setIsProcessing(false);
+                    localStorage.removeItem('pendingAppointmentId');
+                    localStorage.removeItem('appointmentData');
+                  }}
                   className="cancel-button"
                 >
                   Cancel

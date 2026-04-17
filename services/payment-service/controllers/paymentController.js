@@ -258,57 +258,81 @@ export const getPaymentStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: "Payment not found" });
     }
     
-    // If payment still PENDING but this request originates from the frontend redirect
-    // (user returned from PayHere popup), attempt to finalize appointment as a fallback.
+    // If payment still PENDING, attempt to finalize appointment as a fallback.
     if (payment.status === "PENDING") {
-      const requestOrigin = req.get("origin") || req.get("referer") || "";
-      const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
+      console.log("🔁 Pending payment detected. Attempting to finalize appointment (no origin check).");
 
-      if (requestOrigin.includes(frontendOrigin)) {
-        console.log("🔁 Frontend-origin verification detected for pending payment. Attempting to finalize appointment.");
+      // Mark payment SUCCESS and try to update existing appointment first
+      payment.status = "SUCCESS";
+      payment.updatedAt = new Date();
+      await payment.save();
 
-        // Mark payment SUCCESS and create appointment (best-effort fallback)
-        payment.status = "SUCCESS";
-        payment.updatedAt = new Date();
-        await payment.save();
+      try {
+        const appointmentServiceBase = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
+        const bd = payment.bookingDetails || {};
+        const doc = bd.doctor || {};
 
-        // Create appointment via Appointment Service (same mapping used in IPN)
+        const appointmentPayload = {
+          appointmentId: payment.appointmentId || `APT_${Date.now()}`,
+          patientId: payment.patientId,
+          doctorId: payment.doctorId,
+          doctorName: doc.fullName || doc.name || doc.displayName || "",
+          doctorSpecialty: doc.specialization || doc.specialty || "",
+          hospital: doc.baseHospital || doc.hospital || "",
+          appointmentDate: bd.selectedDate || bd.appointmentDate || "",
+          appointmentTime: bd.selectedTime || bd.appointmentTime || bd.startTime || "",
+          startTime: bd.selectedTime || bd.startTime || "",
+          duration: bd.duration || bd.selectedConsultation?.duration || 30,
+          consultationType: bd.selectedConsultation?.type || bd.selectedConsultation || "Consultation",
+          amount: payment.amount || 0,
+          paymentId: payment._id.toString()
+        };
+
+        // Try to update an existing appointment via payment endpoint
         try {
-          const appointmentServiceBase = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
-          const bd = payment.bookingDetails || {};
-          const doc = bd.doctor || {};
-
-          const appointmentPayload = {
-            appointmentId: payment.appointmentId || `APT_${Date.now()}`,
-            patientId: payment.patientId,
-            doctorId: payment.doctorId,
-            doctorName: doc.fullName || doc.name || doc.displayName || "",
-            doctorSpecialty: doc.specialization || doc.specialty || "",
-            hospital: doc.baseHospital || doc.hospital || "",
-            appointmentDate: bd.selectedDate || bd.appointmentDate || "",
-            appointmentTime: bd.selectedTime || bd.appointmentTime || bd.startTime || "",
-            startTime: bd.selectedTime || bd.startTime || "",
-            duration: bd.duration || bd.selectedConsultation?.duration || 30,
-            consultationType: bd.selectedConsultation?.type || bd.selectedConsultation || "Consultation",
-            amount: payment.amount || 0,
-            paymentId: payment._id.toString()
-          };
-
-          console.log("📤 (fallback) Creating appointment via Appointment Service:", appointmentPayload);
+          const targetId = payment.appointmentId || appointmentPayload.appointmentId;
+          const updateResp = await axios.put(`${appointmentServiceBase}/api/appointments/${encodeURIComponent(targetId)}/payment`, {}, { headers: { "Content-Type": "application/json" }, timeout: 8000 });
+          console.log("✅ (fallback) Appointment updated via payment endpoint:", updateResp.data);
+          if (updateResp.data && (updateResp.data._id || updateResp.data.appointmentId)) {
+            payment.appointmentId = updateResp.data.appointmentId || payment.appointmentId;
+            await payment.save();
+          }
+        } catch (updateErr) {
+          console.warn("⚠️ (fallback) Could not update appointment, creating a new one:", updateErr?.response?.data || updateErr.message || updateErr);
+          // Create appointment via Appointment Service
           const resp = await axios.post(`${appointmentServiceBase}/api/appointments`, appointmentPayload, { headers: { "Content-Type": "application/json" }, timeout: 10000 });
           console.log("✅ (fallback) Appointment created:", resp.data);
           if (resp.data && (resp.data._id || resp.data.appointmentId)) {
             payment.appointmentId = resp.data.appointmentId || payment.appointmentId;
             await payment.save();
           }
-        } catch (err) {
-          console.error("❌ (fallback) Failed to create appointment:", err?.response?.data || err.message || err);
         }
+      } catch (err) {
+        console.error("❌ (fallback) Failed to finalize appointment:", err?.response?.data || err.message || err);
       }
     }
 
     res.json({ success: true, status: payment.status, payment });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getPaymentByAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    if (!appointmentId) {
+      return res.status(400).json({ success: false, message: 'Missing appointmentId' });
+    }
+
+    const payment = await Payment.findOne({ appointmentId });
+    if (!payment) {
+      return res.json({ success: true, exists: false });
+    }
+
+    return res.json({ success: true, exists: true, status: payment.status, payment });
+  } catch (error) {
+    console.error('❌ getPaymentByAppointment error:', error);
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

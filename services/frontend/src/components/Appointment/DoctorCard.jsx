@@ -6,8 +6,14 @@ const DoctorCard = ({ doctor, selectedDate, setDateError }) => {
   const navigate = useNavigate();
 
   const handleBookNow = () => {
+    const todayStr = new Date().toISOString().split('T')[0];
     if (!selectedDate) {
-      setDateError(true);
+      setDateError('Please select an appointment date');
+      return;
+    }
+    // Prevent booking for past dates
+    if (selectedDate < todayStr) {
+      setDateError('Cannot book for a past date');
       return;
     }
     setDateError(false);

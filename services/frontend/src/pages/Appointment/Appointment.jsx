@@ -9,19 +9,65 @@ const Appointment = () => {
   const [search, setSearch] = useState("");
   const [selectedSpecialties, setSelectedSpecialties] = useState([]);
   const [selectedHospital, setSelectedHospital] = useState("All Hospitals");
-  const [selectedDate, setSelectedDate] = useState(() => sessionStorage.getItem("appointmentSelectedDate") || "");
+  // Use per-patient session key so date selection is not shared between different logins
+  const currentPatientId = localStorage.getItem('patientId') || '';
+  const storageKeyBase = 'appointmentSelectedDate';
+  const storageKey = currentPatientId ? `${storageKeyBase}_${currentPatientId}` : storageKeyBase;
+
+  const [selectedDate, setSelectedDate] = useState(() => {
+    // Read saved date but clear it if this page load is a full reload/navigation (not SPA navigation)
+    try {
+      const saved = sessionStorage.getItem(storageKey) || "";
+      let isReload = false;
+
+      // Modern navigation timing API
+      if (performance && typeof performance.getEntriesByType === 'function') {
+        const entries = performance.getEntriesByType('navigation');
+        if (entries && entries[0] && entries[0].type === 'reload') isReload = true;
+      }
+
+      // Fallback for older browsers
+      if (!isReload && performance && performance.navigation && performance.navigation.type === 1) {
+        isReload = true;
+      }
+
+      if (isReload) {
+        sessionStorage.removeItem(storageKey);
+        return "";
+      }
+
+      return saved;
+    } catch (e) {
+      // On any error, fall back to not persisting across reloads
+      try { sessionStorage.removeItem(storageKey); } catch(_) {}
+      return "";
+    }
+  });
+  // dateError can be boolean or string message
   const [dateError, setDateError] = useState(false);
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Persist selected date per current patient in sessionStorage
   useEffect(() => {
     if (selectedDate) {
-      sessionStorage.setItem("appointmentSelectedDate", selectedDate);
+      sessionStorage.setItem(storageKey, selectedDate);
     } else {
-      sessionStorage.removeItem("appointmentSelectedDate");
+      sessionStorage.removeItem(storageKey);
     }
-  }, [selectedDate]);
+  }, [selectedDate, storageKey]);
+
+  // If patient changes (login/logout), reload the selected date for that patient
+  useEffect(() => {
+    const newPatientId = localStorage.getItem('patientId') || '';
+    const newKey = newPatientId ? `${storageKeyBase}_${newPatientId}` : storageKeyBase;
+    const saved = sessionStorage.getItem(newKey) || "";
+    setSelectedDate(saved);
+    // clear any previous date error when patient/context changes
+    setDateError(false);
+    // Note: we don't modify storageKey variable here; next render will use updated key
+  }, [/* run on mount and when localStorage patientId might change */]);
 
   const isDoctorAvailableOnSelectedDate = (doctor, dateStr) => {
     if (!dateStr) return true;
