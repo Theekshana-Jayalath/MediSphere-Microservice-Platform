@@ -76,7 +76,7 @@ export default function AdminAppointments() {
       return (
         String(getDisplayPatientId(appointment)).toLowerCase().includes(q) ||
         String(appointment.doctorName || "").toLowerCase().includes(q) ||
-        String(appointment.appointmentType || "").toLowerCase().includes(q) ||
+        String(appointment.consultationType || "").toLowerCase().includes(q) ||
         String(appointment.status || "").toLowerCase().includes(q) ||
         String(appointment.paymentStatus || "").toLowerCase().includes(q) ||
         String(appointment.appointmentDate || "").toLowerCase().includes(q)
@@ -125,7 +125,7 @@ export default function AdminAppointments() {
 
   const formatDateTimeRange = (appointment) => {
     const dateText = formatDate(appointment.appointmentDate);
-    const start = appointment.startTime || "-";
+    const start = appointment.startTime || appointment.appointmentTime || "-";
     const end = appointment.endTime || "-";
     return {
       dateText,
@@ -133,10 +133,11 @@ export default function AdminAppointments() {
     };
   };
 
-  const getTypeClass = (type) => {
-    const value = String(type || "").toUpperCase();
-    if (value === "ONLINE") return "appt-type online";
-    return "appt-type physical";
+  const getConsultationTypeDisplay = (type) => {
+    if (!type) return "Not specified";
+    if (type.toLowerCase() === "online") return "Online";
+    if (type.toLowerCase() === "in-person") return "In-Person";
+    return type;
   };
 
   const getStatusClass = (status) => {
@@ -167,13 +168,13 @@ export default function AdminAppointments() {
       patientId: getDisplayPatientId(appointment),
       doctorId: appointment.doctorId || "",
       doctorName: appointment.doctorName || "",
-      specialization: appointment.specialization || "",
+      specialization: appointment.doctorSpecialty || appointment.specialization || "",
       hospital: appointment.hospital || "",
-      appointmentType: appointment.appointmentType || "",
+      consultationType: appointment.consultationType || "",
       appointmentDate: appointment.appointmentDate
         ? new Date(appointment.appointmentDate).toLocaleDateString()
         : "",
-      startTime: appointment.startTime || "",
+      startTime: appointment.startTime || appointment.appointmentTime || "",
       endTime: appointment.endTime || "",
       duration: appointment.duration || "",
       status: appointment.status || "",
@@ -190,7 +191,7 @@ export default function AdminAppointments() {
       "Doctor Name",
       "Specialization",
       "Hospital",
-      "Appointment Type",
+      "Consultation Type",
       "Appointment Date",
       "Start Time",
       "End Time",
@@ -222,7 +223,7 @@ export default function AdminAppointments() {
           row.doctorName,
           row.specialization,
           row.hospital,
-          row.appointmentType,
+          row.consultationType,
           row.appointmentDate,
           row.startTime,
           row.endTime,
@@ -349,12 +350,10 @@ export default function AdminAppointments() {
                 <table className="appointments-table">
                   <thead>
                     <tr>
-                      <th>Patient</th>
                       <th>Doctor</th>
                       <th>Date &amp; Time</th>
-                      <th>Type</th>
+                      <th>Consultation Type</th>
                       <th>Status</th>
-                      <th>Payment</th>
                       <th className="text-right">Action</th>
                     </tr>
                   </thead>
@@ -366,14 +365,13 @@ export default function AdminAppointments() {
                         <tr key={appointment._id}>
                           <td>
                             <p className="main-text">
-                              {getDisplayPatientId(appointment)}
-                            </p>
-                          </td>
-
-                          <td>
-                            <p className="main-text">
                               {appointment.doctorName || "-"}
                             </p>
+                            {appointment.doctorSpecialty && (
+                              <span className="sub-text">
+                                {appointment.doctorSpecialty}
+                              </span>
+                            )}
                           </td>
 
                           <td>
@@ -384,18 +382,8 @@ export default function AdminAppointments() {
                           </td>
 
                           <td>
-                            <span
-                              className={getTypeClass(
-                                appointment.appointmentType
-                              )}
-                            >
-                              <span className="material-symbols-outlined">
-                                {String(appointment.appointmentType).toUpperCase() ===
-                                "ONLINE"
-                                  ? "videocam"
-                                  : "apartment"}
-                              </span>
-                              {appointment.appointmentType || "-"}
+                            <span className="consultation-type-badge">
+                              {getConsultationTypeDisplay(appointment.consultationType)}
                             </span>
                           </td>
 
@@ -403,21 +391,6 @@ export default function AdminAppointments() {
                             <span className={getStatusClass(appointment.status)}>
                               <span className="status-dot"></span>
                               {formatStatus(appointment.status || "UNKNOWN")}
-                            </span>
-                          </td>
-
-                          <td>
-                            <span
-                              className={`payment-badge ${
-                                String(appointment.paymentStatus || "").toUpperCase() ===
-                                "PENDING"
-                                  ? "pending"
-                                  : "paid"
-                              }`}
-                            >
-                              {formatStatus(
-                                appointment.paymentStatus || "UNKNOWN"
-                              )}
                             </span>
                           </td>
 
@@ -505,7 +478,7 @@ export default function AdminAppointments() {
 
                 <div className="detail-item">
                   <label>Specialization</label>
-                  <p>{selectedAppointment.specialization || "-"}</p>
+                  <p>{selectedAppointment.doctorSpecialty || selectedAppointment.specialization || "-"}</p>
                 </div>
 
                 <div className="detail-item">
@@ -514,8 +487,8 @@ export default function AdminAppointments() {
                 </div>
 
                 <div className="detail-item">
-                  <label>Appointment Type</label>
-                  <p>{selectedAppointment.appointmentType || "-"}</p>
+                  <label>Consultation Type</label>
+                  <p>{getConsultationTypeDisplay(selectedAppointment.consultationType)}</p>
                 </div>
 
                 <div className="detail-item">
@@ -525,7 +498,7 @@ export default function AdminAppointments() {
 
                 <div className="detail-item">
                   <label>Start Time</label>
-                  <p>{selectedAppointment.startTime || "-"}</p>
+                  <p>{selectedAppointment.startTime || selectedAppointment.appointmentTime || "-"}</p>
                 </div>
 
                 <div className="detail-item">
