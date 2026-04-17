@@ -6,6 +6,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import { fileURLToPath } from "url";
 import connectDB from "./config/db.js";
 import patientRoutes from "./routes/patientRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
@@ -13,12 +14,17 @@ import reportRoutes from "./routes/reportRoutes.js";
 dotenv.config();
 
 const app = express();
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDir = path.dirname(currentFilePath);
+const uploadDir = path.join(currentDir, "uploads");
+const legacyUploadDir = path.join(currentDir, "..", "uploads");
 
 connectDB();
 
 app.use(cors());
 app.use(express.json());
-app.use("/uploads", express.static(path.join(process.cwd(), "src", "uploads")));
+app.use("/uploads", express.static(uploadDir));
+app.use("/uploads", express.static(legacyUploadDir));
 
 app.get("/", (req, res) => {
   res.send("Patient Service is running 🚀");

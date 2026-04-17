@@ -2,8 +2,11 @@ import fs from "fs";
 import path from "path";
 import Patient from "../models/Patient.js";
 import Report from "../models/Report.js";
+import { fileURLToPath } from "url";
 
-const uploadsDir = path.join(process.cwd(), "src", "uploads");
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDir = path.dirname(currentFilePath);
+const uploadsDir = path.join(currentDir, "..", "uploads");
 
 const buildPublicFileUrl = (filename) => {
   return `/uploads/${filename}`;
