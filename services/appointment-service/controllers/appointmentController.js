@@ -306,9 +306,7 @@ export async function paymentSuccess(req,res){
   res.json(updated);
 }
 
-/* ---------------------------------------
-   APPROVE APPOINTMENT
----------------------------------------- */
+/* APPROVE */
 export async function approveAppointment(req, res) {
   try {
     const { id } = req.params;
@@ -339,28 +337,23 @@ export async function approveAppointment(req, res) {
     }
 
     try {
-      const telemedicineBase =
-        process.env.TELEMEDICINE_SERVICE_URL || "http://localhost:6001";
+      
+      const gatewayBase = process.env.API_GATEWAY_URL || "http://localhost:5015";
 
-      // 🔥 FETCH PATIENT DETAILS FROM USER SERVICE
+      // 🔥 FETCH PATIENT DETAILS VIA API GATEWAY
       let patientName = "";
       let patientEmail = "";
       let patientPhone = "";
 
       try {
-        const userServiceBase =
-          process.env.PATIENT_SERVICE_URL || "http://localhost:5005";
-        const pres = await axios.get(
-          ${userServiceBase}/api/patients/internal/${updated.patientId}
-        );
-
-        const patient = pres.data;
+        const pres = await axios.get(`${gatewayBase}/api/patients/internal/${updated.patientId}`);
+        const patient = pres.data?.data || pres.data || {};
 
         patientName = patient.name || patient.fullName || "";
         patientEmail = patient.email || "";
         patientPhone = patient.phone || patient.phoneNumber || "";
       } catch (err) {
-        console.warn("⚠️ Could not fetch patient details:", err.message);
+        console.warn("⚠️ Could not fetch patient details:", err?.message || err);
       }
 
       // 🔥 PAYLOAD
@@ -383,7 +376,7 @@ export async function approveAppointment(req, res) {
       console.log("Telemedicine payload:", telemedicinePayload);
 
       const telemedicineResponse = await axios.post(
-        ${telemedicineBase}/api/telemedicine,
+        `${gatewayBase}/api/telemedicine`,
         telemedicinePayload,
         { timeout: 8000 }
       );
