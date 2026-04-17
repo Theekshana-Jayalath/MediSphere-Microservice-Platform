@@ -8,8 +8,9 @@ const enrichAppointmentsWithPatientDisplayId = async (appointments) => {
   const enriched = await Promise.all(
     appointmentList.map(async (appointment) => {
       try {
+        const gatewayBase = process.env.API_GATEWAY_URL || "http://localhost:5015";
         const patientRes = await axios.get(
-          `${process.env.PATIENT_SERVICE_URL}/api/patients/internal/${appointment.patientId}`
+          `${gatewayBase}/api/patients/internal/${appointment.patientId}`
         );
 
         const patientData = patientRes.data?.data || patientRes.data || {};
@@ -37,633 +38,347 @@ const enrichAppointmentsWithPatientDisplayId = async (appointments) => {
 export async function getAllAppointments(req, res) {
   try {
     const appointments = await Appointment.find().sort({ createdAt: -1 });
-    res.status(200).json(appointments);
-  } catch (error) {
-    console.error("❌ Error fetching all appointments:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch appointments",
-      error: error.message,
-    });
+    const enrichedAppointments =
+      await enrichAppointmentsWithPatientDisplayId(appointments);
+
+    res.status(200).json(enrichedAppointments);
+  } catch (err) {
+    console.error("Failed to fetch appointments:", err);
+    res.status(500).json({ message: "Failed to fetch appointments" });
   }
 }
 
-/* ---------------------------------------
-   GET APPOINTMENTS BY PATIENT
----------------------------------------- */
+/* GET BY PATIENT */
 export async function getAppointmentsByPatient(req, res) {
   try {
     const { patientId } = req.params;
 
     const appointments = await Appointment.find({ patientId }).sort({
+      appointmentDate: -1,
       createdAt: -1,
     });
 
-    res.status(200).json(appointments);
-  } catch (error) {
-    console.error("❌ Error fetching patient appointments:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch patient appointments",
-      error: error.message,
-    });
+    const enrichedAppointments =
+      await enrichAppointmentsWithPatientDisplayId(appointments);
+
+    res.status(200).json(enrichedAppointments);
+  } catch (err) {
+    console.error("Failed to fetch patient appointments:", err);
+    res.status(500).json({ message: "Failed to fetch patient appointments" });
   }
 }
-
 /* SEARCH */
 export async function searchAppointments(req, res) {
+  const { doctorName, specialization, hospital, type } = req.query;
+
+  let query = {};
+
+  if (doctorName) query.doctorName = new RegExp(doctorName, "i");
+  if (specialization) query.specialization = specialization;
+  if (hospital) query.hospital = hospital;
+  if (type) query.appointmentType = type;
+
+  const results = await Appointment.find(query);
+  const enrichedResults = await enrichAppointmentsWithPatientDisplayId(results);
+
+  res.json(enrichedResults);
+}
+
+/* SLOTS */
+export async function getSlots(req, res) {
+  const { doctorId, date } = req.query;
+
+  const today = new Date().setHours(0,0,0,0);
+  const selected = new Date(date).setHours(0,0,0,0);
+
+  if (selected < today) {
+    return res.status(400).json({ message: "Past date not allowed" });
+  }
+
   try {
-    const { doctorName, specialization, hospital, type } = req.query;
-
-    const query = {};
-
-    if (doctorName) query.doctorName = new RegExp(doctorName, "i");
-    if (specialization)
-      query.$or = [
-        { doctorSpecialty: new RegExp(specialization, "i") },
-        { specialization: new RegExp(specialization, "i") },
-      ];
-    if (hospital) query.hospital = new RegExp(hospital, "i");
-    if (type) {
-      query.$or = [
-        ...(query.$or || []),
-        { consultationType: new RegExp(type, "i") },
-        { appointmentType: new RegExp(type, "i") },
-      ];
-    }
-
-    const results = await Appointment.find(query).sort({ createdAt: -1 });
-
-    res.status(200).json(results);
-  } catch (error) {
-    console.error("❌ Error searching appointments:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to search appointments",
-      error: error.message,
-    });
+    const { available, blocked } = await generateSlots(doctorId, date);
+    res.json({ available, blocked });
+  } catch (err) {
+    console.error("Error generating slots:", err);
+    res.status(500).json({ message: "Could not generate slots" });
   }
 }
 
-/* ---------------------------------------
-   GET AVAILABLE SLOTS
----------------------------------------- */
-export async function getSlots(req, res) {
-  try {
-    const { doctorId, date } = req.query;
-
-    if (!doctorId || !date) {
-      return res.status(400).json({
-        success: false,
-        message: "doctorId and date are required",
-      });
-    }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const selected = new Date(date);
-    selected.setHours(0, 0, 0, 0);
-
-    if (selected < today) {
-      return res.status(400).json({
-        success: false,
-        message: "Past date not allowed",
-      });
-    }
-
-  const slots = await generateSlots(doctorId, date);
-
-  res.json(slots);
-}
-
-/* ---------------------------------------
-   CREATE APPOINTMENT
----------------------------------------- */
+/* CREATE */
 export async function createAppointment(req, res) {
+
   try {
-    const data = { ...req.body };
+  const data = req.body;
+  console.log("📥 Received createAppointment request:", JSON.stringify(data));
 
-    console.log(
-      "📥 Received createAppointment request:",
-      JSON.stringify(data, null, 2)
-    );
-
-    const requiredFields = [
-      "patientId",
-      "doctorId",
-      "appointmentDate",
-      "amount",
-    ];
-
-    for (const field of requiredFields) {
-      if (
-        data[field] === undefined ||
-        data[field] === null ||
-        data[field] === ""
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: `${field} is required`,
-        });
-      }
-    }
-
+    // Ensure required timing fields exist and are normalized
     data.startTime = data.startTime || data.appointmentTime || "00:00";
-    data.appointmentTime = data.appointmentTime || data.startTime;
+    data.duration = Number(data.duration) || (data.selectedConsultation?.duration ? Number(data.selectedConsultation.duration) : 30);
 
-    data.duration =
-      Number(data.duration) ||
-      (data.selectedConsultation?.duration
-        ? Number(data.selectedConsultation.duration)
-        : 30);
-
+    // Safely parse startTime (format HH:MM)
     const [h = "0", m = "0"] = String(data.startTime).split(":");
-    const start = parseInt(h, 10) * 60 + parseInt(m, 10);
+    const start = parseInt(h) * 60 + parseInt(m);
     const end = start + Number(data.duration);
 
     const endHour = Math.floor(end / 60);
     const endMin = end % 60;
 
-    data.endTime = `${String(endHour).padStart(2, "0")}:${String(
-      endMin
-    ).padStart(2, "0")}`;
+    data.endTime = `${endHour}:${endMin === 0 ? "00" : (endMin < 10 ? `0${endMin}` : endMin)}`;
 
+    // If doctor related display fields are missing, try to fetch from Doctor Service
     const docId = data.doctorId;
     if (docId && (!data.doctorName || !data.doctorSpecialty || !data.hospital)) {
-      const doctorServiceBase = process.env.DOCTOR_SERVICE_URL || "http://localhost:6010";
+      const gatewayBase = process.env.API_GATEWAY_URL || "http://localhost:5015";
       try {
-        const dresp = await axios.get(`${doctorServiceBase}/api/doctors/${docId}`, { timeout: 5000 });
-        const d = dresp.data;
+        const dresp = await axios.get(`${gatewayBase}/api/doctors/${docId}`, { timeout: 5000 });
+        const d = dresp.data?.data || dresp.data;
         if (d) {
-          data.doctorName =
-            data.doctorName || d.fullName || d.name || d.displayName || "";
-          data.doctorSpecialty =
-            data.doctorSpecialty || d.specialization || d.specialty || "";
+          data.doctorName = data.doctorName || d.fullName || d.name || d.displayName || "";
+          data.doctorSpecialty = data.doctorSpecialty || d.specialization || d.specialty || "";
           data.hospital = data.hospital || d.baseHospital || d.hospital || "";
         }
       } catch (err) {
-        console.warn(
-          "⚠️ Could not fetch doctor details, using provided data:",
-          err?.message || err
-        );
+        // Non-fatal: continue with whatever data is available
+        console.warn("⚠️ Could not fetch doctor details, proceeding with provided data:", err?.message || err);
       }
     }
 
-    data.doctorName = data.doctorName || "Unknown Doctor";
-    data.doctorSpecialty = data.doctorSpecialty || "General";
-    data.hospital = data.hospital || "Not Provided";
-
-    const existingSlot = await Appointment.findOne({
-      doctorId: data.doctorId,
-      appointmentDate: data.appointmentDate,
-      appointmentTime: data.startTime,
-      status: { $ne: "CANCELLED" },
-    });
-
-    if (existingSlot) {
-      if (
-        data.patientId &&
-        String(existingSlot.patientId) === String(data.patientId)
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: "Duplicate booking: patient already booked this exact slot",
+    // Prevent duplicate bookings:
+    // - same doctor, same date, same startTime -> slot already taken
+    // - same doctor, same date, same startTime, same patient -> duplicate booking by same patient
+    if (data.doctorId && data.appointmentDate && data.startTime) {
+      try {
+        const existingSlot = await Appointment.findOne({
+          doctorId: data.doctorId,
+          appointmentDate: data.appointmentDate,
+          startTime: data.startTime,
+          status: { $ne: "CANCELLED" }
         });
-      }
 
-      return res.status(400).json({
-        success: false,
-        message: "Time slot already taken for this doctor",
-      });
+        if (existingSlot) {
+          if (data.patientId && String(existingSlot.patientId) === String(data.patientId)) {
+            return res.status(400).json({ message: "Duplicate booking: patient already booked this exact slot" });
+          }
+          return res.status(400).json({ message: "Time slot already taken for this doctor" });
+        }
+      } catch (err) {
+        console.warn("⚠️ Could not validate existing slot:", err?.message || err);
+      }
     }
 
+    // overlap check
     const booked = await Appointment.find({
       doctorId: data.doctorId,
       appointmentDate: data.appointmentDate,
-      status: { $ne: "CANCELLED" },
+      status: { $ne: "CANCELLED" }
     });
 
-    for (const b of booked) {
-      const baseTime = b.startTime || b.appointmentTime || "00:00";
-      const [bh = "0", bm = "0"] = String(baseTime).split(":");
-      const bStart = parseInt(bh, 10) * 60 + parseInt(bm, 10);
-      const bDuration = Number(b.duration) || 30;
-      const bEnd = bStart + bDuration;
+    for (let b of booked) {
+
+      const [bh,bm] = b.startTime.split(":");
+      const bStart = parseInt(bh)*60 + parseInt(bm);
+      const bEnd = bStart + b.duration;
 
       if (start < bEnd && end > bStart) {
-        return res.status(400).json({
-          success: false,
-          message: "Time overlap",
-        });
+        return res.status(400).json({ message: "Time overlap" });
       }
     }
 
-    if (!data.appointmentId) {
-      data.appointmentId = `APT_${Date.now()}_${Math.random()
-        .toString(36)
-        .substring(2, 8)}`;
-    }
-
+    // Ensure unique appointmentId - if missing or duplicate, generate a new one
+    if (!data.appointmentId) data.appointmentId = `APT_${Date.now()}_${Math.random().toString(36).substr(2,6)}`;
+    // If appointmentId already exists, append suffix until unique
     let tries = 0;
-    while (tries < 5) {
-      const exists = await Appointment.findOne({
-        appointmentId: data.appointmentId,
-      });
-
+    while (tries < 3) {
+      const exists = await Appointment.findOne({ appointmentId: data.appointmentId });
       if (!exists) break;
-
-      data.appointmentId = `APT_${Date.now()}_${Math.random()
-        .toString(36)
-        .substring(2, 8)}`;
+      data.appointmentId = `${data.appointmentId}_${Math.random().toString(36).substr(2,4)}`;
       tries++;
     }
 
-    if (!data.status) data.status = "PENDING";
-
     const appointment = await Appointment.create(data);
 
-    res.status(201).json({
-      success: true,
-      message: "Appointment created successfully",
-      appointment,
-    });
+    res.status(201).json(appointment);
+
   } catch (err) {
     console.error("❌ Create appointment error:", err);
-
-    if (err?.name === "ValidationError") {
+    // Format validation errors
+    if (err && err.name === 'ValidationError') {
       const details = {};
-      for (const [key, value] of Object.entries(err.errors || {})) {
-        details[key] = value.message || String(value);
-      }
-
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        details,
-      });
+      for (const [k,v] of Object.entries(err.errors || {})) details[k] = v.message || String(v);
+      return res.status(400).json({ success: false, message: 'Validation failed', details });
     }
-
-    res.status(500).json({
-      success: false,
-      message: err?.message || "Internal server error",
-    });
+    res.status(500).json({ success: false, message: err?.message || 'Internal error', details: err });
   }
 }
 
-/* ---------------------------------------
-   RESCHEDULE APPOINTMENT
----------------------------------------- */
+/* RESCHEDULE */
 export async function rescheduleAppointment(req, res) {
   try {
     const { id } = req.params;
-    const { appointmentDate, appointmentTime, startTime, duration } = req.body;
+    const { appointmentDate, startTime } = req.body;
 
-    let appointment = null;
-
-    if (/^[0-9a-fA-F]{24}$/.test(id)) {
-      appointment = await Appointment.findById(id);
-    }
+    const appointment = await Appointment.findById(id);
 
     if (!appointment) {
-      appointment = await Appointment.findOne({ appointmentId: id });
+      return res.status(404).json({ message: "Not found" });
     }
 
-    if (!appointment) {
-      return res.status(404).json({
-        success: false,
-        message: "Appointment not found",
-      });
-    }
+    const targetDate = appointmentDate || appointment.appointmentDate;
+    const targetStartTime = startTime || appointment.startTime;
+    const duration = appointment.duration;
 
-    const newDate = appointmentDate || appointment.appointmentDate;
-    const newStartTime =
-      startTime || appointmentTime || appointment.startTime || appointment.appointmentTime;
-    const newDuration = Number(duration) || Number(appointment.duration) || 30;
-
-    const [h, m] = targetStartTime.split(":");
-    const start = parseInt(h) * 60 + parseInt(m);
+  const [h = "0", m = "0"] = String(targetStartTime || "00:00").split(":");
+  const start = parseInt(h || "0", 10) * 60 + parseInt(m || "0", 10);
     const end = start + duration;
 
     const endHour = Math.floor(end / 60);
-    const endMin = end % 60;
-    const endTime = `${endHour}:${endMin === 0 ? "00" : "30"}`;
+  const endMin = end % 60;
+  const paddedMin = endMin === 0 ? "00" : (endMin < 10 ? `0${endMin}` : String(endMin));
+  const endTime = `${endHour}:${paddedMin}`;
 
     const booked = await Appointment.find({
-      _id: { $ne: appointment._id },
+      _id: { $ne: id },
       doctorId: appointment.doctorId,
-      appointmentDate: newDate,
+      appointmentDate: targetDate,
       status: { $ne: "CANCELLED" },
     });
 
-    for (const b of booked) {
-      const baseTime = b.startTime || b.appointmentTime || "00:00";
-      const [bh = "0", bm = "0"] = String(baseTime).split(":");
-      const bStart = parseInt(bh, 10) * 60 + parseInt(bm, 10);
-      const bDuration = Number(b.duration) || 30;
-      const bEnd = bStart + bDuration;
+    for (let b of booked) {
+      const [bh, bm] = b.startTime.split(":");
+      const bStart = parseInt(bh) * 60 + parseInt(bm);
+      const bEnd = bStart + b.duration;
 
       if (start < bEnd && end > bStart) {
-        return res.status(400).json({
-          success: false,
-          message: "New time overlaps with another appointment",
-        });
+        return res.status(400).json({ message: "Time overlap" });
       }
     }
 
-    appointment.appointmentDate = newDate;
-    appointment.appointmentTime = newStartTime;
-    appointment.startTime = newStartTime;
-    appointment.duration = newDuration;
+    appointment.appointmentDate = targetDate;
+    appointment.startTime = targetStartTime;
     appointment.endTime = endTime;
 
     await appointment.save();
 
-    res.status(200).json({
-      success: true,
-      message: "Appointment rescheduled successfully",
-      appointment,
-    });
-  } catch (error) {
-    console.error("❌ Error rescheduling appointment:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to reschedule appointment",
-      error: error.message,
-    });
+    res.status(200).json(appointment);
+  } catch (err) {
+    console.error("Failed to reschedule appointment:", err);
+    res.status(500).json({ message: "Failed to reschedule appointment" });
   }
 }
 
-/* ---------------------------------------
-   PAYMENT SUCCESS
----------------------------------------- */
-export async function paymentSuccess(req, res) {
+/* PAYMENT */
+export async function paymentSuccess(req,res){
+
+  const { id } = req.params;
+
+  // Try update by MongoDB _id first
+  let updated = null;
   try {
-    const { id } = req.params;
-
-    let updated = null;
-
-    if (/^[0-9a-fA-F]{24}$/.test(id)) {
-      updated = await Appointment.findByIdAndUpdate(
-        id,
-        {
-          paymentStatus: "PAID",
-          status: "CONFIRMED",
-        },
-        { new: true }
-      );
-    }
-
-    if (!updated) {
-      updated = await Appointment.findOneAndUpdate(
-        { appointmentId: id },
-        {
-          paymentStatus: "PAID",
-          status: "CONFIRMED",
-        },
-        { new: true }
-      );
-    }
-
-    if (!updated) {
-      return res.status(404).json({
-        success: false,
-        message: "Appointment not found",
-      });
-    }
-
-    res.status(200).json(updated);
-  } catch (error) {
-    console.error("❌ Payment success update error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to update payment success",
-      error: error.message,
-    });
+    updated = await Appointment.findByIdAndUpdate(
+      id,
+      {
+        paymentStatus: "PAID",
+        status: "PENDING_DOCTOR_APPROVAL"
+      },
+      { new: true }
+    );
+  } catch (err) {
+    // ignore and try by appointmentId
+    updated = null;
   }
+
+  if (!updated) {
+    // Try update by appointmentId field
+    updated = await Appointment.findOneAndUpdate(
+      { appointmentId: id },
+      {
+        paymentStatus: "PAID",
+        status: "PENDING_DOCTOR_APPROVAL"
+      },
+      { new: true }
+    );
+  }
+
+  if (!updated) {
+    return res.status(404).json({ message: "Appointment not found" });
+  }
+
+  res.json(updated);
 }
 
-/* ---------------------------------------
-   APPROVE APPOINTMENT
----------------------------------------- */
-export async function approveAppointment(req, res) {
-  try {
-    const { id } = req.params;
+/* APPROVE */
+export async function approveAppointment(req,res){
 
-    let updated = null;
+  const { id } = req.params;
 
-    if (/^[0-9a-fA-F]{24}$/.test(id)) {
-      updated = await Appointment.findByIdAndUpdate(
-        id,
-        { status: "CONFIRMED" },
-        { new: true }
-      );
-    }
+  const updated = await Appointment.findByIdAndUpdate(
+    id,
+    { status:"CONFIRMED" },
+    { new:true }
+  );
 
-    if (!updated) {
-      updated = await Appointment.findOneAndUpdate(
-        { appointmentId: id },
-        { status: "CONFIRMED" },
-        { new: true }
-      );
-    }
-
-    if (!updated) {
-      return res.status(404).json({
-        success: false,
-        message: "Appointment not found",
-      });
-    }
-
-    try {
-      const telemedicineBase =
-        process.env.TELEMEDICINE_SERVICE_URL || "http://localhost:6001";
-
-      // 🔥 FETCH PATIENT DETAILS FROM USER SERVICE
-      let patientName = "";
-      let patientEmail = "";
-      let patientPhone = "";
-
-      try {
-        const userServiceBase =
-          process.env.PATIENT_SERVICE_URL || "http://localhost:5005";
-        const pres = await axios.get(
-          `${userServiceBase}/api/patients/internal/${updated.patientId}`
-        );
-
-        const patient = pres.data;
-
-        patientName = patient.name || patient.fullName || "";
-        patientEmail = patient.email || "";
-        patientPhone = patient.phone || patient.phoneNumber || "";
-      } catch (err) {
-        console.warn("⚠️ Could not fetch patient details:", err.message);
-      }
-
-      // 🔥 PAYLOAD
-      const telemedicinePayload = {
-        appointmentId: updated.appointmentId || updated._id.toString(),
-        doctorId: updated.doctorId,
-        doctorName: updated.doctorName || "Unknown Doctor",
-        doctorEmail: updated.doctorEmail || "",
-        patientId: updated.patientId,
-        patientName: patientName || "Patient",
-        patientEmail: patientEmail || "",
-        patientPhone: patientPhone || "",
-        specialty:
-          updated.doctorSpecialty || updated.specialization || "General",
-        scheduledTime: new Date(updated.appointmentDate),
-        appointmentStatus: "CONFIRMED",
-        notes: "",
-      };
-
-      console.log("Telemedicine payload:", telemedicinePayload);
-
-      const telemedicineResponse = await axios.post(
-        `${telemedicineBase}/api/telemedicine`,
-        telemedicinePayload,
-        { timeout: 8000 }
-      );
-
-      return res.status(200).json({
-        success: true,
-        message: "Appointment approved and session created successfully",
-        appointment: updated,
-        telemedicine: telemedicineResponse.data,
-      });
-    } catch (teleErr) {
-      console.error(
-        "❌ Telemedicine session creation failed:",
-        teleErr.response?.data || teleErr.message
-      );
-
-      return res.status(500).json({
-        success: false,
-        message:
-          "Appointment approved, but telemedicine session creation failed",
-        appointment: updated,
-        telemedicineError: teleErr.response?.data || teleErr.message,
-      });
-    }
-  } catch (error) {
-    console.error("❌ Approve appointment error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to approve appointment",
-      error: error.message,
-    });
-  }
+  res.json(updated);
 }
 
-/* ---------------------------------------
-   REJECT APPOINTMENT
----------------------------------------- */
-export async function rejectAppointment(req, res) {
-  try {
-    const { id } = req.params;
+/* REJECT */
+export async function rejectAppointment(req,res){
 
-    let appointment = null;
+  const { id } = req.params;
 
-    if (/^[0-9a-fA-F]{24}$/.test(id)) {
-      appointment = await Appointment.findById(id);
-    }
+  const updated = await Appointment.findByIdAndUpdate(
+    id,
+    { status:"REJECTED" },
+    { new:true }
+  );
 
-    if (!appointment) {
-      appointment = await Appointment.findOne({ appointmentId: id });
-    }
-
-    if (!appointment) {
-      return res.status(404).json({
-        success: false,
-        message: "Appointment not found",
-      });
-    }
-
-    appointment.status = "CANCELLED";
-    await appointment.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Appointment rejected successfully",
-      appointment,
-    });
-  } catch (error) {
-    console.error("❌ Reject appointment error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to reject appointment",
-      error: error.message,
-    });
-  }
+  res.json(updated);
 }
 
-/* ---------------------------------------
-   CANCEL APPOINTMENT
----------------------------------------- */
-export async function cancelAppointment(req, res) {
-  try {
-    const { id } = req.params;
+/* CANCEL */
+export async function cancelAppointment(req,res){
 
-    let appointment = null;
+  const { id } = req.params;
 
-    if (/^[0-9a-fA-F]{24}$/.test(id)) {
-      appointment = await Appointment.findById(id);
-    }
+  const appointment = await Appointment.findById(id);
 
-    if (!appointment) {
-      appointment = await Appointment.findOne({ appointmentId: id });
-    }
-
-    if (!appointment) {
-      return res.status(404).json({
-        success: false,
-        message: "Appointment not found",
-      });
-    }
-
-    appointment.status = "CANCELLED";
-    await appointment.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Appointment cancelled successfully",
-      appointment,
-    });
-  } catch (error) {
-    console.error("❌ Cancel appointment error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to cancel appointment",
-      error: error.message,
-    });
+  if(!appointment){
+    return res.status(404).json({message:"Not found"})
   }
+
+  appointment.status = "CANCELLED";
+
+  await appointment.save();
+
+  res.json({ message:"Appointment cancelled" });
 }
 
-/* ---------------------------------------
-   UPDATE PAYMENT SUCCESS
----------------------------------------- */
+// In appointmentController.js - Add these functions
+
+// Update appointment after successful payment
 export async function updatePaymentSuccess(req, res) {
+  const { id } = req.params;
+  const { orderId, paymentStatus, status, paidAt } = req.body;
+
+  console.log("🔵 Updating appointment payment success:", { id, orderId });
+
   try {
-    const { id } = req.params;
-    const { orderId, paymentStatus, status, paidAt } = req.body;
-
-    console.log("🔵 Updating appointment payment success:", { id, orderId });
-
     let appointment = null;
-
-    if (/^[0-9a-fA-F]{24}$/.test(id)) {
+    
+    // Try to find by MongoDB _id first
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
       appointment = await Appointment.findByIdAndUpdate(
         id,
         {
           paymentStatus: paymentStatus || "PAID",
           status: status || "CONFIRMED",
           paymentId: orderId,
-          paidAt: paidAt || new Date(),
+          paidAt: paidAt || new Date()
         },
         { new: true }
       );
     }
-
+    
+    // If not found, try by appointmentId
     if (!appointment) {
       appointment = await Appointment.findOneAndUpdate(
         { appointmentId: id },
@@ -671,125 +386,117 @@ export async function updatePaymentSuccess(req, res) {
           paymentStatus: paymentStatus || "PAID",
           status: status || "CONFIRMED",
           paymentId: orderId,
-          paidAt: paidAt || new Date(),
+          paidAt: paidAt || new Date()
         },
         { new: true }
       );
     }
 
     if (!appointment) {
-      return res.status(404).json({
-        success: false,
-        message: "Appointment not found",
+      console.error("❌ Appointment not found:", id);
+      return res.status(404).json({ 
+        success: false, 
+        message: "Appointment not found" 
       });
     }
 
-    res.status(200).json({
+    console.log("✅ Appointment updated successfully:", {
+      id: appointment.appointmentId,
+      status: appointment.status,
+      paymentStatus: appointment.paymentStatus
+    });
+
+    res.json({
       success: true,
       message: "Appointment updated successfully",
-      appointment,
+      appointment: appointment
     });
+
   } catch (error) {
     console.error("❌ Update payment success error:", error);
-    res.status(500).json({
-      success: false,
+    res.status(500).json({ 
+      success: false, 
       message: "Error updating appointment",
-      error: error.message,
+      error: error.message 
     });
   }
 }
 
-/* ---------------------------------------
-   UPDATE PAYMENT STATUS
----------------------------------------- */
+// Alternative update endpoint
 export async function updatePaymentStatus(req, res) {
-  try {
-    const { appointmentId, orderId, paymentStatus, status } = req.body;
+  const { appointmentId, orderId, paymentStatus, status } = req.body;
 
+  console.log("🔵 Alternative payment status update:", { appointmentId, orderId });
+
+  try {
     const appointment = await Appointment.findOneAndUpdate(
-      { appointmentId },
+      { appointmentId: appointmentId },
       {
         paymentStatus: paymentStatus || "PAID",
         status: status || "CONFIRMED",
         paymentId: orderId,
-        paidAt: new Date(),
+        paidAt: new Date()
       },
       { new: true }
     );
 
     if (!appointment) {
-      return res.status(404).json({
-        success: false,
-        message: "Appointment not found",
+      return res.status(404).json({ 
+        success: false, 
+        message: "Appointment not found" 
       });
     }
 
-    res.status(200).json({
+    console.log("✅ Appointment updated via alternative method");
+
+    res.json({
       success: true,
-      appointment,
+      appointment: appointment
     });
+
   } catch (error) {
     console.error("❌ Alternative update error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error updating appointment",
-      error: error.message,
+    res.status(500).json({ 
+      success: false, 
+      message: "Error updating appointment" 
     });
   }
 }
 
-/* ---------------------------------------
-   MARK PAYMENT FAILED
----------------------------------------- */
+// Mark payment as failed
 export async function markPaymentFailed(req, res) {
+  const { id } = req.params;
+  const { orderId, statusCode } = req.body;
+
   try {
-    const { id } = req.params;
-    const { orderId, statusCode } = req.body;
-
     let appointment = null;
-
-    if (/^[0-9a-fA-F]{24}$/.test(id)) {
+    
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
       appointment = await Appointment.findByIdAndUpdate(
         id,
         {
           paymentStatus: "FAILED",
           paymentId: orderId,
-          failureReason: `Payment failed with status code: ${statusCode}`,
+          failureReason: `Payment failed with status code: ${statusCode}`
         },
         { new: true }
       );
-    }
-
-    if (!appointment) {
+    } else {
       appointment = await Appointment.findOneAndUpdate(
         { appointmentId: id },
         {
           paymentStatus: "FAILED",
           paymentId: orderId,
-          failureReason: `Payment failed with status code: ${statusCode}`,
+          failureReason: `Payment failed with status code: ${statusCode}`
         },
         { new: true }
       );
     }
 
-    if (!appointment) {
-      return res.status(404).json({
-        success: false,
-        message: "Appointment not found",
-      });
-    }
+    res.json({ success: true });
 
-    res.status(200).json({
-      success: true,
-      message: "Payment marked as failed",
-      appointment,
-    });
   } catch (error) {
-    console.error("❌ Error marking payment failed:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to mark payment as failed",
-      error: error.message,
-    });
+    console.error("Error marking payment failed:", error);
+    res.status(500).json({ success: false });
   }
 }
