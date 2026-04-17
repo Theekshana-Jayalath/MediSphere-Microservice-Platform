@@ -11,6 +11,8 @@ import connectDB from "./config/db.js";
 import prescriptionRoutes from "./routes/prescriptionRoutes.js";
 import errorHandler from "./middlewares/errorMiddleware.js";
 import doctorRoutes from "./routes/doctorRoutes.js";
+import appointmentProxyRoutes from "./routes/appointmentProxyRoutes.js";
+import reportProxyRoutes from "./routes/reportProxyRoutes.js";
 import Doctor from "./models/Doctor.js";
 import Counter from "./models/Counter.js";
 
@@ -118,6 +120,8 @@ app.post("/api/doctors/login", async (req, res, next) => {
 
 app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/doctors", doctorRoutes);
+app.use("/api/appointments", appointmentProxyRoutes);
+app.use("/api/reports", reportProxyRoutes);
 
 app.use(errorHandler);
 

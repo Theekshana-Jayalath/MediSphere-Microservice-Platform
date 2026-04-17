@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPrescription } from "../../services/doctor/prescriptionApi";
+import { getAppointmentsByDoctorId } from "../../services/doctor/appointmentApi";
 import "../../styles/Doctor/prescriptionForm.css";
 
 const createEmptyMedicine = () => ({
@@ -10,25 +11,111 @@ const createEmptyMedicine = () => ({
   instructions: "",
 });
 
-const createUniqueId = (prefix) => {
-  const timestamp = Date.now().toString().slice(-6);
-  const random = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
-
-  return `${prefix}${timestamp}${random}`;
-};
-
 const createInitialFormData = () => ({
-  doctorId: createUniqueId("DOC"),
-  doctorName: "Dr. Julian Vance",
-  patientId: createUniqueId("PAT"),
+  doctorId: "",
+  doctorName: "",
+  patientId: "",
   patientName: "",
-  appointmentId: createUniqueId("APT"),
+  appointmentId: "",
   diagnosis: "",
   notes: "",
   status: "active",
 });
+
+const safeParseJSON = (value) => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
+const getDoctorServiceBaseUrl = () => {
+  const configuredBase = String(import.meta.env.VITE_DOCTOR_API_BASE_URL || "").trim();
+
+  if (configuredBase) {
+    const normalizedConfiguredBase = configuredBase.replace(/\/+$/, "");
+
+    if (normalizedConfiguredBase.endsWith("/api/doctors")) {
+      return normalizedConfiguredBase;
+    }
+
+    if (normalizedConfiguredBase.endsWith("/api")) {
+      return `${normalizedConfiguredBase}/doctors`;
+    }
+
+    return `${normalizedConfiguredBase}/api/doctors`;
+  }
+
+  const fallbackHost =
+    import.meta.env.VITE_DOCTOR_SERVICE_URL ||
+    (typeof window !== "undefined"
+      ? `${window.location.protocol}//${window.location.hostname}:6010`
+      : "http://localhost:6010");
+
+  return `${String(fallbackHost).replace(/\/+$/, "")}/api/doctors`;
+};
+
+const normalizeDoctorName = (name) => {
+  const rawName = String(name || "").trim();
+
+  if (!rawName) return "";
+
+  return /^dr\.?\s/i.test(rawName) ? rawName : `Dr. ${rawName}`;
+};
+
+const extractAppointments = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return payload.data;
+  }
+
+  if (Array.isArray(payload?.data?.data)) {
+    return payload.data.data;
+  }
+
+  return [];
+};
+
+const getAppointmentIdValue = (appointment) => {
+  return (
+    appointment?.appointmentId ||
+    appointment?._id ||
+    appointment?.id ||
+    ""
+  );
+};
+
+const getAppointmentPatientId = (appointment) => {
+  const patientId = appointment?.patientId;
+
+  if (typeof patientId === "object" && patientId !== null) {
+    return patientId?.patientId || patientId?._id || patientId?.id || "";
+  }
+
+  return String(patientId || "");
+};
+
+const getAppointmentPatientName = (appointment) => {
+  return (
+    appointment?.patientName ||
+    appointment?.patient?.name ||
+    appointment?.patient?.fullName ||
+    ""
+  );
+};
+
+const formatAppointmentOptionLabel = (appointment) => {
+  const appointmentCode = getAppointmentIdValue(appointment) || "Appointment";
+  const patientName = getAppointmentPatientName(appointment) || "Unknown patient";
+  const date = appointment?.appointmentDate || "No date";
+  const time = appointment?.appointmentTime || appointment?.startTime || "No time";
+
+  return `${appointmentCode} • ${patientName} • ${date} ${time}`;
+};
 
 const PrescriptionForm = () => {
   const [formData, setFormData] = useState(createInitialFormData);
@@ -37,29 +124,153 @@ const PrescriptionForm = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResolvingDoctor, setIsResolvingDoctor] = useState(true);
+  const [appointments, setAppointments] = useState([]);
+  const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
 
-  const medicineCount = useMemo(() => medicines.length, [medicines]);
+  useEffect(() => {
+    let isMounted = true;
 
-  const regenerateId = (idType) => {
-    const idPrefixes = {
-      doctorId: "DOC",
-      patientId: "PAT",
-      appointmentId: "APT",
+    const loadDoctorAppointments = async () => {
+      if (!formData.doctorId) {
+        if (isMounted) {
+          setAppointments([]);
+        }
+        return;
+      }
+
+      try {
+        setIsLoadingAppointments(true);
+        const response = await getAppointmentsByDoctorId(formData.doctorId);
+        const fetchedAppointments = extractAppointments(response);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setAppointments(fetchedAppointments);
+      } catch {
+        if (isMounted) {
+          setAppointments([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingAppointments(false);
+        }
+      }
     };
 
-    const prefix = idPrefixes[idType];
-    if (!prefix) return;
+    loadDoctorAppointments();
 
-    setFormData((prev) => ({
-      ...prev,
-      [idType]: createUniqueId(prefix),
-    }));
-  };
+    return () => {
+      isMounted = false;
+    };
+  }, [formData.doctorId]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const hydrateDoctorIdentity = async () => {
+      try {
+        setIsResolvingDoctor(true);
+
+        const user =
+          safeParseJSON(localStorage.getItem("user") || "") || {};
+        const token = localStorage.getItem("authToken") || localStorage.getItem("token");
+
+        const doctorUserId = user?.id || user?._id || "";
+        const initialDoctorId = user?.doctorId || "";
+        const initialDoctorName = normalizeDoctorName(user?.name || user?.fullName || "");
+
+        if (isMounted) {
+          setFormData((previous) => ({
+            ...previous,
+            doctorId: initialDoctorId,
+            doctorName: initialDoctorName,
+          }));
+        }
+
+        if (!doctorUserId) {
+          return;
+        }
+
+        const doctorServiceBase = getDoctorServiceBaseUrl();
+        const response = await fetch(`${doctorServiceBase}/${doctorUserId}`, {
+          headers: token
+            ? {
+                Authorization: `Bearer ${token}`,
+              }
+            : {},
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = await response.json();
+        const doctor = payload?.data || {};
+
+        const resolvedDoctorId = doctor?.doctorId || initialDoctorId;
+        const resolvedDoctorName = normalizeDoctorName(
+          doctor?.fullName || doctor?.name || user?.name || user?.fullName
+        );
+
+        if (!isMounted) {
+          return;
+        }
+
+        setFormData((previous) => ({
+          ...previous,
+          doctorId: resolvedDoctorId,
+          doctorName: resolvedDoctorName,
+        }));
+
+        if (resolvedDoctorId || resolvedDoctorName) {
+          localStorage.setItem(
+            "user",
+            JSON.stringify({
+              ...user,
+              doctorId: resolvedDoctorId || user?.doctorId,
+              name: resolvedDoctorName || user?.name,
+            })
+          );
+        }
+      } catch {
+        // Keep existing values when profile lookup fails.
+      } finally {
+        if (isMounted) {
+          setIsResolvingDoctor(false);
+        }
+      }
+    };
+
+    hydrateDoctorIdentity();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const medicineCount = useMemo(() => medicines.length, [medicines]);
 
   const handleChange = (e) => {
     setFormData((previous) => ({
       ...previous,
       [e.target.name]: e.target.value,
+    }));
+  };
+
+  const handleAppointmentSelect = (event) => {
+    const selectedAppointmentId = event.target.value;
+    const selectedAppointment = appointments.find(
+      (appointment) => getAppointmentIdValue(appointment) === selectedAppointmentId
+    );
+
+    setFormData((previous) => ({
+      ...previous,
+      appointmentId: selectedAppointmentId,
+      patientId: selectedAppointment ? getAppointmentPatientId(selectedAppointment) : "",
+      patientName: selectedAppointment ? getAppointmentPatientName(selectedAppointment) : "",
     }));
   };
 
@@ -114,6 +325,22 @@ const PrescriptionForm = () => {
       return;
     }
 
+    if (!cleanedFormData.doctorId || !cleanedFormData.doctorName) {
+      setError("Doctor identity is missing. Please login again and retry.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (
+      !cleanedFormData.appointmentId ||
+      !cleanedFormData.patientId ||
+      !cleanedFormData.patientName
+    ) {
+      setError("Please select an appointment to auto-fill patient details.");
+      setIsSubmitting(false);
+      return;
+    }
+
     const hasIncompleteMedicine = cleanedMedicines.some(
       (medicine) =>
         !medicine.medicineName ||
@@ -136,7 +363,11 @@ const PrescriptionForm = () => {
 
       const response = await createPrescription(payload);
       setMessage(response.message || "Prescription created successfully");
-      setFormData(createInitialFormData());
+      setFormData((previous) => ({
+        ...createInitialFormData(),
+        doctorId: previous.doctorId,
+        doctorName: previous.doctorName,
+      }));
       setMedicines([createEmptyMedicine()]);
     } catch (err) {
       setError(
@@ -218,8 +449,8 @@ const PrescriptionForm = () => {
               <div className="rx-inline-note">
                 <span>⚡</span>
                 <p>
-                  Doctor ID, Patient ID, and Appointment ID are auto-generated
-                  for secure record keeping.
+                  Select an appointment to auto-fill patient ID, patient name,
+                  and appointment ID for accurate prescription records.
                 </p>
               </div>
 
@@ -227,14 +458,6 @@ const PrescriptionForm = () => {
                 <div className="rx-field">
                   <label>
                     Doctor ID
-                    <button
-                      type="button"
-                      onClick={() => regenerateId("doctorId")}
-                      className="rx-mini-action"
-                      title="Generate new Doctor ID"
-                    >
-                      🔄
-                    </button>
                   </label>
                   <input
                     type="text"
@@ -250,24 +473,46 @@ const PrescriptionForm = () => {
                   <input
                     type="text"
                     name="doctorName"
-                    placeholder="Enter doctor name"
+                    placeholder="Doctor name"
                     value={formData.doctorName}
                     onChange={handleChange}
+                    readOnly
                     required
                   />
+                </div>
+
+                <div className="rx-field full-span">
+                  <label>Appointment</label>
+                  <select
+                    name="selectedAppointment"
+                    value={formData.appointmentId}
+                    onChange={handleAppointmentSelect}
+                    required
+                  >
+                    <option value="">
+                      {isLoadingAppointments
+                        ? "Loading appointments..."
+                        : "Select appointment"}
+                    </option>
+                    {appointments.map((appointment) => {
+                      const appointmentId = getAppointmentIdValue(appointment);
+
+                      if (!appointmentId) {
+                        return null;
+                      }
+
+                      return (
+                        <option key={appointmentId} value={appointmentId}>
+                          {formatAppointmentOptionLabel(appointment)}
+                        </option>
+                      );
+                    })}
+                  </select>
                 </div>
 
                 <div className="rx-field">
                   <label>
                     Patient ID
-                    <button
-                      type="button"
-                      onClick={() => regenerateId("patientId")}
-                      className="rx-mini-action"
-                      title="Generate new Patient ID"
-                    >
-                      🔄
-                    </button>
                   </label>
                   <input
                     type="text"
@@ -283,9 +528,10 @@ const PrescriptionForm = () => {
                   <input
                     type="text"
                     name="patientName"
-                    placeholder="Enter patient name"
+                    placeholder="Patient name"
                     value={formData.patientName}
                     onChange={handleChange}
+                    readOnly
                     required
                   />
                 </div>
@@ -293,14 +539,6 @@ const PrescriptionForm = () => {
                 <div className="rx-field">
                   <label>
                     Appointment ID
-                    <button
-                      type="button"
-                      onClick={() => regenerateId("appointmentId")}
-                      className="rx-mini-action"
-                      title="Generate new Appointment ID"
-                    >
-                      🔄
-                    </button>
                   </label>
                   <input
                     type="text"
@@ -476,9 +714,19 @@ const PrescriptionForm = () => {
           <button
             type="submit"
             className={`rx-submit-btn ${isSubmitting ? "submitting" : ""}`}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isResolvingDoctor || isLoadingAppointments}
           >
-            {isSubmitting ? (
+            {isResolvingDoctor ? (
+              <>
+                <span className="rx-spinner"></span>
+                <span>Loading Doctor Profile...</span>
+              </>
+            ) : isLoadingAppointments ? (
+              <>
+                <span className="rx-spinner"></span>
+                <span>Loading Appointments...</span>
+              </>
+            ) : isSubmitting ? (
               <>
                 <span className="rx-spinner"></span>
                 <span>Creating Prescription...</span>

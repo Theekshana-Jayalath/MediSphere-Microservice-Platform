@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../../styles/Doctor/doctorSidebar.css";
 
 const DoctorSidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   let user = null;
   try {
     const storedUser = localStorage.getItem("user");
@@ -83,6 +84,14 @@ const DoctorSidebar = () => {
     { label: "Video Consultations", path: "/doctor/telemedicine", icon: "🎥" },
   ];
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
+
   return (
     <aside className="doctor-sidebar">
       <div className="brand-box">
@@ -119,6 +128,15 @@ const DoctorSidebar = () => {
             <p className="doctor-id-badge">{doctorIdentifier}</p>
           </div>
         </div>
+
+        <button
+          type="button"
+          className="doctor-logout-btn"
+          onClick={handleLogout}
+        >
+          <span className="sidebar-icon">↪</span>
+          <span className="sidebar-label">Logout</span>
+        </button>
       </div>
     </aside>
   );

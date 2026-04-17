@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import Doctor from "../models/Doctor.js";
 import Counter from "../models/Counter.js";
 
@@ -203,6 +204,13 @@ export const registerDoctor = async (req, res, next) => {
 
 export const getDoctorById = async (req, res, next) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid doctor id format",
+      });
+    }
+
     const doctor = await Doctor.findById(req.params.id).select("-password");
 
     if (!doctor) {
