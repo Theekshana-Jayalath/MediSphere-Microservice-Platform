@@ -8,8 +8,11 @@ import {
   completeSession,
 } from "../../services/doctor/telemedicineApi";
 import "../../styles/Doctor/doctorTelemedicine.css";
+import { useNavigate } from "react-router-dom";
 
 const DoctorTelemedicine = () => {
+  const navigate = useNavigate();
+
   const [sessions, setSessions] = useState([]);
   const [summary, setSummary] = useState({
     total: 0,
@@ -85,7 +88,7 @@ const DoctorTelemedicine = () => {
       console.log("All sessions from API:", allSessions);
       console.log("Session summary response:", summaryRes);
       console.log("Logged in user:", user);
-   
+
       console.log("First session doctorId:", allSessions?.[0]?.doctorId);
 
       const doctorSessions = allSessions;
@@ -143,8 +146,16 @@ const DoctorTelemedicine = () => {
       setMessage("");
       setError("");
 
-      await completeSession(sessionId);
+      const response = await completeSession(sessionId);
+      const completedSession = response?.session || response?.data?.session;
+
       setMessage("Session marked as completed successfully.");
+
+      if (completedSession?._id) {
+        navigate(`/doctor/create-prescription?sessionId=${completedSession._id}`);
+        return;
+      }
+
       await fetchDoctorSessions();
     } catch (err) {
       console.error("Failed to complete session:", err);

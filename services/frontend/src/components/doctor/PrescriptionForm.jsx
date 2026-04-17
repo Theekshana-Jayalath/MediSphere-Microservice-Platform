@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPrescription } from "../../services/doctor/prescriptionApi";
 import { getAppointmentsByDoctorId } from "../../services/doctor/appointmentApi";
+import { getSessionById } from "../../services/doctor/telemedicineApi";
 import "../../styles/Doctor/prescriptionForm.css";
 
 const createEmptyMedicine = () => ({
@@ -117,7 +118,7 @@ const formatAppointmentOptionLabel = (appointment) => {
   return `${appointmentCode} • ${patientName} • ${date} ${time}`;
 };
 
-const PrescriptionForm = () => {
+const PrescriptionForm = ({ sessionId = "" }) => {
   const [formData, setFormData] = useState(createInitialFormData);
   const [medicines, setMedicines] = useState([createEmptyMedicine()]);
 
@@ -251,7 +252,47 @@ const PrescriptionForm = () => {
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const hydrateFromSession = async () => {
+      if (!sessionId) return;
+
+      try {
+        const response = await getSessionById(sessionId);
+        const session = response?.session || response?.data?.session;
+
+        if (!session || !isMounted) {
+          return;
+        }
+
+        if ((session?.status || "").toLowerCase() !== "completed") {
+          setError("Only completed sessions can be used to create a prescription.");
+          return;
+        }
+
+        setFormData((previous) => ({
+          ...previous,
+          doctorId: session?.doctorId || previous.doctorId,
+          doctorName: session?.doctorName || previous.doctorName,
+          patientId: session?.patientId || "",
+          patientName: session?.patientName || "",
+          appointmentId: session?.appointmentId || "",
+        }));
+      } catch (err) {
+        console.error("Failed to auto-fill prescription from session:", err);
+      }
+    };
+
+    hydrateFromSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [sessionId]);
+
   const medicineCount = useMemo(() => medicines.length, [medicines]);
+  const isSessionPrefilled = Boolean(sessionId);
 
   const handleChange = (e) => {
     setFormData((previous) => ({
@@ -487,6 +528,7 @@ const PrescriptionForm = () => {
                     name="selectedAppointment"
                     value={formData.appointmentId}
                     onChange={handleAppointmentSelect}
+                    disabled={isSessionPrefilled || isLoadingAppointments}
                     required
                   >
                     <option value="">
