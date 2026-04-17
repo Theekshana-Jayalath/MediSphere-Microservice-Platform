@@ -27,6 +27,9 @@ const adminOnly = (req, res, next) => {
 // Public registration route
 router.post("/", createPatientProfileForRegistration);
 
+// Internal service route for patient lookup by Mongo _id
+router.get("/internal/:id", getPatientById);
+
 // Patient self routes
 router.post("/profile", authMiddleware, createPatientProfile);
 router.get("/me", authMiddleware, getMyProfile);
