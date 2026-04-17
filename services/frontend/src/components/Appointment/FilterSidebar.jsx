@@ -90,17 +90,26 @@ const FilterSidebar = ({
 
       <div className="filter-section">
         <h4>Appointment Date</h4>
+        {/* Prevent choosing past dates by setting min to today and simple validation */}
         <input
           type="date"
           value={selectedDate}
+          min={new Date().toISOString().split('T')[0]}
           onChange={(e) => {
-            setSelectedDate(e.target.value);
-            setDateError(false);
+            const val = e.target.value;
+            const todayStr = new Date().toISOString().split('T')[0];
+            setSelectedDate(val);
+            // If user somehow picks a past date (manual input), show error
+            if (val && val < todayStr) {
+              setDateError(true);
+            } else {
+              setDateError(false);
+            }
           }}
           className="date-input"
         />
         {dateError && (
-          <p className="error-message">Please select an appointment date</p>
+          <p className="error-message">{typeof dateError === 'string' ? dateError : 'Please select an appointment date'}</p>
         )}
       </div>
     </div>
