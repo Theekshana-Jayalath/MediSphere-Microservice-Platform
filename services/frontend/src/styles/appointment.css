@@ -1204,18 +1204,6 @@ body {
   letter-spacing: 0.5px;
 }
 
-.timeslot-type {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--ms-gray-500);
-  margin-top: 4px;
-  text-transform: uppercase;
-}
-
-.timeslot-btn.selected .timeslot-type {
-  color: rgba(255, 255, 255, 0.8);
-}
-
 /* Loading State */
 .timeslot-loading {
   text-align: center;

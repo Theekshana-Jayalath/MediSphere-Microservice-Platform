@@ -224,7 +224,6 @@ const TimeSlots = ({ doctor = null, selectedDate = '', selectedTime = '', setSel
               >
                 <div className="timeslot-time">{label}</div>
                 <div className="timeslot-hospital">{slot.hospital}</div>
-                <div className="timeslot-type">{slot.type}</div>
               </button>
             );
           })}
