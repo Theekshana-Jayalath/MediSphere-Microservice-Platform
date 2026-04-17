@@ -25,6 +25,11 @@ export const getSessionSummary = async () => {
   return response.data;
 };
 
+export const getSessionById = async (sessionId) => {
+  const response = await telemedicineApi.get(`/${sessionId}`);
+  return response.data;
+};
+
 export const startSession = async (sessionId) => {
   const response = await telemedicineApi.patch(`/${sessionId}/start`);
   return response.data;
