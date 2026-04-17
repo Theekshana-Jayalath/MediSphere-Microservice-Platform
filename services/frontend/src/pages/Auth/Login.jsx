@@ -17,6 +17,7 @@ const AUTH_ENDPOINTS = [
 const DOCTOR_ENDPOINTS = [
   import.meta.env.VITE_DOCTOR_API_BASE_URL,
   "http://localhost:6010/api/doctors",
+  "http://localhost:5015/api/doctors",
 ].filter(Boolean);
 
 export default function Login() {
@@ -76,7 +77,11 @@ export default function Login() {
 
       if (!response) {
         console.error("Login network error:", lastError);
-        alert("Auth service is not reachable. Please start auth-service and try again.");
+        alert(
+          isDoctorLogin
+            ? "Doctor service is not reachable. Please start doctor-service and try again."
+            : "Auth service is not reachable. Please start auth-service or the API gateway and try again."
+        );
         return;
       }
 
