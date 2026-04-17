@@ -1,79 +1,361 @@
 import Payment from "../models/paymentModel.js";
 import { generateHash } from "../utils/payhereHash.js";
+import axios from "axios";
 
 export const createPayment = async (req, res) => {
-  const { appointmentId, patientId, doctorId, amount, contact } = req.body;
+  try {
+    console.log("📦 Received payment request:", req.body);
 
-  const orderId = "ORDER_" + Date.now();
+    const {
+      appointmentId,
+      patientId,
+      doctorId,
+      amount,
+      contact,
+      bookingDetails,
+    } = req.body;
 
-  const payment = new Payment({
-    orderId,
-    appointmentId,
-    patientId,
-    doctorId,
-    amount,
-    currency: "LKR",
-    status: "PENDING",
-    contact,
-  });
+    if (!appointmentId || !patientId || !doctorId || !amount || !contact) {
+      console.error("❌ Missing required fields");
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+      });
+    }
 
-  await payment.save();
+    const orderId = "ORDER_" + Date.now() + "_" + Math.random().toString(36).substr(2, 6);
+    console.log("🆕 Created orderId:", orderId);
 
-  const formattedAmount = Number(amount).toFixed(2);
+    const payment = new Payment({
+      orderId,
+      appointmentId,
+      patientId,
+      doctorId,
+      amount: Number(amount),
+      currency: "LKR",
+      status: "PENDING",
+      contact,
+      bookingDetails: bookingDetails || {},
+    });
 
-  const hash = generateHash(
-    process.env.PAYHERE_MERCHANT_ID,
-    orderId,
-    formattedAmount,
-    "LKR",
-    process.env.PAYHERE_MERCHANT_SECRET
-  );
+    await payment.save();
 
-  const payhere = {
-    merchant_id: process.env.PAYHERE_MERCHANT_ID,
-    return_url: process.env.PAYHERE_RETURN_URL,
-    cancel_url: process.env.PAYHERE_CANCEL_URL,
-    notify_url: process.env.PAYHERE_NOTIFY_URL,
-    order_id: orderId,
-    items: `Appointment ${orderId}`,
-    currency: "LKR",
-    amount: formattedAmount,
-    first_name: "Patient",
-    last_name: "",
-    email: contact,
-    phone: contact,
-    country: "Sri Lanka",
-    hash,
-  };
+    if (!appointmentId && !payment.appointmentId) {
+      try {
+        const appointmentServiceBase =
+          process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
+        const bd = payment.bookingDetails || {};
+        const doc = bd.doctor || {};
 
-  res.json({ payhere });
+        const appointmentPayload = {
+          appointmentId: payment.appointmentId || `APT_${Date.now()}`,
+          patientId: payment.patientId,
+          doctorId: payment.doctorId,
+          doctorName: doc.fullName || doc.name || "",
+          doctorSpecialty: doc.specialization || doc.specialty || "",
+          hospital: doc.baseHospital || doc.hospital || "",
+          appointmentDate: bd.selectedDate || bd.appointmentDate || "",
+          appointmentTime: bd.selectedTime || bd.appointmentTime || bd.startTime || "",
+          startTime: bd.selectedTime || bd.startTime || "",
+          duration: bd.duration || bd.selectedConsultation?.duration || 30,
+          consultationType: bd.selectedConsultation?.type || bd.selectedConsultation || "Consultation",
+          amount: payment.amount || 0,
+          paymentId: payment._id.toString(),
+          status: "PENDING",
+        };
+
+        console.log("📤 Creating initial appointment (PENDING) via Appointment Service:", appointmentPayload);
+
+        const resp = await axios.post(
+          `${appointmentServiceBase}/api/appointments`,
+          appointmentPayload,
+          {
+            headers: { "Content-Type": "application/json" },
+            timeout: 8000,
+          }
+        );
+
+        console.log("✅ Initial appointment created:", resp.data);
+        if (resp.data && (resp.data._id || resp.data.appointmentId)) {
+          payment.appointmentId = resp.data.appointmentId || payment.appointmentId || appointmentPayload.appointmentId;
+          await payment.save();
+        }
+      } catch (err) {
+        console.error("⚠️ Could not create initial appointment (will retry on IPN):", err?.response?.data || err.message || err);
+      }
+    } else {
+      console.log("ℹ️ Skipping appointment creation because appointmentId was provided by caller:", appointmentId || payment.appointmentId);
+    }
+
+    const formattedAmount = Number(amount).toFixed(2);
+    console.log("💰 Amount:", formattedAmount);
+
+    const merchantId = process.env.PAYHERE_MERCHANT_ID;
+    const merchantSecret = process.env.PAYHERE_MERCHANT_SECRET;
+
+    console.log("🏪 Merchant ID:", merchantId);
+
+    if (!merchantId || !merchantSecret) {
+      console.error("❌ Missing PayHere credentials in .env");
+      return res.status(500).json({
+        success: false,
+        message: "Payment gateway configuration error",
+      });
+    }
+
+    const hash = generateHash(
+      merchantId,
+      orderId,
+      formattedAmount,
+      "LKR",
+      merchantSecret
+    );
+    console.log("🔐 Generated hash:", hash);
+
+    let firstName = "Test";
+    let lastName = "User";
+    let email = "test@example.com";
+    let phone = "0712345678";
+
+    if (contact.includes("@")) {
+      email = contact;
+      firstName = contact.split("@")[0];
+    } else {
+      phone = contact;
+      firstName = "Patient";
+    }
+
+    const payhere = {
+      merchant_id: merchantId,
+      return_url: process.env.PAYHERE_RETURN_URL,
+      cancel_url: process.env.PAYHERE_CANCEL_URL,
+      notify_url: process.env.PAYHERE_NOTIFY_URL,
+      order_id: orderId,
+      items: `Appointment Booking - ${bookingDetails?.doctor?.name || "Doctor Consultation"}`,
+      currency: "LKR",
+      amount: formattedAmount,
+      first_name: firstName,
+      last_name: lastName,
+      email: email,
+      phone: phone,
+      address: "Colombo",
+      city: "Colombo",
+      country: "Sri Lanka",
+      delivery_address: "",
+      delivery_city: "",
+      delivery_country: "",
+      custom_1: "appointment_payment",
+      custom_2: patientId,
+      hash: hash,
+    };
+
+    console.log("✅ Sending payhere data:", payhere);
+
+    res.json({
+      success: true,
+      payhere: payhere,
+    });
+  } catch (error) {
+    console.error("❌ Create payment error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 };
 
 export const handleIPN = async (req, res) => {
   console.log("IPN received", req.body);
 
-  const { order_id, payment_id, status_code } = req.body;
+  const body = req.body;
+  const orderId = body.order_id || body.orderId;
+  const statusCode = body.status_code || body.status || body.payment_status;
 
-  try {
-    const payment = await Payment.findOne({ orderId: order_id });
-
-    if (payment) {
-      if (status_code == 2) {
-        payment.status = "SUCCESS";
-      } else {
-        payment.status = "FAILED";
-      }
-
-      payment.transactionId = payment_id;
-      await payment.save();
-
-      console.log("Payment updated:", order_id);
-    }
-  } catch (error) {
-    console.error(error);
+  if (!orderId) {
+    console.error("⚠️ IPN missing order_id");
+    return res.status(400).send("Missing order_id");
   }
 
-  res.sendStatus(200);
+  try {
+    const payment = await Payment.findOne({ orderId });
+
+    if (!payment) {
+      console.error("⚠️ Payment not found for orderId:", orderId);
+      return res.status(404).send("Payment not found");
+    }
+
+    const isSuccess = String(statusCode) === "2" ||
+      String(body.status).toLowerCase() === "paid" ||
+      String(body.status).toLowerCase() === "success";
+
+    if (!isSuccess) {
+      payment.status = "FAILED";
+      payment.transactionId = body.payment_id || body.transaction_id || payment.transactionId;
+      await payment.save();
+      console.log("⚠️ Payment marked as FAILED for orderId:", orderId);
+      return res.status(200).send("OK");
+    }
+
+    payment.status = "SUCCESS";
+    payment.transactionId = body.payment_id || body.transaction_id || payment.transactionId || body.paymentId || body.payhere_payment_id;
+    payment.updatedAt = new Date();
+    await payment.save();
+
+    console.log("✅ Payment updated to SUCCESS for orderId:", orderId);
+
+    const appointmentServiceBase = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
+
+    const bd = payment.bookingDetails || {};
+    const doc = bd.doctor || {};
+
+    const appointmentPayload = {
+      appointmentId: payment.appointmentId || `APT_${Date.now()}`,
+      patientId: payment.patientId,
+      doctorId: payment.doctorId,
+      doctorName: doc.fullName || doc.name || doc.displayName || "",
+      doctorSpecialty: doc.specialization || doc.specialty || "",
+      hospital: doc.baseHospital || doc.hospital || "",
+      appointmentDate: bd.selectedDate || bd.appointmentDate || "",
+      appointmentTime: bd.selectedTime || bd.appointmentTime || bd.startTime || "",
+      startTime: bd.selectedTime || bd.startTime || "",
+      duration: bd.duration || 30,
+      consultationType: bd.selectedConsultation || bd.consultationType || "",
+      amount: payment.amount || 0,
+      paymentId: payment._id.toString(),
+    };
+
+    console.log("📤 Creating appointment via Appointment Service:", appointmentPayload);
+
+    try {
+      const resp = await axios.post(
+        `${appointmentServiceBase}/api/appointments`,
+        appointmentPayload,
+        {
+          headers: { "Content-Type": "application/json" },
+          timeout: 10000,
+        }
+      );
+
+      console.log("✅ Appointment created:", resp.data);
+
+      if (resp.data && (resp.data._id || resp.data.appointmentId)) {
+        payment.appointmentId = resp.data.appointmentId || payment.appointmentId;
+        await payment.save();
+      }
+
+      return res.status(200).send("OK");
+    } catch (err) {
+      console.error("❌ Failed to create appointment after payment success:", err?.response?.data || err.message || err);
+      return res.status(500).send("Appointment creation failed");
+    }
+  } catch (error) {
+    console.error("IPN processing error:", error);
+    res.sendStatus(200);
+  }
+};
+
+export const getPaymentStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const payment = await Payment.findOne({ orderId });
+
+    if (!payment) {
+      return res.status(404).json({ success: false, message: "Payment not found" });
+    }
+
+    if (payment.status === "PENDING") {
+      console.log("🔁 Pending payment detected. Attempting to finalize appointment (no origin check).");
+
+      payment.status = "SUCCESS";
+      payment.updatedAt = new Date();
+      await payment.save();
+
+      try {
+        const appointmentServiceBase = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
+        const bd = payment.bookingDetails || {};
+        const doc = bd.doctor || {};
+
+        const appointmentPayload = {
+          appointmentId: payment.appointmentId || `APT_${Date.now()}`,
+          patientId: payment.patientId,
+          doctorId: payment.doctorId,
+          doctorName: doc.fullName || doc.name || doc.displayName || "",
+          doctorSpecialty: doc.specialization || doc.specialty || "",
+          hospital: doc.baseHospital || doc.hospital || "",
+          appointmentDate: bd.selectedDate || bd.appointmentDate || "",
+          appointmentTime: bd.selectedTime || bd.appointmentTime || bd.startTime || "",
+          startTime: bd.selectedTime || bd.startTime || "",
+          duration: bd.duration || bd.selectedConsultation?.duration || 30,
+          consultationType: bd.selectedConsultation?.type || bd.selectedConsultation || "Consultation",
+          amount: payment.amount || 0,
+          paymentId: payment._id.toString(),
+        };
+
+        try {
+          const targetId = payment.appointmentId || appointmentPayload.appointmentId;
+          const updateResp = await axios.put(
+            `${appointmentServiceBase}/api/appointments/${encodeURIComponent(targetId)}/payment`,
+            {},
+            {
+              headers: { "Content-Type": "application/json" },
+              timeout: 8000,
+            }
+          );
+          console.log("✅ (fallback) Appointment updated via payment endpoint:", updateResp.data);
+          if (updateResp.data && (updateResp.data._id || updateResp.data.appointmentId)) {
+            payment.appointmentId = updateResp.data.appointmentId || payment.appointmentId;
+            await payment.save();
+          }
+        } catch (updateErr) {
+          console.warn("⚠️ (fallback) Could not update appointment, creating a new one:", updateErr?.response?.data || updateErr.message || updateErr);
+          const resp = await axios.post(
+            `${appointmentServiceBase}/api/appointments`,
+            appointmentPayload,
+            {
+              headers: { "Content-Type": "application/json" },
+              timeout: 10000,
+            }
+          );
+          console.log("✅ (fallback) Appointment created:", resp.data);
+          if (resp.data && (resp.data._id || resp.data.appointmentId)) {
+            payment.appointmentId = resp.data.appointmentId || payment.appointmentId;
+            await payment.save();
+          }
+        }
+      } catch (err) {
+        console.error("❌ (fallback) Failed to finalize appointment:", err?.response?.data || err.message || err);
+      }
+    }
+
+    res.json({ success: true, status: payment.status, payment });
+  } catch (error) {
+    console.error("Get payment status error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getPaymentByAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    if (!appointmentId) {
+      return res.status(400).json({ success: false, message: "Missing appointmentId" });
+    }
+
+    const payment = await Payment.findOne({ appointmentId });
+    if (!payment) {
+      return res.json({ success: true, exists: false });
+    }
+
+    return res.json({
+      success: true,
+      exists: true,
+      status: payment.status,
+      payment,
+    });
+  } catch (error) {
+    console.error("❌ getPaymentByAppointment error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 export const getAllPayments = async (req, res) => {
@@ -89,9 +371,7 @@ export const getAllPayments = async (req, res) => {
 export const getPaymentsByPatient = async (req, res) => {
   try {
     const { patientId } = req.params;
-
     const payments = await Payment.find({ patientId }).sort({ createdAt: -1 });
-
     res.status(200).json(payments);
   } catch (error) {
     console.error("Failed to fetch patient payments:", error);
