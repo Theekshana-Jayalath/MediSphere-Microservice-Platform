@@ -2,8 +2,11 @@ import fs from "fs";
 import path from "path";
 import Patient from "../models/Patient.js";
 import Report from "../models/Report.js";
+import { fileURLToPath } from "url";
 
-const uploadsDir = path.join(process.cwd(), "src", "uploads");
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDir = path.dirname(currentFilePath);
+const uploadsDir = path.join(currentDir, "..", "uploads");
 
 const buildPublicFileUrl = (filename) => {
   return `/uploads/${filename}`;
@@ -15,6 +18,11 @@ const getStoredFilenameFromUrl = (fileUrl = "") => {
 
 export const uploadReport = async (req, res) => {
   try {
+    console.log("uploadReport hit");
+    console.log("Authenticated user:", req.user);
+    console.log("Request body:", req.body);
+    console.log("Request file:", req.file);
+
     const patient = await Patient.findOne({ userId: req.user.id });
 
     if (!patient) {
@@ -25,7 +33,7 @@ export const uploadReport = async (req, res) => {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    const { title, description, reportType } = req.body;
+    const { title, description, reportType, doctorId } = req.body;
 
     if (!title) {
       return res.status(400).json({ message: "Report title is required" });
@@ -34,6 +42,7 @@ export const uploadReport = async (req, res) => {
     const report = await Report.create({
       patientId: patient._id,
       uploadedBy: req.user.id,
+      doctorId: doctorId || null,
       title,
       description,
       fileUrl: buildPublicFileUrl(req.file.filename),
@@ -48,6 +57,7 @@ export const uploadReport = async (req, res) => {
       report,
     });
   } catch (error) {
+    console.error("uploadReport error:", error);
     return res.status(500).json({ message: error.message });
   }
 };
@@ -63,6 +73,31 @@ export const getMyReports = async (req, res) => {
     const reports = await Report.find({ patientId: patient._id }).sort({
       createdAt: -1,
     });
+
+    return res.status(200).json(reports);
+  } catch (error) {
+    console.error("getMyReports error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const getReportsByDoctor = async (req, res) => {
+  try {
+    const requestedDoctorId = String(req.params.doctorId || "").trim();
+    const requesterRole = String(req.user?.role || "").toUpperCase();
+    const requesterId = String(req.user?.id || "").trim();
+
+    if (!requestedDoctorId) {
+      return res.status(400).json({ message: "Doctor id is required" });
+    }
+
+    if (requesterRole !== "ADMIN" && requesterId !== requestedDoctorId) {
+      return res.status(403).json({ message: "Forbidden: can only access your own reports" });
+    }
+
+    const reports = await Report.find({ doctorId: requestedDoctorId })
+      .populate("patientId", "name patientId")
+      .sort({ createdAt: -1 });
 
     return res.status(200).json(reports);
   } catch (error) {
@@ -89,6 +124,7 @@ export const getReportById = async (req, res) => {
 
     return res.status(200).json(report);
   } catch (error) {
+    console.error("getReportById error:", error);
     return res.status(500).json({ message: error.message });
   }
 };
@@ -111,14 +147,17 @@ export const updateReport = async (req, res) => {
     }
 
     if (report.uploadedBy.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Not authorized to update this report" });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to update this report" });
     }
 
-    const { title, description, reportType } = req.body;
+    const { title, description, reportType, doctorId } = req.body;
 
     if (title !== undefined) report.title = title;
     if (description !== undefined) report.description = description;
     if (reportType !== undefined) report.reportType = reportType;
+    if (doctorId !== undefined) report.doctorId = doctorId;
 
     if (req.file) {
       if (report.fileUrl) {
@@ -143,6 +182,7 @@ export const updateReport = async (req, res) => {
       report,
     });
   } catch (error) {
+    console.error("updateReport error:", error);
     return res.status(500).json({ message: error.message });
   }
 };
@@ -165,7 +205,9 @@ export const deleteReport = async (req, res) => {
     }
 
     if (report.uploadedBy.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Not authorized to delete this report" });
+      return res
+        .status(403)
+        .json({ message: "Not authorized to delete this report" });
     }
 
     if (report.fileUrl) {
@@ -183,6 +225,7 @@ export const deleteReport = async (req, res) => {
       message: "Report deleted successfully",
     });
   } catch (error) {
+    console.error("deleteReport error:", error);
     return res.status(500).json({ message: error.message });
   }
 };

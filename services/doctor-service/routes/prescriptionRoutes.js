@@ -1,22 +1,14 @@
 import express from "express";
-import {
-  createPrescription,
-  getAllPrescriptions,
-  getPrescriptionById,
-  getPrescriptionsByDoctor,
-  getPrescriptionsByPatient,
-  updatePrescription,
-  deletePrescription,
-} from "../controllers/prescriptionController.js";
+import * as prescriptionController from "../controllers/prescriptionController.js";
 
 const router = express.Router();
 
-router.post("/", createPrescription);
-router.get("/", getAllPrescriptions);
-router.get("/doctor/:doctorId", getPrescriptionsByDoctor);
-router.get("/patient/:patientId", getPrescriptionsByPatient);
-router.get("/:id", getPrescriptionById);
-router.put("/:id", updatePrescription);
-router.delete("/:id", deletePrescription);
+router.post("/", prescriptionController.createPrescription);
+router.get("/", prescriptionController.getAllPrescriptions);
+router.get("/doctor/:doctorId", prescriptionController.getPrescriptionsByDoctor);
+router.get("/patient/:patientId", prescriptionController.getPrescriptionsByPatient);
+router.get("/:id", prescriptionController.getPrescriptionById);
+router.put("/:id", prescriptionController.updatePrescription);
+router.delete("/:id", prescriptionController.deletePrescription);
 
 export default router;

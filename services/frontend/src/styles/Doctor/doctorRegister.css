@@ -1,0 +1,180 @@
+/* ================= BASE ================= */
+* {
+  box-sizing: border-box;
+}
+
+.doctor-register-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.08fr 0.92fr;
+  background: #f5f1ed;
+}
+
+/* ================= LEFT PANEL ================= */
+.doctor-register-left-panel {
+  background: linear-gradient(180deg, #10294b 0%, #163862 100%);
+  color: #ffffff;
+  padding: 40px;
+  position: sticky;
+  top: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.doctor-register-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.doctor-register-logo-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #10294b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.doctor-register-brand h2 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.doctor-register-left-content h1 {
+  font-size: 72px;
+  font-weight: 800;
+}
+
+.doctor-register-left-content p {
+  font-size: 22px;
+  color: #d7e3f6;
+}
+
+/* ================= RIGHT PANEL ================= */
+.doctor-register-right-panel {
+  background: #f6f1ed;
+  padding: 30px 40px;
+  overflow-y: auto;
+}
+
+.doctor-register-form-wrapper {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.doctor-register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+/* ================= FIELDS ================= */
+.doctor-register-grid {
+  display: grid;
+  gap: 22px;
+}
+
+.doctor-register-grid.two-columns {
+  grid-template-columns: 1fr 1fr;
+}
+
+.doctor-register-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.doctor-register-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.doctor-register-field label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #50627f;
+  margin-bottom: 8px;
+}
+
+.doctor-register-field input,
+.doctor-register-field select {
+  height: 60px;
+  border: 1px solid #e0dad4;
+  border-radius: 16px;
+  padding: 0 16px;
+  font-size: 18px;
+  background: #ffffff;
+}
+
+.doctor-register-field input:focus,
+.doctor-register-field select:focus {
+  outline: none;
+  border-color: #183a66;
+  box-shadow: 0 0 0 3px rgba(24, 58, 102, 0.1);
+}
+
+/* ================= BUTTON ================= */
+
+.doctor-register-submit-btn {
+  height: 70px;
+  border-radius: 20px;
+  background: linear-gradient(90deg, #031f45, #1d3658);
+  color: #fff;
+  font-size: 22px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.doctor-register-submit-btn:hover {
+  transform: translateY(-2px);
+}
+
+/* ================= ERROR ================= */
+
+.field-error {
+  font-size: 13px;
+  color: red;
+  margin-top: 6px;
+}
+
+.doctor-register-error-message {
+  background: #fde9e9;
+  color: #9f1f1f;
+  border: 1px solid #f3c1c1;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.inline-submit-error {
+  margin-top: -8px;
+}
+
+.doctor-register-success-message {
+  background: #e8f7ed;
+  color: #1d6a3a;
+  border: 1px solid #bfe8cc;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 900px) {
+  .doctor-register-page {
+    grid-template-columns: 1fr;
+  }
+
+  .doctor-register-grid.two-columns {
+    grid-template-columns: 1fr;
+  }
+}

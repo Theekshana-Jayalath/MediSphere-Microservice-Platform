@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Patient from "../models/Patient.js";
 import Prescription from "../models/Prescription.js";
 import MedicalHistory from "../models/MedicalHistory.js";
@@ -81,7 +82,9 @@ export const createPatientProfile = async (req, res) => {
       allergies,
     } = req.body;
 
-    const existingProfile = await Patient.findOne({ userId: req.user.id });
+    const existingProfile = await Patient.findOne({
+      userId: new mongoose.Types.ObjectId(req.user.id),
+    });
 
     if (existingProfile) {
       return res
@@ -93,7 +96,7 @@ export const createPatientProfile = async (req, res) => {
 
     const patient = await Patient.create({
       patientId,
-      userId: req.user.id,
+      userId: new mongoose.Types.ObjectId(req.user.id),
       name,
       email,
       dateOfBirth,
@@ -116,7 +119,9 @@ export const createPatientProfile = async (req, res) => {
 
 export const getMyProfile = async (req, res) => {
   try {
-    const patient = await Patient.findOne({ userId: req.user.id });
+    const patient = await Patient.findOne({
+      userId: new mongoose.Types.ObjectId(req.user.id),
+    });
 
     if (!patient) {
       return res.status(404).json({ message: "Patient profile not found" });
@@ -142,7 +147,9 @@ export const updateMyProfile = async (req, res) => {
       allergies,
     } = req.body;
 
-    const patient = await Patient.findOne({ userId: req.user.id });
+    const patient = await Patient.findOne({
+      userId: new mongoose.Types.ObjectId(req.user.id),
+    });
 
     if (!patient) {
       return res.status(404).json({ message: "Patient profile not found" });
@@ -191,7 +198,9 @@ export const updateMyProfile = async (req, res) => {
 
 export const getMyPrescriptions = async (req, res) => {
   try {
-    const patient = await Patient.findOne({ userId: req.user.id });
+    const patient = await Patient.findOne({
+      userId: new mongoose.Types.ObjectId(req.user.id),
+    });
 
     if (!patient) {
       return res.status(404).json({ message: "Patient profile not found" });
@@ -209,7 +218,9 @@ export const getMyPrescriptions = async (req, res) => {
 
 export const getMyMedicalHistory = async (req, res) => {
   try {
-    const patient = await Patient.findOne({ userId: req.user.id });
+    const patient = await Patient.findOne({
+      userId: new mongoose.Types.ObjectId(req.user.id),
+    });
 
     if (!patient) {
       return res.status(404).json({ message: "Patient profile not found" });
@@ -236,7 +247,17 @@ export const getAllPatients = async (req, res) => {
 
 export const getPatientById = async (req, res) => {
   try {
-    const patient = await Patient.findById(req.params.id);
+    const { id } = req.params;
+
+    let patient = null;
+
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      patient =
+        (await Patient.findById(id)) ||
+        (await Patient.findOne({ userId: new mongoose.Types.ObjectId(id) }));
+    } else {
+      patient = await Patient.findOne({ patientId: id });
+    }
 
     if (!patient) {
       return res.status(404).json({ message: "Patient not found" });
@@ -244,6 +265,7 @@ export const getPatientById = async (req, res) => {
 
     return res.status(200).json(patient);
   } catch (error) {
+    console.error("Failed to fetch patient by id:", error);
     return res.status(500).json({ message: error.message });
   }
 };

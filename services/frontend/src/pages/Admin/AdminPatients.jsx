@@ -243,20 +243,6 @@ export default function AdminPatients() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-
-          <div className="admin-patients-topbar-right">
-            <button className="icon-btn" type="button">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
-            <button className="icon-btn" type="button">
-              <span className="material-symbols-outlined">chat_bubble</span>
-            </button>
-
-            <div className="admin-patients-user">
-              <img src="https://i.pravatar.cc/100?img=12" alt="admin" />
-              <span className="material-symbols-outlined">account_circle</span>
-            </div>
-          </div>
         </header>
 
         <main className="admin-patients-content">
@@ -267,11 +253,6 @@ export default function AdminPatients() {
             </div>
 
             <div className="admin-patients-header-actions">
-              <button className="secondary-btn" type="button">
-                <span className="material-symbols-outlined">download</span>
-                Export Registry
-              </button>
-
               <button className="primary-btn" type="button">
                 <span className="material-symbols-outlined">person_add</span>
                 Onboard Patient
@@ -502,42 +483,8 @@ export default function AdminPatients() {
                 <span className="material-symbols-outlined">arrow_forward</span>
               </button>
             </div>
-
-            <div className="quick-actions-panel">
-              <h3>System Quick Actions</h3>
-
-              <div className="quick-actions-panel-grid">
-                <button type="button">
-                  <span className="material-symbols-outlined">assignment_add</span>
-                  <strong>Bulk Upload</strong>
-                  <small>Import CSV records</small>
-                </button>
-
-                <button type="button">
-                  <span className="material-symbols-outlined">share_windows</span>
-                  <strong>Sync Records</strong>
-                  <small>External EHR Update</small>
-                </button>
-
-                <button type="button">
-                  <span className="material-symbols-outlined">shield_person</span>
-                  <strong>Privacy Audit</strong>
-                  <small>Registry review</small>
-                </button>
-
-                <button type="button">
-                  <span className="material-symbols-outlined">mail</span>
-                  <strong>Broadcast</strong>
-                  <small>Notify registry</small>
-                </button>
-              </div>
-            </div>
           </section>
         </main>
-
-        <button className="patient-fab" type="button">
-          <span className="material-symbols-outlined">add</span>
-        </button>
       </div>
 
       {selectedPatient && (

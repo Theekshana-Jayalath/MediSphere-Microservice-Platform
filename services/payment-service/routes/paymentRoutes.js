@@ -1,9 +1,21 @@
+// routes/paymentRoutes.js
 import express from "express";
-import { createPayment, handleIPN } from "../controllers/paymentController.js";
+import {
+  createPayment,
+  handleIPN,
+  getPaymentStatus,
+  getPaymentByAppointment,
+  getAllPayments,
+  getPaymentsByPatient,
+} from "../controllers/paymentController.js";
 
 const router = express.Router();
 
+router.get("/", getAllPayments);
+router.get("/patient/:patientId", getPaymentsByPatient);
 router.post("/create", createPayment);
-router.post("/ipn", handleIPN); // PayHere notify_url will POST here
+router.post("/ipn", handleIPN);
+router.get("/status/:orderId", getPaymentStatus);
+router.get("/appointment/:appointmentId", getPaymentByAppointment);
 
 export default router;

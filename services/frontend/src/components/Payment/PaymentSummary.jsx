@@ -1,41 +1,24 @@
-const PaymentSummary = ({ consultationFee = 0 }) => {
-  // Ensure numeric
-  const fee = Number(consultationFee) || 0;
-  const serviceCharge = 500; // fixed LKR per doctor
-  const tax = Math.round((fee * 0.04) * 100) / 100; // 4% of consultation fee, rounded to 2 decimals
-  const total = Math.round((fee + serviceCharge + tax) * 100) / 100;
+import React from "react";
 
-  const fmt = (val) => `LKR ${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const PaymentSummary = ({ consultationFee = 0 }) => {
+  const fee = Number(consultationFee) || 0;
+  const serviceCharge = 500;
+  const tax = (fee * 0.04);
+  const total = fee + serviceCharge + tax;
 
   return (
-    <div className="pm-summary-card">
-
-      <div className="pm-summary-top">
+    <div className="payment-summary-card">
+      <div className="summary-header">
         <div>
-          <p className="pm-label">TOTAL AMOUNT</p>
-          <h2>{fmt(total)}</h2>
+          <p className="summary-label">TOTAL AMOUNT</p>
+          <h2 className="summary-amount">LKR {total.toFixed(2)}</h2>
         </div>
-
-        <span className="pm-verified">✔ VERIFIED RATE</span>
+        <span className="verified-badge">✓ VERIFIED RATE</span>
       </div>
-
-      <div className="pm-divider"></div>
-
-      <div className="pm-row">
-        <span>Consultation Fee</span>
-        <span>{fmt(fee)}</span>
-      </div>
-
-      <div className="pm-row">
-        <span>Service Charge</span>
-        <span>{fmt(serviceCharge)}</span>
-      </div>
-
-      <div className="pm-row">
-        <span>Healthcare Tax (4%)</span>
-        <span>{fmt(tax)}</span>
-      </div>
-
+      <div className="summary-divider"></div>
+      <div className="summary-row"><span>Consultation Fee</span><span>LKR {fee.toFixed(2)}</span></div>
+      <div className="summary-row"><span>Service Charge</span><span>LKR {serviceCharge.toFixed(2)}</span></div>
+      <div className="summary-row"><span>Healthcare Tax (4%)</span><span>LKR {tax.toFixed(2)}</span></div>
     </div>
   );
 };

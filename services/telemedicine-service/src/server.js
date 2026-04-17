@@ -1,10 +1,12 @@
+import dns from "node:dns";
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import telemedicineRoutes from "./routes/telemedicineRoutes.js";
-import dns from "node:dns";
-dns.setServers(["8.8.8.8", "1.1.1.1"]);
+
 
 dotenv.config();
 
