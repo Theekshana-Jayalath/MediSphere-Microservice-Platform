@@ -22,7 +22,12 @@ export default function PatientPayments() {
 
   const patientName =
     patientProfile?.name || patientProfile?.fullName || user?.name || "Patient";
+
+  // For display in UI
   const patientId = patientProfile?.patientId || user?.patientId || "PAT0004";
+
+  // For backend lookup (matches payment collection patientId)
+  const paymentPatientId = patientProfile?.userId || user?.id || "";
 
   const API_GATEWAY_URL = import.meta.env.VITE_API_GATEWAY_URL
     ? import.meta.env.VITE_API_GATEWAY_URL
@@ -40,8 +45,14 @@ export default function PatientPayments() {
         localStorage.getItem("accessToken") ||
         "";
 
+      if (!paymentPatientId) {
+        setPayments([]);
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch(
-        `${API_GATEWAY_URL}/api/payments/patient/${patientId}`,
+        `${API_GATEWAY_URL}/api/payments/patient/${paymentPatientId}`,
         {
           method: "GET",
           headers: {
@@ -154,6 +165,14 @@ export default function PatientPayments() {
     ];
   };
 
+  const normalizePaymentStatus = (status) => {
+    const normalized = String(status || "").toUpperCase();
+
+    if (normalized === "SUCCESS") return "PAID";
+    if (normalized === "FAILED") return "FAILED";
+    return normalized;
+  };
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -164,48 +183,56 @@ export default function PatientPayments() {
   };
 
   const formatAmount = (amount) => {
-    return `LKR ${amount.toLocaleString("en-US", {
+    return `LKR ${Number(amount || 0).toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
   };
 
   const getStatusBadgeClass = (status) => {
-    return status === "PAID" ? "paid" : "pending";
+    const normalizedStatus = normalizePaymentStatus(status);
+    if (normalizedStatus === "PAID") return "paid";
+    if (normalizedStatus === "FAILED") return "failed";
+    return "pending";
   };
 
   const getDoctorInitials = (doctorName) => {
-    return doctorName
+    return String(doctorName || "Doctor")
       .split(" ")
       .map((n) => n[0])
       .join("");
   };
 
   const calculateTotals = () => {
-    const patientPayments = payments.filter((p) => p.patientId === patientId);
-    const totalSpent = patientPayments
-      .filter((p) => p.status === "PAID")
-      .reduce((sum, p) => sum + p.amount, 0);
+    const totalSpent = payments
+      .filter((p) => normalizePaymentStatus(p.status) === "PAID")
+      .reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
-    const pendingAmount = patientPayments
-      .filter((p) => p.status === "PENDING")
-      .reduce((sum, p) => sum + p.amount, 0);
+    const pendingAmount = payments
+      .filter((p) => normalizePaymentStatus(p.status) === "PENDING")
+      .reduce((sum, p) => sum + Number(p.amount || 0), 0);
 
-    const lastTransaction = patientPayments
-      .filter((p) => p.status === "PAID")
+    const lastTransaction = [...payments]
+      .filter((p) => normalizePaymentStatus(p.status) === "PAID")
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
 
     return { totalSpent, pendingAmount, lastTransaction };
   };
 
   const filteredPayments = payments.filter((payment) => {
-    const matchesPatient = payment.patientId === patientId;
+    const normalizedStatus = normalizePaymentStatus(payment.status);
     const matchesSearch =
-      payment.doctorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.serviceType.toLowerCase().includes(searchTerm.toLowerCase());
+      String(payment.doctorName || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      String(payment.serviceType || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+
     const matchesStatus =
-      filterStatus === "all" || payment.status === filterStatus;
-    return matchesPatient && matchesSearch && matchesStatus;
+      filterStatus === "all" || normalizedStatus === filterStatus;
+
+    return matchesSearch && matchesStatus;
   });
 
   const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
@@ -232,7 +259,7 @@ export default function PatientPayments() {
       amount: payment.amount || 0,
       currency: payment.currency || "LKR",
       paymentMethod: payment.paymentMethod || "",
-      status: payment.status || "",
+      status: normalizePaymentStatus(payment.status) || "",
       patientId: payment.patientId || "",
       doctorId: payment.doctorId || "",
       paymentId: payment._id || "",
@@ -454,7 +481,9 @@ export default function PatientPayments() {
                   <tbody>
                     {paginatedPayments.map((payment) => (
                       <tr key={payment._id}>
-                        <td className="date-cell">{formatDate(payment.createdAt)}</td>
+                        <td className="date-cell">
+                          {formatDate(payment.createdAt)}
+                        </td>
                         <td>
                           <div className="practitioner-info">
                             <div className="doctor-avatar">
@@ -475,7 +504,7 @@ export default function PatientPayments() {
                               payment.status
                             )}`}
                           >
-                            {payment.status}
+                            {normalizePaymentStatus(payment.status)}
                           </span>
                         </td>
                         <td className="actions-cell text-right">
@@ -499,12 +528,14 @@ export default function PatientPayments() {
               <div className="table-footer">
                 <p className="pagination-info">
                   Showing {(currentPage - 1) * itemsPerPage + 1}-
-                  {Math.min(currentPage * itemsPerPage, filteredPayments.length)} of{" "}
-                  {filteredPayments.length} transactions
+                  {Math.min(currentPage * itemsPerPage, filteredPayments.length)}{" "}
+                  of {filteredPayments.length} transactions
                 </p>
                 <div className="pagination-controls">
                   <button
-                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
                     disabled={currentPage === 1}
                   >
                     <span className="material-symbols-outlined">
