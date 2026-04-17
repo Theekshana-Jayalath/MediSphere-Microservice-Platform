@@ -47,7 +47,8 @@ export const createPayment = async (req, res) => {
     // we should NOT create a duplicate appointment — keep the same id.
     if (!appointmentId && !payment.appointmentId) {
       try {
-        const appointmentServiceBase = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
+        // Use API gateway to reach appointment service
+        const appointmentServiceBase = process.env.API_GATEWAY_URL || "http://localhost:5015";
         const bd = payment.bookingDetails || {};
         const doc = bd.doctor || {};
 
@@ -57,7 +58,8 @@ export const createPayment = async (req, res) => {
           doctorId: payment.doctorId,
           doctorName: doc.fullName || doc.name || "",
           doctorSpecialty: doc.specialization || doc.specialty || "",
-          hospital: doc.baseHospital || doc.hospital || "",
+          // Prefer hospital chosen at booking time (selectedHospital), fallback to doctor's base/hospital
+          hospital: bd.selectedHospital || doc.baseHospital || doc.hospital || "",
           appointmentDate: bd.selectedDate || bd.appointmentDate || "",
           appointmentTime: bd.selectedTime || bd.appointmentTime || bd.startTime || "",
           startTime: bd.selectedTime || bd.startTime || "",
@@ -202,8 +204,8 @@ export const handleIPN = async (req, res) => {
 
     console.log("✅ Payment updated to SUCCESS for orderId:", orderId);
 
-    // Create appointment in Appointment Service using saved payment data
-    const appointmentServiceBase = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
+  // Create appointment in Appointment Service using saved payment data via API gateway
+  const appointmentServiceBase = process.env.API_GATEWAY_URL || "http://localhost:5015";
 
     const bd = payment.bookingDetails || {};
     const doc = bd.doctor || {};
@@ -215,7 +217,7 @@ export const handleIPN = async (req, res) => {
       doctorId: payment.doctorId,
       doctorName: doc.fullName || doc.name || doc.displayName || "",
       doctorSpecialty: doc.specialization || doc.specialty || "",
-      hospital: doc.baseHospital || doc.hospital || "",
+  hospital: bd.selectedHospital || doc.baseHospital || doc.hospital || "",
       appointmentDate: bd.selectedDate || bd.appointmentDate || "",
       appointmentTime: bd.selectedTime || bd.appointmentTime || bd.startTime || "",
       startTime: bd.selectedTime || bd.startTime || "",
@@ -271,7 +273,7 @@ export const getPaymentStatus = async (req, res) => {
       await payment.save();
 
       try {
-        const appointmentServiceBase = process.env.APPOINTMENT_SERVICE_URL || "http://localhost:5002";
+  const appointmentServiceBase = process.env.API_GATEWAY_URL || "http://localhost:5015";
         const bd = payment.bookingDetails || {};
         const doc = bd.doctor || {};
 
@@ -281,7 +283,7 @@ export const getPaymentStatus = async (req, res) => {
           doctorId: payment.doctorId,
           doctorName: doc.fullName || doc.name || doc.displayName || "",
           doctorSpecialty: doc.specialization || doc.specialty || "",
-          hospital: doc.baseHospital || doc.hospital || "",
+          hospital: bd.selectedHospital || doc.baseHospital || doc.hospital || "",
           appointmentDate: bd.selectedDate || bd.appointmentDate || "",
           appointmentTime: bd.selectedTime || bd.appointmentTime || bd.startTime || "",
           startTime: bd.selectedTime || bd.startTime || "",

@@ -23,7 +23,9 @@ const BookingConfirm = ({ doctor, selectedTime, selectedDate, selectedConsultati
           doctor,
           selectedDate,
           selectedTime,
-          selectedConsultation
+          selectedConsultation,
+          // In some usages, doctor may include a selectedHospital prop or parent passes it in
+          selectedHospital: doctor?.selectedHospital || null
         }
       }
     });

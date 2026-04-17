@@ -53,6 +53,11 @@ let getAppointmentsByDoctorId = async (doctorId) => {
   return response.data;
 };
 
+let getSlots = async (doctorId, date) => {
+  const response = await appointmentApi.get(`/slots`, { params: { doctorId, date } });
+  return response.data; // { available: [...], blocked: [...] }
+};
+
 let createAppointment = async (appointmentData) => {
   let response = await appointmentApi.post("/", appointmentData);
   return response.data;
@@ -68,6 +73,7 @@ let updateAppointmentStatus = async (appointmentId, status) => {
 export {
   getAllAppointments,
   getAppointmentsByDoctorId,
+  getSlots,
   createAppointment,
   updateAppointmentStatus,
 };
