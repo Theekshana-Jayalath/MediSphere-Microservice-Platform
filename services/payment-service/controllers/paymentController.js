@@ -5,15 +5,22 @@ import axios from "axios";
 export const createPayment = async (req, res) => {
   try {
     console.log("📦 Received payment request:", req.body);
-    
-    const { appointmentId, patientId, doctorId, amount, contact, bookingDetails } = req.body;
+
+    const {
+      appointmentId,
+      patientId,
+      doctorId,
+      amount,
+      contact,
+      bookingDetails,
+    } = req.body;
 
     // Validate required fields
     if (!appointmentId || !patientId || !doctorId || !amount || !contact) {
       console.error("❌ Missing required fields");
-      return res.status(400).json({ 
-        success: false, 
-        message: "Missing required fields" 
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
       });
     }
 
@@ -29,8 +36,8 @@ export const createPayment = async (req, res) => {
       amount: Number(amount),
       currency: "LKR",
       status: "PENDING",
-      contact
-      // bookingDetails: bookingDetails || {}
+      contact,
+      bookingDetails: bookingDetails || {},
     });
 
     await payment.save();
@@ -58,7 +65,7 @@ export const createPayment = async (req, res) => {
           consultationType: bd.selectedConsultation?.type || bd.selectedConsultation || "Consultation",
           amount: payment.amount || 0,
           paymentId: payment._id.toString(),
-          status: "PENDING"
+          status: "PENDING",
         };
 
         console.log("📤 Creating initial appointment (PENDING) via Appointment Service:", appointmentPayload);
@@ -159,7 +166,7 @@ export const handleIPN = async (req, res) => {
   try {
     const body = req.body || {};
 
-    const orderId = body.order_id || body.orderId || body.orderId;
+    const orderId = body.order_id || body.orderId;
     const statusCode = body.status_code || body.status || body.payment_status;
 
     // Find the payment by orderId
@@ -206,12 +213,11 @@ export const handleIPN = async (req, res) => {
       appointmentId: payment.appointmentId || `APT_${Date.now()}`,
       patientId: payment.patientId,
       doctorId: payment.doctorId,
-      doctorName: doc.fullName || doc.name || doc.fullName || doc.displayName || "",
+      doctorName: doc.fullName || doc.name || doc.displayName || "",
       doctorSpecialty: doc.specialization || doc.specialty || "",
       hospital: doc.baseHospital || doc.hospital || "",
       appointmentDate: bd.selectedDate || bd.appointmentDate || "",
       appointmentTime: bd.selectedTime || bd.appointmentTime || bd.startTime || "",
-      // include startTime and duration which appointment controller expects for overlap checks
       startTime: bd.selectedTime || bd.startTime || "",
       duration: bd.duration || 30,
       consultationType: bd.selectedConsultation || bd.consultationType || "",
@@ -229,8 +235,6 @@ export const handleIPN = async (req, res) => {
 
       console.log("✅ Appointment created:", resp.data);
 
-      // Optionally link appointment internal id back to payment if returned
-      // If appointment creation returns appointment.appointmentId or _id, keep them
       if (resp.data && (resp.data._id || resp.data.appointmentId)) {
         payment.appointmentId = resp.data.appointmentId || payment.appointmentId;
         await payment.save();
@@ -239,7 +243,6 @@ export const handleIPN = async (req, res) => {
       return res.status(200).send("OK");
     } catch (err) {
       console.error("❌ Failed to create appointment after payment success:", err?.response?.data || err.message || err);
-      // Keep payment as SUCCESS but log error. Respond 500 so IPN sender can retry.
       return res.status(500).send("Appointment creation failed");
     }
 
@@ -291,7 +294,10 @@ export const getPaymentStatus = async (req, res) => {
         // Try to update an existing appointment via payment endpoint
         try {
           const targetId = payment.appointmentId || appointmentPayload.appointmentId;
-          const updateResp = await axios.put(`${appointmentServiceBase}/api/appointments/${encodeURIComponent(targetId)}/payment`, {}, { headers: { "Content-Type": "application/json" }, timeout: 8000 });
+          const updateResp = await axios.put(`${appointmentServiceBase}/api/appointments/${encodeURIComponent(targetId)}/payment`, {}, { 
+            headers: { "Content-Type": "application/json" }, 
+            timeout: 8000 
+          });
           console.log("✅ (fallback) Appointment updated via payment endpoint:", updateResp.data);
           if (updateResp.data && (updateResp.data._id || updateResp.data.appointmentId)) {
             payment.appointmentId = updateResp.data.appointmentId || payment.appointmentId;
@@ -300,7 +306,10 @@ export const getPaymentStatus = async (req, res) => {
         } catch (updateErr) {
           console.warn("⚠️ (fallback) Could not update appointment, creating a new one:", updateErr?.response?.data || updateErr.message || updateErr);
           // Create appointment via Appointment Service
-          const resp = await axios.post(`${appointmentServiceBase}/api/appointments`, appointmentPayload, { headers: { "Content-Type": "application/json" }, timeout: 10000 });
+          const resp = await axios.post(`${appointmentServiceBase}/api/appointments`, appointmentPayload, { 
+            headers: { "Content-Type": "application/json" }, 
+            timeout: 10000 
+          });
           console.log("✅ (fallback) Appointment created:", resp.data);
           if (resp.data && (resp.data._id || resp.data.appointmentId)) {
             payment.appointmentId = resp.data.appointmentId || payment.appointmentId;
@@ -314,6 +323,7 @@ export const getPaymentStatus = async (req, res) => {
 
     res.json({ success: true, status: payment.status, payment });
   } catch (error) {
+    console.error("Get payment status error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -334,5 +344,26 @@ export const getPaymentByAppointment = async (req, res) => {
   } catch (error) {
     console.error('❌ getPaymentByAppointment error:', error);
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const getAllPayments = async (req, res) => {
+  try {
+    const payments = await Payment.find().sort({ createdAt: -1 });
+    res.status(200).json(payments);
+  } catch (error) {
+    console.error("Failed to fetch payments:", error);
+    res.status(500).json({ message: "Failed to fetch payments" });
+  }
+};
+
+export const getPaymentsByPatient = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const payments = await Payment.find({ patientId }).sort({ createdAt: -1 });
+    res.status(200).json(payments);
+  } catch (error) {
+    console.error("Failed to fetch patient payments:", error);
+    res.status(500).json({ message: "Failed to fetch patient payments" });
   }
 };

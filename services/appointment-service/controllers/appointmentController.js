@@ -67,6 +67,67 @@ export async function getAppointmentsByPatient(req, res) {
   }
 }
 
+/* LIST */
+export async function getAllAppointments(req, res) {
+  try {
+    const appointments = await Appointment.find({}).sort({ createdAt: -1 });
+    return res.json(appointments);
+  } catch (error) {
+    console.error("Error fetching all appointments:", error);
+    return res.status(500).json({ message: "Failed to fetch appointments" });
+  }
+}
+
+/* BY PATIENT */
+export async function getAppointmentsByPatient(req, res) {
+  try {
+    const { patientId } = req.params;
+
+    const appointments = await Appointment.find({ patientId }).sort({
+      appointmentDate: -1,
+      startTime: -1,
+    });
+
+    return res.json(appointments);
+  } catch (error) {
+    console.error("Error fetching patient appointments:", error);
+    return res.status(500).json({ message: "Failed to fetch patient appointments" });
+  }
+}
+
+/* RESCHEDULE */
+export async function rescheduleAppointment(req, res) {
+  try {
+    const { id } = req.params;
+    const { appointmentDate, startTime, duration } = req.body;
+
+    const appointment = await Appointment.findById(id);
+
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    if (appointmentDate !== undefined) appointment.appointmentDate = appointmentDate;
+    if (startTime !== undefined) appointment.startTime = startTime;
+    if (duration !== undefined) appointment.duration = Number(duration);
+
+    if (appointment.startTime && appointment.duration) {
+      const [h = "0", m = "0"] = String(appointment.startTime).split(":");
+      const start = parseInt(h, 10) * 60 + parseInt(m, 10);
+      const end = start + Number(appointment.duration);
+      const endHour = Math.floor(end / 60);
+      const endMinute = end % 60;
+      appointment.endTime = `${endHour}:${endMinute === 0 ? "00" : (endMinute < 10 ? `0${endMinute}` : endMinute)}`;
+    }
+
+    await appointment.save();
+    return res.json(appointment);
+  } catch (error) {
+    console.error("Error rescheduling appointment:", error);
+    return res.status(500).json({ message: "Failed to reschedule appointment" });
+  }
+}
+
 /* SEARCH */
 export async function searchAppointments(req, res) {
   const { doctorName, specialization, hospital, type } = req.query;

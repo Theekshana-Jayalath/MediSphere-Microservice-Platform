@@ -5,10 +5,16 @@ import "../../styles/Admin/AdminVerifyAccounts.css";
 export default function AdminVerifyAccounts() {
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [doctors, setDoctors] = useState([]);
+  const [verifiedDoctors, setVerifiedDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [specialtyFilter, setSpecialtyFilter] = useState("All Specialties");
   const [statusFilter, setStatusFilter] = useState("Status: Pending");
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [stats, setStats] = useState({
+    pendingCount: 0,
+    verifiedThisMonth: 0,
+    averageReviewTime: 0,
+  });
 
   const API_BASE_URL = "http://localhost:5015/api/admin/doctors";
 
@@ -49,7 +55,6 @@ export default function AdminVerifyAccounts() {
     if (doctor?.photo && doctor.photo.trim() !== "") {
       return doctor.photo;
     }
-
     return "https://via.placeholder.com/80x80.png?text=DR";
   };
 
@@ -75,6 +80,85 @@ export default function AdminVerifyAccounts() {
       minute: "2-digit",
       hour12: true,
     });
+  };
+
+  // Calculate average review time from verified doctors
+  const calculateAverageReviewTime = (verifiedDoctorsList) => {
+    if (!verifiedDoctorsList || verifiedDoctorsList.length === 0) return 0;
+    
+    let totalHours = 0;
+    let validReviews = 0;
+    
+    verifiedDoctorsList.forEach(doctor => {
+      const createdAt = doctor?.createdAt ? new Date(doctor.createdAt) : null;
+      const updatedAt = doctor?.updatedAt ? new Date(doctor.updatedAt) : null;
+      
+      if (createdAt && updatedAt && updatedAt > createdAt) {
+        const diffInMs = updatedAt - createdAt;
+        const diffInHours = diffInMs / (1000 * 60 * 60);
+        totalHours += diffInHours;
+        validReviews++;
+      }
+    });
+    
+    if (validReviews === 0) return 0;
+    const avgHours = totalHours / validReviews;
+    return Math.round(avgHours * 10) / 10; // Round to 1 decimal place
+  };
+
+  // Calculate verified count for current month
+  const calculateVerifiedThisMonth = (verifiedDoctorsList) => {
+    if (!verifiedDoctorsList || verifiedDoctorsList.length === 0) return 0;
+    
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    return verifiedDoctorsList.filter(doctor => {
+      const approvedDate = doctor?.updatedAt ? new Date(doctor.updatedAt) : null;
+      if (!approvedDate) return false;
+      
+      return approvedDate.getMonth() === currentMonth && 
+             approvedDate.getFullYear() === currentYear;
+    }).length;
+  };
+
+  // Fetch verified doctors to calculate stats
+  const fetchVerifiedDoctors = async () => {
+    try {
+      const token = getToken();
+      const response = await fetch(`${API_BASE_URL}/verified`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      if (response.ok) {
+        const data = await parseResponseData(response);
+        const verifiedList = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.doctors)
+          ? data.doctors
+          : Array.isArray(data?.data)
+          ? data.data
+          : [];
+        
+        setVerifiedDoctors(verifiedList);
+        
+        const verifiedThisMonth = calculateVerifiedThisMonth(verifiedList);
+        const averageReviewTime = calculateAverageReviewTime(verifiedList);
+        
+        setStats(prev => ({
+          ...prev,
+          verifiedThisMonth,
+          averageReviewTime
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to fetch verified doctors:", error);
+    }
   };
 
   const fetchDoctors = async () => {
@@ -105,6 +189,13 @@ export default function AdminVerifyAccounts() {
         : [];
 
       setDoctors(doctorList);
+      
+      const pendingCount = doctorList.filter(
+        (doctor) => String(getDoctorStatus(doctor)).toLowerCase() === "pending_approval"
+      ).length;
+      
+      setStats(prev => ({ ...prev, pendingCount }));
+      
     } catch (error) {
       console.error("Failed to fetch doctors:", error);
       alert(error.message || "Failed to load doctor applications");
@@ -116,6 +207,7 @@ export default function AdminVerifyAccounts() {
 
   useEffect(() => {
     fetchDoctors();
+    fetchVerifiedDoctors();
   }, []);
 
   const specialtyOptions = useMemo(() => {
@@ -146,11 +238,6 @@ export default function AdminVerifyAccounts() {
       return matchesSpecialty && matchesStatus;
     });
   }, [doctors, specialtyFilter, statusFilter]);
-
-  const pendingCount = doctors.filter(
-    (doctor) =>
-      String(getDoctorStatus(doctor)).toLowerCase() === "pending_approval"
-  ).length;
 
   const handleAccept = async (doctor) => {
     try {
@@ -185,6 +272,7 @@ export default function AdminVerifyAccounts() {
         setSelectedDoctor(null);
       }
       await fetchDoctors();
+      await fetchVerifiedDoctors();
     } catch (error) {
       console.error("Approve doctor failed:", error);
       alert(error.message || "Failed to approve doctor");
@@ -251,6 +339,15 @@ export default function AdminVerifyAccounts() {
     setSelectedDoctor(null);
   };
 
+  const formatReviewTime = (hours) => {
+    if (hours === 0) return "N/A";
+    if (hours < 1) {
+      const minutes = Math.round(hours * 60);
+      return `${minutes}m`;
+    }
+    return `${hours}h`;
+  };
+
   return (
     <div className="admin-verify-layout">
       <link
@@ -291,7 +388,7 @@ export default function AdminVerifyAccounts() {
                 </div>
                 <span className="verify-chip">Live data</span>
               </div>
-              <h2>{pendingCount}</h2>
+              <h2>{stats.pendingCount}</h2>
               <p>Total Pending Verifications</p>
             </div>
 
@@ -302,7 +399,7 @@ export default function AdminVerifyAccounts() {
                 </div>
                 <span className="verify-chip">System data</span>
               </div>
-              <h2>0</h2>
+              <h2>{stats.verifiedThisMonth}</h2>
               <p>Verified this Month</p>
             </div>
 
@@ -313,7 +410,7 @@ export default function AdminVerifyAccounts() {
                 </div>
                 <span className="verify-chip">Estimated</span>
               </div>
-              <h2>18.5h</h2>
+              <h2>{formatReviewTime(stats.averageReviewTime)}</h2>
               <p>Average Review Time</p>
             </div>
           </section>
@@ -673,7 +770,7 @@ export default function AdminVerifyAccounts() {
                 <span>
                   {selectedDoctor?.consultationFee !== undefined &&
                   selectedDoctor?.consultationFee !== null
-                    ? selectedDoctor.consultationFee
+                    ? `LKR ${selectedDoctor.consultationFee}`
                     : "N/A"}
                 </span>
               </div>
