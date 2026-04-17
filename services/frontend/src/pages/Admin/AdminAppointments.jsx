@@ -52,6 +52,21 @@ export default function AdminAppointments() {
     fetchAppointments();
   }, [APPOINTMENTS_API]);
 
+  const getDisplayPatientId = (appointment) => {
+    return (
+      appointment.patientPatientId ||
+      appointment.patientDisplayId ||
+      appointment.patientCode ||
+      appointment.patientCodeId ||
+      appointment.patientRegNo ||
+      appointment.patient?.patientId ||
+      appointment.patient?.patientCode ||
+      appointment.patient?.patientDisplayId ||
+      appointment.patientId ||
+      "-"
+    );
+  };
+
   const filteredAppointments = useMemo(() => {
     const q = search.trim().toLowerCase();
 
@@ -59,7 +74,7 @@ export default function AdminAppointments() {
 
     return appointments.filter((appointment) => {
       return (
-        String(appointment.patientId || "").toLowerCase().includes(q) ||
+        String(getDisplayPatientId(appointment)).toLowerCase().includes(q) ||
         String(appointment.doctorName || "").toLowerCase().includes(q) ||
         String(appointment.appointmentType || "").toLowerCase().includes(q) ||
         String(appointment.status || "").toLowerCase().includes(q) ||
@@ -149,7 +164,7 @@ export default function AdminAppointments() {
 
   const handleExportData = () => {
     const rows = filteredAppointments.map((appointment) => ({
-      patientId: appointment.patientId || "",
+      patientId: getDisplayPatientId(appointment),
       doctorId: appointment.doctorId || "",
       doctorName: appointment.doctorName || "",
       specialization: appointment.specialization || "",
@@ -351,7 +366,7 @@ export default function AdminAppointments() {
                         <tr key={appointment._id}>
                           <td>
                             <p className="main-text">
-                              {appointment.patientId || "-"}
+                              {getDisplayPatientId(appointment)}
                             </p>
                           </td>
 
@@ -475,7 +490,7 @@ export default function AdminAppointments() {
               <div className="detail-grid">
                 <div className="detail-item">
                   <label>Patient ID</label>
-                  <p>{selectedAppointment.patientId || "-"}</p>
+                  <p>{getDisplayPatientId(selectedAppointment)}</p>
                 </div>
 
                 <div className="detail-item">
