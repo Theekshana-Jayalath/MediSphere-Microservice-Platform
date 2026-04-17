@@ -5,9 +5,9 @@ const appointmentSchema = new mongoose.Schema({
   patientId: { type: String, required: true },
 
   // ✅ ADD THESE 3 FIELDS
-  patientName: { type: String, required: true },
-  patientEmail: { type: String, required: true },
-  phoneNumber: { type: String, required: true },
+  patientName: { type: String, },
+  patientEmail: { type: String, },
+  phoneNumber: { type: String,  },
 
   doctorId: { type: String, required: true },
   doctorName: { type: String, required: true },

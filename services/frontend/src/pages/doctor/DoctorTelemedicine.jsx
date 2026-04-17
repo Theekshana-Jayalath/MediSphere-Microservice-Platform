@@ -84,11 +84,11 @@ const DoctorTelemedicine = () => {
       console.log("Doctor ID used for filtering:", doctorId);
       console.log("All sessions from API:", allSessions);
       console.log("Session summary response:", summaryRes);
+      console.log("Logged in user:", user);
+   
+      console.log("First session doctorId:", allSessions?.[0]?.doctorId);
 
-      const doctorSessions = allSessions.filter((session) => {
-        const sessionDoctorId = normalizeId(session?.doctorId);
-        return sessionDoctorId === doctorId;
-      });
+      const doctorSessions = allSessions;
 
       console.log("Filtered doctor sessions:", doctorSessions);
 

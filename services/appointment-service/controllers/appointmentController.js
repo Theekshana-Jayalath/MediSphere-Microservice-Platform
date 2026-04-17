@@ -1,7 +1,7 @@
 import axios from "axios";
 import Appointment from "../models/appointmentModel.js";
 import { generateSlots } from "../service/slotService.js";
-import axios from "axios";
+
 
 /* ---------------------------------------
    GET ALL APPOINTMENTS
@@ -470,15 +470,37 @@ export async function approveAppointment(req, res) {
       const telemedicineBase =
         process.env.TELEMEDICINE_SERVICE_URL || "http://localhost:6001";
 
+      // 🔥 FETCH PATIENT DETAILS FROM USER SERVICE
+      let patientName = "";
+      let patientEmail = "";
+      let patientPhone = "";
+
+      try {
+        const userServiceBase =
+          process.env.PATIENT_SERVICE_URL || "http://localhost:5005";
+        const pres = await axios.get(
+          `${userServiceBase}/api/patients/internal/${updated.patientId}`
+        );
+
+        const patient = pres.data;
+
+        patientName = patient.name || patient.fullName || "";
+        patientEmail = patient.email || "";
+        patientPhone = patient.phone || patient.phoneNumber || "";
+      } catch (err) {
+        console.warn("⚠️ Could not fetch patient details:", err.message);
+      }
+
+      // 🔥 PAYLOAD
       const telemedicinePayload = {
         appointmentId: updated.appointmentId || updated._id.toString(),
         doctorId: updated.doctorId,
         doctorName: updated.doctorName || "Unknown Doctor",
         doctorEmail: updated.doctorEmail || "",
         patientId: updated.patientId,
-        patientName: updated.patientName || "",
-        patientEmail: updated.patientEmail || "",
-        patientPhone: updated.phoneNumber || updated.patientPhone || "",
+        patientName: patientName || "Patient",
+        patientEmail: patientEmail || "",
+        patientPhone: patientPhone || "",
         specialty:
           updated.doctorSpecialty || updated.specialization || "General",
         scheduledTime: new Date(updated.appointmentDate),
@@ -508,7 +530,8 @@ export async function approveAppointment(req, res) {
 
       return res.status(500).json({
         success: false,
-        message: "Appointment approved, but telemedicine session creation failed",
+        message:
+          "Appointment approved, but telemedicine session creation failed",
         appointment: updated,
         telemedicineError: teleErr.response?.data || teleErr.message,
       });
