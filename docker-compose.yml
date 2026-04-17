@@ -1,131 +1,120 @@
 version: '3.8'
 
 services:
-  mongo:
-    image: mongo:6
-    restart: unless-stopped
-    volumes:
-      - mongo-data:/data/db
-    environment:
-      MONGO_INITDB_DATABASE: medisphere
-
   api-gateway:
     build: ./api-gateway
     ports:
       - "5015:5015"
-    environment:
-      - NODE_ENV=development
+    env_file:
+      - ./api-gateway/.env
     restart: unless-stopped
+    networks:
+      - medisphere-network
 
   admin-service:
     build: ./services/admin-service
     ports:
       - "5008:5008"
-    environment:
-      - NODE_ENV=production
-      - MONGO_URI=mongodb://mongo:27017/medisphere
-      - MONGODB_URI=mongodb://mongo:27017/medisphere
-      - API_GATEWAY_URL=http://api-gateway:5015
+    env_file:
+      - ./services/admin-service/.env
     restart: unless-stopped
+    networks:
+      - medisphere-network
     depends_on:
-      - mongo
+      - api-gateway
 
   appointment-service:
     build: ./services/appointment-service
     ports:
-      - "5003:5003"
-    environment:
-      - NODE_ENV=production
-      - MONGO_URI=mongodb://mongo:27017/medisphere
-      - MONGODB_URI=mongodb://mongo:27017/medisphere
-      - API_GATEWAY_URL=http://api-gateway:5015
+      - "5002:5002"
+    env_file:
+      - ./services/appointment-service/.env
     restart: unless-stopped
+    networks:
+      - medisphere-network
     depends_on:
-      - mongo
-
-  payment-service:
-    build: ./services/payment-service
-    ports:
-      - "5004:5003" # container listens on 5003, host mapped to 5004 to avoid collision with appointment
-    environment:
-      - NODE_ENV=production
-      - MONGODB_URI=mongodb://mongo:27017/medisphere
-      - API_GATEWAY_URL=http://api-gateway:5015
-    restart: unless-stopped
-    depends_on:
-      - mongo
+      - api-gateway
 
   auth-service:
     build: ./services/auth-service
     ports:
       - "5006:5006"
-    environment:
-      - NODE_ENV=production
-      - MONGO_URI=mongodb://mongo:27017/medisphere
-      - MONGODB_URI=mongodb://mongo:27017/medisphere
+    env_file:
+      - ./services/auth-service/.env
     restart: unless-stopped
+    networks:
+      - medisphere-network
     depends_on:
-      - mongo
+      - api-gateway
 
   doctor-service:
     build: ./services/doctor-service
     ports:
       - "6010:6010"
-    environment:
-      - NODE_ENV=production
-      - MONGO_URI=mongodb://mongo:27017/medisphere
-      - MONGODB_URI=mongodb://mongo:27017/medisphere
-      - APPOINTMENT_SERVICE_URL=http://appointment-service:5003
-      - PATIENT_SERVICE_URL=http://patient-service:5005
+    env_file:
+      - ./services/doctor-service/.env
     restart: unless-stopped
+    networks:
+      - medisphere-network
     depends_on:
-      - mongo
+      - api-gateway
 
   notification-service:
     build: ./services/notification-service
     ports:
       - "6002:6002"
-    environment:
-      - NODE_ENV=production
-      - MONGO_URI=mongodb://mongo:27017/medisphere
-      - MONGODB_URI=mongodb://mongo:27017/medisphere
+    env_file:
+      - ./services/notification-service/.env
     restart: unless-stopped
+    networks:
+      - medisphere-network
     depends_on:
-      - mongo
+      - api-gateway
 
   patient-service:
     build: ./services/patient-service
     ports:
       - "5005:5005"
-    environment:
-      - NODE_ENV=production
-      - MONGO_URI=mongodb://mongo:27017/medisphere
-      - MONGODB_URI=mongodb://mongo:27017/medisphere
+    env_file:
+      - ./services/patient-service/.env
     restart: unless-stopped
+    networks:
+      - medisphere-network
     depends_on:
-      - mongo
+      - api-gateway
+
+  payment-service:
+    build: ./services/payment-service
+    ports:
+      - "5003:5003"
+    env_file:
+      - ./services/payment-service/.env
+    restart: unless-stopped
+    networks:
+      - medisphere-network
+    depends_on:
+      - api-gateway
 
   telemedicine-service:
     build: ./services/telemedicine-service
     ports:
       - "6001:6001"
-    environment:
-      - NODE_ENV=production
-      - MONGO_URI=mongodb://mongo:27017/medisphere
-      - MONGODB_URI=mongodb://mongo:27017/medisphere
-      - NOTIFICATION_SERVICE_URL=http://notification-service:6002
+    env_file:
+      - ./services/telemedicine-service/.env
     restart: unless-stopped
+    networks:
+      - medisphere-network
     depends_on:
-      - mongo
+      - api-gateway
 
   frontend:
-    build: ./services/frontend
+    build: ./frontend
     ports:
       - "3000:80"
-    environment:
-      - NODE_ENV=production
     restart: unless-stopped
+    networks:
+      - medisphere-network
 
-volumes:
-  mongo-data:
-    driver: local
+networks:
+  medisphere-network:
+    driver: bridge
