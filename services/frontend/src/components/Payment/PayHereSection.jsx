@@ -5,129 +5,177 @@ import frimiImg from '../../assets/frimi.png';
 import genieImg from '../../assets/genie.png';
 import payhereImg from '../../assets/payhere.png';
 
-// Card payment form with validation
-const CardForm = ({ variant = 'visa', onPay }) => {
-  const label = variant === 'visa' ? 'Visa Card Number' : 'Mastercard Number';
-
-  const [number, setNumber] = useState(''); // raw digits only
-  const [holder, setHolder] = useState('');
-  const [expiry, setExpiry] = useState(''); // formatted MM/YY
+// Card Form Component
+const CardForm = ({ variant = 'visa', onDataChange }) => {
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardHolder, setCardHolder] = useState('');
+  const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
+  const [touched, setTouched] = useState({});
 
-  const [touched, setTouched] = useState({ number: false, holder: false, expiry: false, cvv: false });
+  // Send card data to parent when valid
+  useEffect(() => {
+    const isValid = validateCardNumber() && validateCardHolder() && validateExpiry() && validateCvv();
+    if (onDataChange) {
+      onDataChange({
+        isValid,
+        data: {
+          cardNumber: cardNumber.replace(/\s/g, ''),
+          cardHolder,
+          expiry,
+          cvv
+        }
+      });
+    }
+  }, [cardNumber, cardHolder, expiry, cvv]);
 
-  const formatNumber = (digits) => {
-    // group into 4-4-4 for 12 digits: "1234 5678 9012"
-    return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+  const formatCardNumber = (value) => {
+    const digits = value.replace(/\D/g, '').slice(0, 16);
+    const groups = digits.match(/.{1,4}/g);
+    return groups ? groups.join(' ') : digits;
   };
 
-  const handleNumberChange = (e) => {
-    const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
-    setNumber(digits);
-  };
-
-  const handleHolderChange = (e) => {
-    setHolder(e.target.value);
+  const handleCardNumberChange = (e) => {
+    const formatted = formatCardNumber(e.target.value);
+    setCardNumber(formatted);
   };
 
   const handleExpiryChange = (e) => {
-    // keep only digits and auto-insert slash after two digits
-    let v = e.target.value.replace(/\D/g, '').slice(0, 4); // MMYY
-    if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
-    setExpiry(v);
+    let value = e.target.value.replace(/\D/g, '').slice(0, 4);
+    if (value.length >= 2) {
+      value = value.slice(0, 2) + '/' + value.slice(2);
+    }
+    setExpiry(value);
   };
 
-  const handleCvvChange = (e) => {
-    const digits = e.target.value.replace(/\D/g, '').slice(0, 3);
-    setCvv(digits);
+  const validateCardNumber = () => {
+    const digits = cardNumber.replace(/\s/g, '');
+    return digits.length === 16;
   };
 
-  const validateNumber = () => number.length === 12;
-  const validateHolder = () => holder.trim().length > 0;
   const validateExpiry = () => {
-    if (!/^(\d{2}\/\d{2})$/.test(expiry)) return false;
-    const [m] = expiry.split('/');
-    const month = Number(m);
-    return month >= 1 && month <= 12;
+    return /^(0[1-9]|1[0-2])\/([0-9]{2})$/.test(expiry);
   };
-  const validateCvv = () => /^\d{3}$/.test(cvv);
 
-  const showError = (field) => touched[field] && !({ number: validateNumber(), holder: validateHolder(), expiry: validateExpiry(), cvv: validateCvv() }[field]);
+  const validateCvv = () => {
+    return /^\d{3}$/.test(cvv);
+  };
+
+  const validateCardHolder = () => {
+    return cardHolder.trim().length > 0;
+  };
 
   return (
-    <div style={{ marginTop: 12 }}>
-      <label style={{ fontSize: 12, color: '#555' }}>{label}</label>
-      <input
-        className="pm-input"
-        inputMode="numeric"
-        value={formatNumber(number)}
-        onChange={handleNumberChange}
-        onBlur={() => setTouched((t) => ({ ...t, number: true }))}
-        aria-invalid={!validateNumber()}
-      />
-      {showError('number') && (
-        <div style={{ color: 'crimson', fontSize: 12, marginTop: 4 }}>Card number must be 12 digits (3 groups of 4).</div>
-      )}
+    <div className="card-form">
+      <div className="form-group">
+        <label className="form-label">
+          {variant === 'visa' ? 'Visa Card Number' : 'Mastercard Number'}
+        </label>
+        <input
+          type="text"
+          className="form-input"
+          placeholder="1234 5678 9012 3456"
+          value={cardNumber}
+          onChange={handleCardNumberChange}
+          onBlur={() => setTouched({ ...touched, cardNumber: true })}
+        />
+        {touched.cardNumber && !validateCardNumber() && (
+          <span className="form-error">Please enter a valid 16-digit card number</span>
+        )}
+      </div>
 
-      <label style={{ fontSize: 12, color: '#555', marginTop: 8 }}>Card Holder Name</label>
-      <input
-        className="pm-input"
-        value={holder}
-        onChange={handleHolderChange}
-        onBlur={() => setTouched((t) => ({ ...t, holder: true }))}
-        aria-invalid={!validateHolder()}
-      />
-      {showError('holder') && (
-        <div style={{ color: 'crimson', fontSize: 12, marginTop: 4 }}>Please enter the card holder's name.</div>
-      )}
+      <div className="form-group">
+        <label className="form-label">Card Holder Name</label>
+        <input
+          type="text"
+          className="form-input"
+          placeholder="JOHN DOE"
+          value={cardHolder}
+          onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
+          onBlur={() => setTouched({ ...touched, cardHolder: true })}
+        />
+        {touched.cardHolder && !validateCardHolder() && (
+          <span className="form-error">Please enter card holder name</span>
+        )}
+      </div>
 
-      <div className="pm-row">
-        <div style={{ flex: 1 }}>
-          <label style={{ fontSize: 12, color: '#555' }}>Expiry (MM/YY)</label>
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label">Expiry Date (MM/YY)</label>
           <input
-            className="pm-input"
-            inputMode="numeric"
+            type="text"
+            className="form-input"
+            placeholder="MM/YY"
             value={expiry}
             onChange={handleExpiryChange}
-            onBlur={() => setTouched((t) => ({ ...t, expiry: true }))}
-            aria-invalid={!validateExpiry()}
+            onBlur={() => setTouched({ ...touched, expiry: true })}
           />
-          {showError('expiry') && (
-            <div style={{ color: 'crimson', fontSize: 12, marginTop: 4 }}>Enter a valid expiry month (01-12) and year.</div>
+          {touched.expiry && !validateExpiry() && (
+            <span className="form-error">Invalid expiry date</span>
           )}
         </div>
-
-        <div style={{ width: 120 }}>
-          <label style={{ fontSize: 12, color: '#555' }}>CVV</label>
+        <div className="form-group">
+          <label className="form-label">CVV</label>
           <input
-            className="pm-input"
-            inputMode="numeric"
+            type="text"
+            className="form-input"
+            placeholder="123"
+            maxLength="3"
             value={cvv}
-            onChange={handleCvvChange}
-            onBlur={() => setTouched((t) => ({ ...t, cvv: true }))}
-            aria-invalid={!validateCvv()}
+            onChange={(e) => setCvv(e.target.value.replace(/\D/g, ''))}
+            onBlur={() => setTouched({ ...touched, cvv: true })}
           />
-          {showError('cvv') && (
-            <div style={{ color: 'crimson', fontSize: 12, marginTop: 4 }}>CVV must be 3 digits.</div>
+          {touched.cvv && !validateCvv() && (
+            <span className="form-error">CVV must be 3 digits</span>
           )}
         </div>
       </div>
-
-      {/* inline pay button removed - use page-level Pay button */}
     </div>
   );
 };
 
-// Wallet form
-const WalletForm = ({ type, onContinue }) => (
-  <div style={{ marginTop: 12 }}>
-    <input className="pm-input" placeholder="Mobile Number" inputMode="tel" />
-  {/* inline continue button removed - use page-level Pay button */}
-  </div>
-);
+// Wallet Form Component
+const WalletForm = ({ type, onDataChange }) => {
+  const [mobileNumber, setMobileNumber] = useState('');
 
-const PayHereSection = ({ onSelectMethod, selectedMethod, onProcessPayment, contact, onContactChange }) => {
+  useEffect(() => {
+    if (onDataChange) {
+      onDataChange({
+        isValid: mobileNumber.length >= 10,
+        data: { mobileNumber }
+      });
+    }
+  }, [mobileNumber]);
+
+  return (
+    <div className="wallet-form">
+      <div className="form-group">
+        <label className="form-label">{type} Mobile Number</label>
+        <input
+          type="tel"
+          className="form-input"
+          placeholder="0712345678"
+          value={mobileNumber}
+          onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
+        />
+        <span className="form-hint">Enter your {type} registered mobile number</span>
+      </div>
+    </div>
+  );
+};
+
+// Main PayHere Section Component
+const PayHereSection = ({ 
+  onSelectMethod, 
+  selectedMethod, 
+  onProcessPayment, 
+  contact, 
+  onContactChange, 
+  isProcessing,
+  payHereReady = true 
+}) => {
   const [quickPay, setQuickPay] = useState(false);
+  const [paymentData, setPaymentData] = useState(null);
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -138,109 +186,104 @@ const PayHereSection = ({ onSelectMethod, selectedMethod, onProcessPayment, cont
         onSelectMethod(null);
       }
     };
-
     document.addEventListener('mousedown', handleDocClick);
     return () => document.removeEventListener('mousedown', handleDocClick);
   }, [selectedMethod, onSelectMethod]);
 
-  // These trigger processing if parent supplied a handler
-  const handlePay = () => {
-    onProcessPayment && onProcessPayment();
+  const paymentMethods = [
+    { id: 'visa', name: 'VISA', img: visaImg },
+    { id: 'master', name: 'Mastercard', img: masterImg },
+    { id: 'frimi', name: 'FriMi', img: frimiImg },
+    { id: 'genie', name: 'Genie', img: genieImg }
+  ];
+
+  const handlePaymentDataChange = (data) => {
+    setPaymentData(data);
   };
 
-  const handleWalletContinue = () => {
-    onProcessPayment && onProcessPayment();
+  const isPaymentMethodValid = () => {
+    if (!selectedMethod) return false;
+    if (selectedMethod === 'visa' || selectedMethod === 'master') {
+      return paymentData?.isValid === true;
+    }
+    if (selectedMethod === 'frimi' || selectedMethod === 'genie') {
+      return paymentData?.isValid === true;
+    }
+    return true;
   };
 
   return (
-    <div className="pm-payhere-card" ref={containerRef}>
-
-      <div className="pm-payhere-header">
-        <h3>
-          <img src={payhereImg} alt="PayHere" className="pm-logo-img" />
-        </h3>
-        <span className="pm-secure">● SECURE</span>
+    <div className="payment-methods-card" ref={containerRef}>
+      <div className="methods-header">
+        <div className="payhere-logo">
+          <img src={payhereImg} alt="PayHere" />
+        </div>
+        <span className="secure-badge">● SECURE</span>
       </div>
 
-      <label className="pm-input-label">
-        Mobile Number or Email
-      </label>
-
-      <div className="pm-input-wrap">
-        <input
-          type="text"
-          placeholder="e.g. +1 234 567 890 or you@email.com"
-          value={contact ?? ''}
-          onChange={(e) => onContactChange && onContactChange(e.target.value)}
-        />
-        <span>🔍</span>
+      <div className="contact-input">
+        <label className="form-label">Mobile Number or Email</label>
+        <div className="input-with-icon">
+          <input
+            type="text"
+            placeholder="e.g. 0771234567 or you@email.com"
+            value={contact ?? ''}
+            onChange={(e) => onContactChange && onContactChange(e.target.value)}
+            className="form-input"
+            disabled={isProcessing}
+          />
+          <span className="input-icon">🔍</span>
+        </div>
       </div>
 
-      <div className="pm-methods">
-        <p>Available Payment Modes</p>
-
-        <div className="pm-method-icons">
-
-          <button
-            type="button"
-            onClick={() => onSelectMethod("visa")}
-            className={selectedMethod === 'visa' ? 'active-method pm-method-btn' : 'pm-method-btn'}
-          >
-            <img src={visaImg} alt="VISA" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onSelectMethod("master")}
-            className={selectedMethod === 'master' ? 'active-method pm-method-btn' : 'pm-method-btn'}
-          >
-            <img src={masterImg} alt="Mastercard" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onSelectMethod("frimi")}
-            className={selectedMethod === 'frimi' ? 'active-method pm-method-btn' : 'pm-method-btn'}
-          >
-            <img src={frimiImg} alt="FriMi" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onSelectMethod("genie")}
-            className={selectedMethod === 'genie' ? 'active-method pm-method-btn' : 'pm-method-btn'}
-          >
-            <img src={genieImg} alt="Genie" />
-          </button>
-
+      <div className="payment-methods">
+        <p className="methods-title">Available Payment Modes</p>
+        <div className="methods-icons">
+          {paymentMethods.map((method) => (
+            <button
+              key={method.id}
+              type="button"
+              onClick={() => onSelectMethod(method.id)}
+              className={`method-btn ${selectedMethod === method.id ? 'active' : ''}`}
+              disabled={isProcessing}
+            >
+              <img src={method.img} alt={method.name} />
+            </button>
+          ))}
         </div>
 
+        {/* Show card form when Visa or Mastercard is selected */}
         {(selectedMethod === 'visa' || selectedMethod === 'master') && (
-          <CardForm variant={selectedMethod} onPay={handlePay} />
+          <CardForm variant={selectedMethod} onDataChange={handlePaymentDataChange} />
         )}
 
-        {selectedMethod === 'frimi' && (
-          <WalletForm type="FriMi" onContinue={handleWalletContinue} />
+        {/* Show wallet form when FriMi or Genie is selected */}
+        {(selectedMethod === 'frimi' || selectedMethod === 'genie') && (
+          <WalletForm 
+            type={selectedMethod === 'frimi' ? 'FriMi' : 'Genie'} 
+            onDataChange={handlePaymentDataChange}
+          />
         )}
-
-        {selectedMethod === 'genie' && (
-          <WalletForm type="Genie" onContinue={handleWalletContinue} />
-        )}
-
       </div>
 
-      <div className="pm-toggle-row">
-        <div
-          className={`pm-toggle ${quickPay ? "active" : ""}`}
-          onClick={() => setQuickPay(!quickPay)}
+      <div className="quick-pay">
+        <div 
+          className={`toggle-switch ${quickPay ? 'active' : ''}`} 
+          onClick={() => !isProcessing && setQuickPay(!quickPay)}
         >
-          <div></div>
+          <div className="toggle-slider"></div>
         </div>
-
-        <span> Remember me for Quick Pay</span>
-        <span className="pm-lightning">⚡</span>
+        <span>Remember me for Quick Pay</span>
+        <span className="lightning-icon">⚡</span>
       </div>
 
+      <button 
+        onClick={onProcessPayment} 
+        className="pay-now-button"
+        disabled={isProcessing || !selectedMethod || !contact || !payHereReady || (selectedMethod && !isPaymentMethodValid())}
+      >
+        {isProcessing ? "Processing..." : "Pay Now"}
+      </button>
     </div>
   );
 };

@@ -1,11 +1,36 @@
 import axios from "axios";
 
+const fallbackDoctorApiBaseUrl =
+  typeof window !== "undefined"
+    ? `${window.location.protocol}//${window.location.hostname}:6010`
+    : "http://localhost:6010";
+
+const normalizeDoctorReportBaseUrl = (value) => {
+  const raw = String(value || "").trim();
+
+  if (!raw) {
+    return `${fallbackDoctorApiBaseUrl}/api/reports`;
+  }
+
+  const withoutTrailingSlash = raw.replace(/\/+$/, "");
+
+  if (withoutTrailingSlash.endsWith("/api/doctors")) {
+    return withoutTrailingSlash.replace(/\/api\/doctors$/i, "/api/reports");
+  }
+
+  if (withoutTrailingSlash.endsWith("/api")) {
+    return `${withoutTrailingSlash}/reports`;
+  }
+
+  return `${withoutTrailingSlash}/api/reports`;
+};
+
 let reportApi = axios.create({
-  baseURL: `${import.meta.env.VITE_DOCTOR_API_BASE_URL}/reports`,
+  baseURL: normalizeDoctorReportBaseUrl(import.meta.env.VITE_DOCTOR_API_BASE_URL),
 });
 
 let getToken = () => {
-  return localStorage.getItem("token");
+  return localStorage.getItem("authToken") || localStorage.getItem("token");
 };
 
 let getAuthHeaders = () => {

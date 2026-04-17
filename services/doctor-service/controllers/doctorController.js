@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import Doctor from "../models/Doctor.js";
+import Counter from "../models/Counter.js";
 
 const WEEKDAY_NAMES = [
   "Sunday",
@@ -95,6 +97,16 @@ const generateDoctorToken = (doctor) => {
   );
 };
 
+const generateDoctorId = async () => {
+  const counter = await Counter.findOneAndUpdate(
+    { name: "doctorId" },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+
+  return `DOC${String(counter.seq).padStart(4, "0")}`;
+};
+
 export const registerDoctor = async (req, res, next) => {
   try {
     const {
@@ -150,8 +162,10 @@ export const registerDoctor = async (req, res, next) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const doctorId = await generateDoctorId();
 
     const doctor = await Doctor.create({
+      doctorId,
       fullName,
       email: email.toLowerCase(),
       password: hashedPassword,
@@ -174,6 +188,7 @@ export const registerDoctor = async (req, res, next) => {
     });
 
     console.log("Doctor registered successfully:", doctor._id);
+    console.log("Assigned doctor ID:", doctor.doctorId);
 
     return res.status(201).json({
       success: true,
@@ -189,6 +204,13 @@ export const registerDoctor = async (req, res, next) => {
 
 export const getDoctorById = async (req, res, next) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid doctor id format",
+      });
+    }
+
     const doctor = await Doctor.findById(req.params.id).select("-password");
 
     if (!doctor) {
@@ -210,7 +232,7 @@ export const getDoctorById = async (req, res, next) => {
 export const getDoctorApprovalStatus = async (req, res, next) => {
   try {
     const doctor = await Doctor.findById(req.params.id).select(
-      "approvalStatus rejectionReason fullName email"
+      "doctorId approvalStatus rejectionReason fullName email"
     );
 
     if (!doctor) {
@@ -296,6 +318,22 @@ export const getAllDoctors = async (req, res, next) => {
   try {
     const doctors = await Doctor.find()
       .select("-password")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      data: doctors,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Public endpoint: return approved doctors for frontend consumption
+export const getPublicDoctors = async (req, res, next) => {
+  try {
+    const doctors = await Doctor.find({ approvalStatus: 'approved' })
+      .select('-password')
       .sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -499,6 +537,7 @@ export const loginDoctor = async (req, res, next) => {
       token: generateDoctorToken(doctor),
       user: {
         id: doctor._id,
+        doctorId: doctor.doctorId,
         name: doctor.fullName,
         email: doctor.email,
         role: doctor.role || "doctor",

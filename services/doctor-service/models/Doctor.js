@@ -47,6 +47,11 @@ const availabilitySlotSchema = new mongoose.Schema(
 
 const doctorSchema = new mongoose.Schema(
   {
+    doctorId: {
+      type: String,
+      unique: true,
+      index: true,
+    },
     fullName: {
       type: String,
       required: true,

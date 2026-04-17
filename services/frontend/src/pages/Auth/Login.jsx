@@ -96,6 +96,11 @@ export default function Login() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("authToken", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
+      // persist patientId for booking/payment flows
+      if (String(data.user?.role || "").toUpperCase() === "PATIENT") {
+        const pid = data.user?.id || data.user?._id || data.user?.patientId;
+        if (pid) localStorage.setItem("patientId", String(pid));
+      }
 
       if (role === "PATIENT") {
         navigate("/patient/dashboard");
