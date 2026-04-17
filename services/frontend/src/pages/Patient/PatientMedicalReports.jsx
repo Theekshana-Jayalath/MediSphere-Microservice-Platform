@@ -53,6 +53,13 @@ export default function PatientMedicalReports() {
     );
   };
 
+  const formatDoctorDisplayName = (doctor) => {
+    const rawName = doctor?.fullName || doctor?.name || doctor?.email || "Unknown";
+    const cleanedName = String(rawName).replace(/^dr\.?\s*/i, "").trim();
+    const specialization = doctor?.specialization ? ` - ${doctor.specialization}` : "";
+    return `Dr. ${cleanedName}${specialization}`;
+  };
+
   const resetForm = () => {
     setReportForm({
       title: "",
@@ -405,7 +412,7 @@ export default function PatientMedicalReports() {
     if (!doctorId) return "Not assigned";
     const doctor = doctors.find((d) => d._id === doctorId || d.id === doctorId);
     if (doctor) {
-      return `Dr. ${doctor.fullName || doctor.name || "Unknown"}`;
+      return formatDoctorDisplayName(doctor);
     }
     return "Unknown Doctor";
   };
@@ -629,12 +636,7 @@ export default function PatientMedicalReports() {
                           key={doctor._id || doctor.id}
                           value={doctor._id || doctor.id}
                         >
-                          Dr.{" "}
-                          {doctor.fullName ||
-                            doctor.name ||
-                            doctor.email ||
-                            "Unknown"}{" "}
-                          - {doctor.specialization || ""}
+                          {formatDoctorDisplayName(doctor)}
                         </option>
                       ))
                     )}

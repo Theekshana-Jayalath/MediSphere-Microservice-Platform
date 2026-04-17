@@ -1,0 +1,285 @@
+.doctor-telemedicine-layout {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fb 0%, #eef4ff 100%);
+}
+
+.doctor-telemedicine-main {
+  flex: 1;
+  padding: 32px;
+}
+
+.doctor-telemedicine-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.doctor-telemedicine-title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.doctor-telemedicine-subtitle {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 15px;
+}
+
+.doctor-telemedicine-refresh-btn {
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.doctor-telemedicine-refresh-btn:hover {
+  background: #1d4ed8;
+}
+
+.doctor-telemedicine-message,
+.doctor-telemedicine-error {
+  padding: 14px 16px;
+  border-radius: 14px;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.doctor-telemedicine-message {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.doctor-telemedicine-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.doctor-telemedicine-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.doctor-telemedicine-summary-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  border: 1px solid #e2e8f0;
+}
+
+.doctor-telemedicine-summary-card span {
+  display: block;
+  color: #64748b;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.doctor-telemedicine-summary-card strong {
+  font-size: 28px;
+  color: #0f172a;
+}
+
+.doctor-telemedicine-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.doctor-telemedicine-filter-row button {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  padding: 10px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.doctor-telemedicine-filter-row button.active {
+  background: #0f172a;
+  color: #fff;
+  border-color: #0f172a;
+}
+
+.doctor-telemedicine-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 20px;
+}
+
+.doctor-session-card {
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 22px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
+}
+
+.doctor-session-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.doctor-session-badge {
+  display: inline-block;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 999px;
+  margin-bottom: 12px;
+}
+
+.doctor-session-patient-name {
+  margin: 0 0 10px;
+  font-size: 22px;
+  color: #0f172a;
+}
+
+.doctor-session-meta {
+  margin: 6px 0;
+  color: #475569;
+  font-size: 14px;
+}
+
+.doctor-session-status {
+  align-self: flex-start;
+  text-transform: capitalize;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.doctor-session-status-scheduled {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.doctor-session-status-started {
+  background: #ecfeff;
+  color: #0f766e;
+}
+
+.doctor-session-status-completed {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.doctor-session-status-cancelled {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.doctor-session-link-box {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.doctor-session-link-label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.doctor-session-link {
+  color: #2563eb;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.doctor-session-link:hover {
+  text-decoration: underline;
+}
+
+.doctor-session-notes {
+  margin-bottom: 16px;
+  color: #334155;
+  background: #f8fafc;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.doctor-session-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.doctor-session-btn {
+  border: none;
+  padding: 12px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: 0.2s ease;
+}
+
+.doctor-session-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.doctor-session-btn-start {
+  background: #16a34a;
+  color: #fff;
+}
+
+.doctor-session-btn-start:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.doctor-session-btn-complete {
+  background: #7c3aed;
+  color: #fff;
+}
+
+.doctor-session-btn-complete:hover:not(:disabled) {
+  background: #6d28d9;
+}
+
+.doctor-telemedicine-empty-box {
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 20px;
+  padding: 40px 24px;
+  text-align: center;
+  color: #64748b;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .doctor-telemedicine-main {
+    padding: 20px;
+  }
+
+  .doctor-telemedicine-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .doctor-session-card-top {
+    flex-direction: column;
+  }
+}

@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import axios from "axios";
 import Session from "../models/sessionModel.js";
 import {
@@ -6,17 +7,43 @@ import {
   calculateSessionCounts,
 } from "../services/telemedicineService.js";
 
-export const createSession = async (req, res) => {
+const getCleanObjectId = (rawId) => {
+  const cleanedId = String(rawId || "").replace(/['"]/g, "").trim();
+
+  if (!mongoose.Types.ObjectId.isValid(cleanedId)) {
+    return null;
+  }
+
+  return cleanedId;
+};
+
+const formatSriLankaPhoneNumber = (phoneNumber) => {
+  const cleaned = String(phoneNumber || "").replace(/\s+/g, "").trim();
+
+  if (!cleaned) return "";
+
+  if (cleaned.startsWith("+94")) return cleaned;
+  if (cleaned.startsWith("94")) return `+${cleaned}`;
+  if (cleaned.startsWith("0")) return `+94${cleaned.substring(1)}`;
+
+  return cleaned;
+};
+
+export const createSessionFromConfirmedAppointment = async (req, res) => {
   try {
     const {
       appointmentId,
       doctorId,
       doctorName,
+      doctorEmail,
       patientId,
       patientName,
+      patientEmail,
+      patientPhone,
       specialty,
       scheduledTime,
       notes,
+      appointmentStatus,
     } = req.body;
 
     if (
@@ -25,12 +52,21 @@ export const createSession = async (req, res) => {
       !doctorName ||
       !patientId ||
       !patientName ||
+      !patientEmail ||
+      !patientPhone ||
       !scheduledTime
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "appointmentId, doctorId, doctorName, patientId, patientName, and scheduledTime are required",
+          "appointmentId, doctorId, doctorName, patientId, patientName, patientEmail, patientPhone, and scheduledTime are required",
+      });
+    }
+
+    if (String(appointmentStatus || "").toLowerCase() !== "confirmed") {
+      return res.status(400).json({
+        success: false,
+        message: "Session can only be created for a confirmed appointment",
       });
     }
 
@@ -39,7 +75,7 @@ export const createSession = async (req, res) => {
     if (existingSession) {
       return res.status(400).json({
         success: false,
-        message: "A session already exists for this appointmentId",
+        message: "A session already exists for this appointment",
       });
     }
 
@@ -50,25 +86,60 @@ export const createSession = async (req, res) => {
       appointmentId,
       doctorId,
       doctorName,
+      doctorEmail: doctorEmail || "",
       patientId,
       patientName,
-      specialty,
+      patientEmail,
+      patientPhone,
+      specialty: specialty || "",
       roomName,
       meetingLink,
       scheduledTime,
-      notes,
-      status: "pending",
+      notes: notes || "",
+      status: "scheduled",
+      isActive: true,
     });
+
+    try {
+      if (!process.env.NOTIFICATION_SERVICE_URL) {
+        console.warn("NOTIFICATION_SERVICE_URL is not set in .env");
+      } else {
+        const payload = {
+          appointmentId: session.appointmentId,
+          patientEmail: session.patientEmail,
+          patientPhone: formatSriLankaPhoneNumber(session.patientPhone),
+          patientName: session.patientName,
+          doctorName: session.doctorName,
+          doctorEmail: session.doctorEmail,
+          specialty: session.specialty,
+          scheduledTime: session.scheduledTime,
+          meetingLink: session.meetingLink,
+          status: "Scheduled",
+        };
+
+        const response = await axios.post(
+          `${process.env.NOTIFICATION_SERVICE_URL}/api/notifications/telemedicine-confirmation`,
+          payload
+        );
+
+        console.log("Notification sent successfully:", response.data);
+      }
+    } catch (notifyError) {
+      console.error(
+        "Failed to send notification:",
+        notifyError.response?.data || notifyError.message
+      );
+    }
 
     return res.status(201).json({
       success: true,
-      message: "Telemedicine session request created successfully",
+      message: "Session created from confirmed appointment successfully",
       session,
     });
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Failed to create session",
+      message: "Failed to create session from confirmed appointment",
       error: error.message,
     });
   }
@@ -96,7 +167,14 @@ export const getAllSessions = async (req, res) => {
 
 export const getSessionById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = getCleanObjectId(req.params.id);
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid session id",
+      });
+    }
 
     const session = await Session.findById(id);
 
@@ -123,17 +201,28 @@ export const getSessionById = async (req, res) => {
 
 export const updateSession = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = getCleanObjectId(req.params.id);
     const {
       doctorId,
       doctorName,
+      doctorEmail,
       patientId,
       patientName,
+      patientEmail,
+      patientPhone,
       specialty,
       scheduledTime,
       notes,
       status,
+      isActive,
     } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid session id",
+      });
+    }
 
     const session = await Session.findById(id);
 
@@ -144,18 +233,30 @@ export const updateSession = async (req, res) => {
       });
     }
 
-    if (session.status === "scheduled") {
-      session.status = "pending";
-    }
-
     if (doctorId !== undefined) session.doctorId = doctorId;
     if (doctorName !== undefined) session.doctorName = doctorName;
+    if (doctorEmail !== undefined) session.doctorEmail = doctorEmail;
     if (patientId !== undefined) session.patientId = patientId;
     if (patientName !== undefined) session.patientName = patientName;
+    if (patientEmail !== undefined) session.patientEmail = patientEmail;
+    if (patientPhone !== undefined) session.patientPhone = patientPhone;
     if (specialty !== undefined) session.specialty = specialty;
     if (scheduledTime !== undefined) session.scheduledTime = scheduledTime;
     if (notes !== undefined) session.notes = notes;
-    if (status !== undefined) session.status = status;
+    if (isActive !== undefined) session.isActive = isActive;
+
+    if (status !== undefined) {
+      const allowedStatuses = ["scheduled", "started", "completed", "cancelled"];
+
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid status value",
+        });
+      }
+
+      session.status = status;
+    }
 
     await session.save();
 
@@ -173,22 +274,14 @@ export const updateSession = async (req, res) => {
   }
 };
 
-export const confirmSessionByDoctor = async (req, res) => {
+export const startSession = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { doctorId, patientEmail } = req.body;
+    const id = getCleanObjectId(req.params.id);
 
-    if (!doctorId) {
+    if (!id) {
       return res.status(400).json({
         success: false,
-        message: "doctorId is required",
-      });
-    }
-
-    if (!patientEmail) {
-      return res.status(400).json({
-        success: false,
-        message: "patientEmail is required",
+        message: "Invalid session id",
       });
     }
 
@@ -201,46 +294,89 @@ export const confirmSessionByDoctor = async (req, res) => {
       });
     }
 
-    if (session.doctorId !== doctorId) {
-      return res.status(403).json({
+    if (session.status !== "scheduled") {
+      return res.status(400).json({
         success: false,
-        message: "Only the assigned doctor can confirm this session",
+        message: "Only scheduled sessions can be started",
       });
     }
 
-    // ✅ Update status
-    session.status = "confirmed";
+    session.status = "started";
+    session.startedAt = new Date();
+    session.isActive = true;
+
     await session.save();
-
-    // ✅ Send notification immediately
-    try {
-      await axios.post(
-        `${process.env.NOTIFICATION_SERVICE_URL}/api/notifications/telemedicine-confirmation`,
-        {
-          patientEmail,
-          patientName: session.patientName,
-          doctorName: session.doctorName,
-          specialty: session.specialty,
-          scheduledTime: session.scheduledTime,
-          meetingLink: session.meetingLink,
-        }
-      );
-
-      console.log("📩 Notification sent");
-    } catch (err) {
-      console.error("❌ Notification failed:", err.message);
-    }
 
     return res.status(200).json({
       success: true,
-      message: "Session confirmed successfully",
+      message: "Session started successfully",
       session,
     });
-
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: "Failed to confirm session",
+      message: "Failed to start session",
+      error: error.message,
+    });
+  }
+};
+
+export const completeSession = async (req, res) => {
+  try {
+    const id = getCleanObjectId(req.params.id);
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid session id",
+      });
+    }
+
+    const session = await Session.findById(id);
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: "Session not found",
+      });
+    }
+
+    if (session.status === "completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Session already completed",
+      });
+    }
+
+    if (session.status === "cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Cancelled session cannot be completed",
+      });
+    }
+
+    if (session.status !== "started" && session.status !== "scheduled") {
+      return res.status(400).json({
+        success: false,
+        message: "Only scheduled or started sessions can be completed",
+      });
+    }
+
+    session.status = "completed";
+    session.completedAt = new Date();
+    session.isActive = false;
+
+    await session.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Session marked as completed successfully",
+      session,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to complete session",
       error: error.message,
     });
   }
@@ -248,7 +384,14 @@ export const confirmSessionByDoctor = async (req, res) => {
 
 export const deleteSession = async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = getCleanObjectId(req.params.id);
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid session id",
+      });
+    }
 
     const session = await Session.findById(id);
 

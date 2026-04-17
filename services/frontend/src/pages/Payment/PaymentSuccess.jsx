@@ -175,7 +175,10 @@ const PaymentSuccess = () => {
                 'Specialist';
               
               // Extract hospital from various possible fields
+              // Prefer stored appointmentData.selectedHospital if present, otherwise extract from doctorData
+              const storedAppointmentData = JSON.parse(localStorage.getItem('appointmentData') || '{}');
               const hospital = 
+                storedAppointmentData?.selectedHospital ||
                 doctorData.hospital || 
                 doctorData.baseHospital || 
                 doctorData.clinic || 

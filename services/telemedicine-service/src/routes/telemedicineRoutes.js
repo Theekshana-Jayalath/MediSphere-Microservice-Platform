@@ -1,29 +1,55 @@
 import express from "express";
 import {
-  createSession,
+  createSessionFromConfirmedAppointment,
   getAllSessions,
   getSessionById,
   updateSession,
-  confirmSessionByDoctor,
+  startSession,
+  completeSession,
   deleteSession,
   getSessionSummary,
 } from "../controllers/telemedicineController.js";
 
 const router = express.Router();
 
-router.get("/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Telemedicine service is healthy",
-  });
-});
+/**
+ * CREATE SESSION (Triggered after doctor confirms appointment)
+ */
+router.post("/", createSessionFromConfirmedAppointment);
 
-router.post("/sessions", createSession);
-router.get("/sessions", getAllSessions);
-router.get("/sessions/summary", getSessionSummary);
-router.get("/sessions/:id", getSessionById);
-router.put("/sessions/:id", updateSession);
-router.patch("/sessions/:id/confirm", confirmSessionByDoctor);
-router.delete("/sessions/:id", deleteSession);
+/**
+ * GET ALL SESSIONS
+ */
+router.get("/", getAllSessions);
+
+/**
+ * GET SUMMARY (dashboard / analytics)
+ */
+router.get("/summary", getSessionSummary);
+
+/**
+ * GET SINGLE SESSION
+ */
+router.get("/:id", getSessionById);
+
+/**
+ * UPDATE SESSION
+ */
+router.put("/:id", updateSession);
+
+/**
+ * START SESSION
+ */
+router.patch("/:id/start", startSession);
+
+/**
+ * COMPLETE SESSION
+ */
+router.patch("/:id/complete", completeSession);
+
+/**
+ * DELETE SESSION
+ */
+router.delete("/:id", deleteSession);
 
 export default router;

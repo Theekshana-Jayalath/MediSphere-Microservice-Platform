@@ -1,1 +1,33 @@
+# dependencies
+node_modules/
+
+# environment variables
 .env
+.env.*
+
+# logs
+logs
+*.log
+npm-debug.log*
+
+# build folders
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Git
+.gitignore
+
+# coverage
+coverage/
+
+# temp files
+tmp/
+temp/

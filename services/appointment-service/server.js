@@ -1,5 +1,9 @@
+
+// Force DNS to use Google DNS (required for MongoDB Atlas on Windows)
+
 import dns from 'dns';
 dns.setServers(['8.8.8.8', '8.8.4.4']);
+
 
 import express from "express";
 import cors from "cors";

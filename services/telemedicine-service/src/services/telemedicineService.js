@@ -9,8 +9,10 @@ export const generateMeetingLink = (roomName) => {
 export const calculateSessionCounts = (sessions) => {
   const counts = {
     total: sessions.length,
-    pending: 0,
-    confirmed: 0,
+    scheduled: 0,
+    started: 0,
+    completed: 0,
+    cancelled: 0,
   };
 
   for (const session of sessions) {

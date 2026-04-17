@@ -1,20 +1,25 @@
-# Use official Node.js image
-FROM node:18
+FROM node:20-alpine AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# copy package files and install (no lockfile present)
+COPY package.json ./
+RUN npm install --production=false
 
-# Install dependencies
-RUN npm install
-
-# Copy all source code
+# copy source
 COPY . .
 
-# Expose service port
+FROM node:20-alpine
+WORKDIR /app
+
+# copy node_modules and source
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app ./
+
+ENV NODE_ENV=production
 EXPOSE 5003
 
-# Start the service
+# run as non-root
+USER node
+
 CMD ["node", "server.js"]

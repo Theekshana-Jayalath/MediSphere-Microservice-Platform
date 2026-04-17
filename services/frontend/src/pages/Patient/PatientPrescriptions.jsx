@@ -13,12 +13,25 @@ export default function PatientPrescriptions() {
 
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
-  
+
   const storedPatientProfile = localStorage.getItem("patientProfile");
   const patientProfile = storedPatientProfile ? JSON.parse(storedPatientProfile) : null;
-  
-  const patientName = patientProfile?.name || patientProfile?.fullName || user?.name || "Patient";
-  const patientId = patientProfile?.patientId || user?.patientId || "PAT0004";
+
+  const patientName =
+    patientProfile?.name || patientProfile?.fullName || user?.name || "Patient";
+
+  const patientMongoId =
+    user?.id ||
+    user?._id ||
+    patientProfile?._id ||
+    patientProfile?.id ||
+    "";
+
+  const patientDisplayId =
+    patientProfile?.patientId || user?.patientId || "";
+
+  const patientId = patientDisplayId || patientMongoId || "PAT0004";
+
   const patientEmail = patientProfile?.email || user?.email || "No email";
 
   const PRESCRIPTIONS_BASE_URL = import.meta.env.VITE_DOCTOR_SERVICE_URL
@@ -70,29 +83,61 @@ export default function PatientPrescriptions() {
         localStorage.getItem("accessToken") ||
         "";
 
-      const response = await fetch(
-        `${PRESCRIPTIONS_BASE_URL}/patient/${patientId}`,
-        {
-          method: "GET",
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        }
-      );
+      const idsToTry = [patientMongoId, patientDisplayId].filter(Boolean);
 
-      const data = await parseResponseData(response);
+      console.log("Logged-in patient Mongo ID:", patientMongoId);
+      console.log("Logged-in patient Display ID:", patientDisplayId);
+      console.log("Fetching prescriptions for:", idsToTry);
 
-      if (!response.ok) {
-        throw new Error(data?.message || "Failed to fetch prescriptions");
+      if (idsToTry.length === 0) {
+        setPrescriptions([]);
+        return;
       }
 
-      const prescriptionList = Array.isArray(data)
-        ? data
-        : Array.isArray(data?.data)
-        ? data.data
-        : [];
+      const responses = await Promise.all(
+        idsToTry.map(async (id) => {
+          try {
+            const response = await fetch(
+              `${PRESCRIPTIONS_BASE_URL}/patient/${id}`,
+              {
+                method: "GET",
+                headers: {
+                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+              }
+            );
 
-      setPrescriptions(prescriptionList.map(mapPrescriptionForUI));
+            const data = await parseResponseData(response);
+
+            if (!response.ok) {
+              return [];
+            }
+
+            return Array.isArray(data)
+              ? data
+              : Array.isArray(data?.data)
+              ? data.data
+              : [];
+          } catch (error) {
+            console.error(`Failed to fetch prescriptions for ID ${id}:`, error);
+            return [];
+          }
+        })
+      );
+
+      const mergedPrescriptions = responses.flat();
+
+      const uniquePrescriptions = Array.from(
+        new Map(
+          mergedPrescriptions.map((prescription) => [
+            prescription._id ||
+              `${prescription.appointmentId}-${prescription.patientId}-${prescription.createdAt}`,
+            prescription,
+          ])
+        ).values()
+      );
+
+      setPrescriptions(uniquePrescriptions.map(mapPrescriptionForUI));
     } catch (error) {
       console.error("Failed to fetch prescriptions:", error);
       setPrescriptions([]);
@@ -154,7 +199,6 @@ export default function PatientPrescriptions() {
             </div>
           </div>
 
-          {/* Stats Cards - Only Active Meds remains */}
           <div className="stats-grid">
             <div className="stat-card">
               <p>Active Prescriptions</p>
@@ -162,7 +206,6 @@ export default function PatientPrescriptions() {
             </div>
           </div>
 
-          {/* Search and Filter Bar */}
           <div className="action-bar">
             <div className="search-wrapper">
               <span className="material-symbols-outlined">search</span>
@@ -189,10 +232,9 @@ export default function PatientPrescriptions() {
             </div>
           </div>
 
-          {/* Active Prescriptions Table */}
           <div className="prescriptions-table-container">
             <h2>Active Prescriptions</h2>
-            
+
             {loading ? (
               <div className="empty-state">
                 <span className="material-symbols-outlined">medication</span>
@@ -220,26 +262,26 @@ export default function PatientPrescriptions() {
                       <tr key={prescription._id}>
                         <td className="appointment-cell">
                           <div className="appointment-id">{prescription.appointmentId}</div>
-                         </td>
+                        </td>
                         <td>
                           <div className="medication-name">{prescription.medicineName}</div>
                           <div className="medication-category">{prescription.category}</div>
-                         </td>
+                        </td>
                         <td>
                           <div>{prescription.dosage} {prescription.dosageForm}</div>
                           <div className="frequency">{prescription.frequency}</div>
-                         </td>
+                        </td>
                         <td>{prescription.prescribedBy}</td>
                         <td>
-                          <button 
+                          <button
                             className="view-details-btn"
                             onClick={() => handleViewDetails(prescription)}
                           >
                             View Details
                             <span className="material-symbols-outlined">chevron_right</span>
                           </button>
-                         </td>
-                       </tr>
+                        </td>
+                      </tr>
                     ))}
                   </tbody>
                 </table>
@@ -249,7 +291,6 @@ export default function PatientPrescriptions() {
         </div>
       </main>
 
-      {/* View Details Modal - No Request Refill button */}
       {showDetailsModal && selectedPrescription && (
         <div className="modal-overlay" onClick={() => setShowDetailsModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -264,17 +305,17 @@ export default function PatientPrescriptions() {
                 <label>APPOINTMENT ID</label>
                 <p>{selectedPrescription.appointmentId}</p>
               </div>
-              
+
               <div className="detail-section">
                 <label>MEDICATION NAME</label>
                 <p>{selectedPrescription.medicineName}</p>
               </div>
-              
+
               <div className="detail-section">
                 <label>CATEGORY</label>
                 <p>{selectedPrescription.category}</p>
               </div>
-              
+
               <div className="detail-row-group">
                 <div className="detail-section half">
                   <label>DOSAGE</label>
@@ -285,12 +326,12 @@ export default function PatientPrescriptions() {
                   <p>{selectedPrescription.frequency}</p>
                 </div>
               </div>
-              
+
               <div className="detail-section">
                 <label>PRESCRIBED BY</label>
                 <p>{selectedPrescription.prescribedBy}</p>
               </div>
-              
+
               <div className="detail-section">
                 <label>INSTRUCTIONS</label>
                 <p className="instructions-text">{selectedPrescription.instructions}</p>
@@ -328,7 +369,7 @@ export default function PatientPrescriptions() {
                   </div>
                 </div>
               )}
-              
+
               <div className="detail-section">
                 <label>ISSUED DATE</label>
                 <p>
@@ -361,7 +402,7 @@ export default function PatientPrescriptions() {
           justify-content: center;
           z-index: 1000;
         }
-        
+
         .modal-content {
           background: white;
           border-radius: 20px;
@@ -371,7 +412,7 @@ export default function PatientPrescriptions() {
           overflow-y: auto;
           box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
         }
-        
+
         .modal-header {
           display: flex;
           justify-content: space-between;
@@ -383,14 +424,14 @@ export default function PatientPrescriptions() {
           background: white;
           z-index: 1;
         }
-        
+
         .modal-header h3 {
           font-size: 20px;
           font-weight: 700;
           color: #07182e;
           margin: 0;
         }
-        
+
         .modal-header button {
           background: none;
           border: none;
@@ -401,19 +442,19 @@ export default function PatientPrescriptions() {
           justify-content: center;
           border-radius: 8px;
         }
-        
+
         .modal-header button:hover {
           background: #f8f2ee;
         }
-        
+
         .modal-body {
           padding: 24px;
         }
-        
+
         .detail-section {
           margin-bottom: 20px;
         }
-        
+
         .detail-section label {
           display: block;
           font-size: 11px;
@@ -423,28 +464,28 @@ export default function PatientPrescriptions() {
           color: #75777e;
           margin-bottom: 6px;
         }
-        
+
         .detail-section p {
           font-size: 15px;
           color: #1d1b19;
           margin: 0;
         }
-        
+
         .detail-row-group {
           display: flex;
           gap: 20px;
           margin-bottom: 20px;
         }
-        
+
         .detail-section.half {
           flex: 1;
           margin-bottom: 0;
         }
-        
+
         .instructions-text {
           line-height: 1.5;
         }
-        
+
         .modal-footer {
           display: flex;
           justify-content: flex-end;
@@ -454,7 +495,7 @@ export default function PatientPrescriptions() {
           bottom: 0;
           background: white;
         }
-        
+
         .close-modal-btn {
           padding: 10px 24px;
           background: #07182e;
@@ -465,7 +506,7 @@ export default function PatientPrescriptions() {
           color: white;
           cursor: pointer;
         }
-        
+
         .close-modal-btn:hover {
           background: #1d2d44;
         }
