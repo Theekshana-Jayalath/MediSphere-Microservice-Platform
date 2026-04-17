@@ -1,15 +1,23 @@
-import { useState } from 'react'
-import './App.css'
+import { BrowserRouter as Router, Routes } from "react-router-dom";
+import appointmentRoutes from "./routes/AppointmentRoutes.jsx";
+import authRoutes from "./routes/AuthRoutes.jsx";
+import patientRoutes from "./routes/PatientRoutes.jsx";
+import adminRoutes from "./routes/AdminRoutes.jsx";
+import doctorRoutes from "./routes/DoctorRoutes.jsx";
+
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <h1 className='text-4xl font-bold text-amber-700'>Welcome to MediSphere</h1>
-      <p className='mt-4'>Your one-stop solution for managing medical appointments.</p>
-    </>
-  )
+    <Router>
+      <Routes>
+        {authRoutes}
+        {patientRoutes}
+        {doctorRoutes}
+        {adminRoutes}
+        {appointmentRoutes}
+      </Routes>
+    </Router>
+  );
 }
 
-export default App
+export default App;

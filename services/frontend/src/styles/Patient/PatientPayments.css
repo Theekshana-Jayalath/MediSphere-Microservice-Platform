@@ -1,0 +1,581 @@
+.patient-payments-page {
+  display: flex;
+  min-height: 100vh;
+  background: #fef8f4;
+  font-family: "Inter", sans-serif;
+}
+
+.patient-payments-main {
+  flex: 1;
+  margin-left: 280px;
+  min-height: 100vh;
+}
+
+.patient-payments-topbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 280px;
+  height: 64px;
+  background: linear-gradient(to bottom, #f3ede9, transparent);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 32px;
+  z-index: 40;
+}
+
+.topbar-left h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1d2d44;
+  margin: 0;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.search-wrapper {
+  position: relative;
+}
+
+.search-wrapper span {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  color: #75777e;
+}
+
+.search-wrapper input {
+  padding: 8px 12px 8px 40px;
+  border: none;
+  border-radius: 30px;
+  background: white;
+  width: 260px;
+  font-size: 14px;
+  outline: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.search-wrapper input:focus {
+  box-shadow: 0 0 0 2px rgba(7, 24, 46, 0.2);
+}
+
+.notification-btn,
+.help-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+
+.notification-btn:hover,
+.help-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.notification-btn span,
+.help-btn span {
+  font-size: 24px;
+  color: #1d2d44;
+}
+
+.patient-payments-content {
+  padding: 96px 32px 32px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 32px;
+  align-items: stretch;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 18px;
+  padding: 14px 16px;
+  position: relative;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(197, 198, 205, 0.2);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.summary-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(29, 45, 68, 0.08);
+}
+
+.compact-summary-card {
+  min-height: 120px;
+}
+
+.card-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.card-icon.primary {
+  background: #dbe8ff;
+  color: #07182e;
+}
+
+.card-icon.secondary {
+  background: #d6e6ff;
+  color: #4b5f7e;
+}
+
+.card-icon.tertiary {
+  background: #d5e1e8;
+  color: #091a23;
+}
+
+.card-icon span {
+  font-size: 20px;
+}
+
+.card-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #dbe8ff;
+  color: #07182e;
+}
+
+.card-badge.warning {
+  background: #ffe0dc;
+  color: #ba1a1a;
+}
+
+/* ========== INCREASED FONT SIZES FOR BETTER READABILITY ========== */
+/* Labels like "Total Spent", "Pending Payments", "Last Transaction" */
+.card-label {
+  font-size: 13px !important;
+  font-weight: 600;
+  color: #6b7280;
+  margin: 0 0 6px 0;
+  letter-spacing: 0.3px;
+}
+
+/* Amount values like "LKR 34,700.00" */
+.summary-card h3 {
+  font-size: 18px !important;
+  line-height: 1.25;
+  font-weight: 800;
+  color: #07182e;
+  margin: 0 0 8px 0;
+  word-break: break-word;
+  letter-spacing: -0.2px;
+}
+
+/* Trend text like "~12% increase from last year" */
+.card-trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px !important;
+  font-weight: 600;
+  color: #4b5f7e;
+}
+
+.card-trend span {
+  font-size: 12px;
+}
+
+/* Due date text like "Next due date: Oct 24, 2024" */
+.card-due {
+  font-size: 11px !important;
+  color: #5f6368;
+  margin: 0;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+/* Transaction text like "Paid to Dr. Sarah Vance • Oct 12, 2024" */
+.card-transaction {
+  font-size: 11px !important;
+  color: #5f6368;
+  margin: 0;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+/* Any additional text inside cards */
+.card-subtext {
+  font-size: 11px !important;
+}
+
+.transactions-section {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 40px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(197, 198, 205, 0.2);
+}
+
+.transactions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 32px;
+  border-bottom: 1px solid #ede7e3;
+}
+
+.transactions-header h4 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #07182e;
+  margin: 0 0 4px 0;
+}
+
+.transactions-header p {
+  font-size: 14px;
+  color: #75777e;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-buttons button {
+  padding: 8px 16px;
+  background: #f8f2ee;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #75777e;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-buttons button:hover {
+  background: #ede7e3;
+}
+
+.filter-buttons button.active {
+  background: #07182e;
+  color: white;
+}
+
+.export-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  background: #07182e;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.export-btn:hover {
+  opacity: 0.9;
+}
+
+.export-btn span {
+  font-size: 18px;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.transactions-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.transactions-table thead tr {
+  background: rgba(248, 242, 238, 0.3);
+}
+
+.transactions-table th {
+  padding: 16px 24px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1d2d44;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.transactions-table td {
+  padding: 20px 24px;
+  border-bottom: 1px solid #ede7e3;
+}
+
+.transactions-table tbody tr:hover {
+  background: rgba(248, 242, 238, 0.5);
+}
+
+.date-cell {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d1b19;
+}
+
+.practitioner-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.doctor-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #d5e3ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #07182e;
+}
+
+.doctor-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #07182e;
+}
+
+.service-type {
+  font-size: 14px;
+  color: #75777e;
+  font-style: italic;
+}
+
+.amount-cell {
+  font-size: 14px;
+  font-weight: 700;
+  color: #07182e;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.paid {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-badge.pending {
+  background: #fff3e0;
+  color: #ed6c02;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.action-btn span {
+  font-size: 20px;
+}
+
+.pay-btn {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.pay-btn:hover {
+  background: #4caf50;
+  color: white;
+}
+
+.receipt-btn {
+  color: #4b5f7e;
+}
+
+.receipt-btn:hover {
+  background: rgba(75, 95, 126, 0.1);
+}
+
+.table-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 32px;
+  border-top: 1px solid #ede7e3;
+  background: white;
+}
+
+.pagination-info {
+  font-size: 12px;
+  font-weight: 500;
+  color: #75777e;
+  margin: 0;
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.pagination-controls button {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: #f8f2ee;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  font-weight: 500;
+  color: #07182e;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+  background: #ede7e3;
+}
+
+.pagination-controls button.active {
+  background: #07182e;
+  color: white;
+}
+
+.pagination-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-controls button span {
+  font-size: 18px;
+}
+
+.loading-state,
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-state span {
+  font-size: 64px;
+  color: #75777e;
+  margin-bottom: 16px;
+  display: block;
+}
+
+.empty-state p {
+  font-size: 16px;
+  color: #75777e;
+  margin: 0;
+}
+
+.payments-footer {
+  text-align: center;
+  padding: 24px 32px;
+}
+
+.payments-footer p {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #75777e;
+  margin: 0;
+}
+
+@media (max-width: 1200px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .transactions-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 768px) {
+  .patient-payments-main {
+    margin-left: 0;
+  }
+
+  .patient-payments-topbar {
+    left: 0;
+  }
+
+  .topbar-right .search-wrapper {
+    display: none;
+  }
+
+  .table-footer {
+    flex-direction: column;
+    gap: 16px;
+  }
+}
