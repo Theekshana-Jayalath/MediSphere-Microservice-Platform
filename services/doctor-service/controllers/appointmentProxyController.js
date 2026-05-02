@@ -158,6 +158,10 @@ const mapStatusToAppointmentAction = (status) => {
 		return "reject";
 	}
 
+	if (normalizedStatus === "completed") {
+		return "complete";
+	}
+
 	return "";
 };
 

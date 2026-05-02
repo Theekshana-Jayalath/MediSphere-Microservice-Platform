@@ -10,6 +10,7 @@ export default function PatientPayments() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [selectedPayment, setSelectedPayment] = useState(null);
   const itemsPerPage = 4;
 
   const storedUser = localStorage.getItem("user");
@@ -23,10 +24,8 @@ export default function PatientPayments() {
   const patientName =
     patientProfile?.name || patientProfile?.fullName || user?.name || "Patient";
 
-  // For display in UI
   const patientId = patientProfile?.patientId || user?.patientId || "PAT0004";
 
-  // For backend lookup (matches payment collection patientId)
   const paymentPatientId = patientProfile?.userId || user?.id || "";
 
   const API_GATEWAY_URL = import.meta.env.VITE_API_GATEWAY_URL
@@ -201,6 +200,18 @@ export default function PatientPayments() {
       .split(" ")
       .map((n) => n[0])
       .join("");
+  };
+
+  const formatDetailLabel = (key) => {
+    return String(key)
+      .replace(/([A-Z])/g, " $1")
+      .replace(/^./, (char) => char.toUpperCase());
+  };
+
+  const formatDetailValue = (value) => {
+    if (value === null || value === undefined || value === "") return "-";
+    if (typeof value === "object") return JSON.stringify(value, null, 2);
+    return String(value);
   };
 
   const calculateTotals = () => {
@@ -472,7 +483,6 @@ export default function PatientPayments() {
                     <tr>
                       <th>Date</th>
                       <th>Practitioner</th>
-                      <th>Service Type</th>
                       <th className="text-right">Amount</th>
                       <th className="text-center">Status</th>
                       <th className="text-right">Actions</th>
@@ -494,7 +504,6 @@ export default function PatientPayments() {
                             </span>
                           </div>
                         </td>
-                        <td className="service-type">{payment.serviceType}</td>
                         <td className="amount-cell text-right">
                           {formatAmount(payment.amount)}
                         </td>
@@ -510,7 +519,8 @@ export default function PatientPayments() {
                         <td className="actions-cell text-right">
                           <button
                             className="action-btn receipt-btn"
-                            title="View Receipt"
+                            title="View Payment Details"
+                            onClick={() => setSelectedPayment(payment)}
                           >
                             <span className="material-symbols-outlined">
                               receipt_long
@@ -573,6 +583,136 @@ export default function PatientPayments() {
           <p>Powered by Ethereal AI Health Intelligence</p>
         </footer>
       </main>
+
+      {selectedPayment && (
+        <div
+          className="payment-details-overlay"
+          onClick={() => setSelectedPayment(null)}
+        >
+          <div
+            className="payment-details-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="payment-details-header">
+              <h3>Payment Details</h3>
+              <button type="button" onClick={() => setSelectedPayment(null)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="payment-details-body">
+              {Object.entries(selectedPayment).map(([key, value]) => (
+                <div className="payment-detail-row" key={key}>
+                  <strong>{formatDetailLabel(key)}</strong>
+                  <span>{formatDetailValue(value)}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="payment-details-footer">
+              <button type="button" onClick={() => setSelectedPayment(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        .payment-details-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.45);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          padding: 20px;
+        }
+
+        .payment-details-modal {
+          width: 100%;
+          max-width: 680px;
+          background: #ffffff;
+          border-radius: 20px;
+          padding: 24px;
+          max-height: 85vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+        }
+
+        .payment-details-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 18px;
+        }
+
+        .payment-details-header h3 {
+          margin: 0;
+          color: #07182e;
+          font-size: 22px;
+          font-weight: 800;
+        }
+
+        .payment-details-header button {
+          border: none;
+          background: transparent;
+          cursor: pointer;
+          font-size: 18px;
+          font-weight: 700;
+          color: #07182e;
+        }
+
+        .payment-details-body {
+          display: grid;
+          gap: 10px;
+        }
+
+        .payment-detail-row {
+          display: grid;
+          grid-template-columns: 180px 1fr;
+          gap: 12px;
+          padding: 12px;
+          border-radius: 12px;
+          background: #f8f5f2;
+          word-break: break-word;
+        }
+
+        .payment-detail-row strong {
+          color: #07182e;
+          font-size: 13px;
+          font-weight: 800;
+        }
+
+        .payment-detail-row span {
+          color: #1f2937;
+          font-size: 13px;
+          white-space: pre-wrap;
+        }
+
+        .payment-details-footer {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: 20px;
+        }
+
+        .payment-details-footer button {
+          border: none;
+          background: #07182e;
+          color: #ffffff;
+          padding: 10px 22px;
+          border-radius: 12px;
+          cursor: pointer;
+          font-weight: 700;
+        }
+
+        @media (max-width: 640px) {
+          .payment-detail-row {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </div>
   );
 }

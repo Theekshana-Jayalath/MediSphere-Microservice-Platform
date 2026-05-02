@@ -502,7 +502,7 @@ const PaymentSuccess = () => {
           </button>
           
           <button 
-            onClick={() => navigate('/patient/dashboard')} 
+            onClick={() => navigate('/patient/appointments')} 
             className="action-button primary"
           >
             <span className="button-icon">📅</span>

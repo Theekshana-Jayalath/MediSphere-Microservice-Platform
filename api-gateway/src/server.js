@@ -64,6 +64,58 @@ const forwardRequest = async (req, res, targetBaseUrl) => {
   }
 };
 
+const forwardBinaryRequest = async (req, res, targetBaseUrl) => {
+  try {
+    if (!targetBaseUrl) {
+      return res.status(500).json({
+        success: false,
+        message: "Target service URL is not configured in API Gateway .env",
+      });
+    }
+
+    const targetUrl = `${targetBaseUrl}${req.originalUrl}`;
+
+    const headers = {
+      ...(req.headers.authorization
+        ? { Authorization: req.headers.authorization }
+        : {}),
+    };
+
+    const response = await axios({
+      method: req.method,
+      url: targetUrl,
+      headers,
+      responseType: "arraybuffer",
+      validateStatus: () => true,
+    });
+
+    const contentType = response.headers?.["content-type"];
+    const contentLength = response.headers?.["content-length"];
+    const contentDisposition = response.headers?.["content-disposition"];
+
+    if (contentType) {
+      res.setHeader("Content-Type", contentType);
+    }
+
+    if (contentLength) {
+      res.setHeader("Content-Length", contentLength);
+    }
+
+    if (contentDisposition) {
+      res.setHeader("Content-Disposition", contentDisposition);
+    }
+
+    return res.status(response.status).send(Buffer.from(response.data || []));
+  } catch (error) {
+    console.error("Gateway binary forward error:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Gateway forwarding failed",
+      error: error.message,
+    });
+  }
+};
+
 // Special forwarder for multipart/form-data uploads
 const forwardMultipartRequest = async (req, res, targetBaseUrl) => {
   try {
@@ -198,6 +250,10 @@ app.use("/api/auth", (req, res) =>
 
 app.use("/api/patients", (req, res) =>
   forwardRequest(req, res, process.env.PATIENT_SERVICE_URL)
+);
+
+app.use("/uploads", (req, res) =>
+  forwardBinaryRequest(req, res, process.env.PATIENT_SERVICE_URL)
 );
 
 // Use multipart forwarder for reports upload/update requests with files

@@ -49,3 +49,34 @@ export const sendTelemedicineConfirmationEmail = async ({
 
   return await transporter.sendMail(mailOptions);
 };
+
+export const sendTelemedicineEmailToDoctor = async ({
+  doctorEmail,
+  doctorName,
+  patientName,
+  specialty,
+  scheduledTime,
+  meetingLink,
+}) => {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: doctorEmail,
+    subject: "New Telemedicine Appointment",
+    html: `
+      <h2>New Telemedicine Session Scheduled</h2>
+      <p>Dear Dr. ${doctorName},</p>
+      <p>You have a scheduled telemedicine session.</p>
+      <p><strong>Patient:</strong> ${patientName}</p>
+      <p><strong>Specialty:</strong> ${specialty || "Not specified"}</p>
+      <p><strong>Scheduled Time:</strong> ${scheduledTime}</p>
+      ${
+        meetingLink
+          ? `<p><strong>Meeting Link:</strong> <a href="${meetingLink}">${meetingLink}</a></p>`
+          : ""
+      }
+      <p>MediSphere Team</p>
+    `,
+  };
+
+  return await transporter.sendMail(mailOptions);
+};

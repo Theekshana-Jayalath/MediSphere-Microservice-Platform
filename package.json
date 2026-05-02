@@ -1,0 +1,17 @@
+{
+  "scripts": {
+    "start": "concurrently \"npm start --prefix api-gateway\" \"npm start --prefix services/auth-service\" \"npm start --prefix services/admin-service\" \"npm start --prefix services/appointment-service\" \"npm start --prefix services/doctor-service\" \"npm start --prefix services/notification-service\" \"npm start --prefix services/patient-service\" \"npm start --prefix services/payment-service\" \"npm start --prefix services/telemedicine-service\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "axios": "^1.15.2",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mongoose": "^9.5.0",
+    "nodemailer": "^8.0.5",
+    "twilio": "^6.0.0"
+  }
+}
