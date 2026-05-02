@@ -7,6 +7,7 @@ export default function AdminPayments() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedPayment, setSelectedPayment] = useState(null);
 
   const PAYMENTS_API =
     import.meta.env.VITE_API_GATEWAY_URL
@@ -226,23 +227,18 @@ export default function AdminPayments() {
               <table className="payments-table">
                 <thead>
                   <tr>
-                    <th>Payment ID</th>
                     <th>Appointment ID</th>
-                    <th>Patient ID</th>
-                    <th>Doctor ID</th>
                     <th>Amount</th>
                     <th>Method</th>
                     <th>Status</th>
                     <th>Created At</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredPayments.map((payment) => (
                     <tr key={payment._id}>
-                      <td>{payment._id}</td>
                       <td>{payment.appointmentId || "-"}</td>
-                      <td>{payment.patientId || "-"}</td>
-                      <td>{payment.doctorId || "-"}</td>
                       <td>{formatCurrency(payment.amount, payment.currency)}</td>
                       <td>{payment.paymentMethod || "-"}</td>
                       <td>
@@ -251,6 +247,15 @@ export default function AdminPayments() {
                         </span>
                       </td>
                       <td>{formatDate(payment.createdAt)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="payment-view-btn"
+                          onClick={() => setSelectedPayment(payment)}
+                        >
+                          View
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -259,6 +264,194 @@ export default function AdminPayments() {
           )}
         </section>
       </main>
+
+      {selectedPayment && (
+        <div
+          className="payment-modal-overlay"
+          onClick={() => setSelectedPayment(null)}
+        >
+          <div
+            className="payment-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="payment-modal-header">
+              <h3>Payment Details</h3>
+              <button type="button" onClick={() => setSelectedPayment(null)}>
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="payment-modal-body">
+              <div className="payment-detail-item">
+                <label>Payment ID</label>
+                <p>{selectedPayment._id || "-"}</p>
+              </div>
+
+              <div className="payment-detail-item">
+                <label>Appointment ID</label>
+                <p>{selectedPayment.appointmentId || "-"}</p>
+              </div>
+
+              <div className="payment-detail-item">
+                <label>Patient ID</label>
+                <p>{selectedPayment.patientId || "-"}</p>
+              </div>
+
+              <div className="payment-detail-item">
+                <label>Doctor ID</label>
+                <p>{selectedPayment.doctorId || "-"}</p>
+              </div>
+
+              <div className="payment-detail-item">
+                <label>Amount</label>
+                <p>{formatCurrency(selectedPayment.amount, selectedPayment.currency)}</p>
+              </div>
+
+              <div className="payment-detail-item">
+                <label>Method</label>
+                <p>{selectedPayment.paymentMethod || "-"}</p>
+              </div>
+
+              <div className="payment-detail-item">
+                <label>Status</label>
+                <p>
+                  <span className={getStatusClass(selectedPayment.status)}>
+                    {selectedPayment.status || "UNKNOWN"}
+                  </span>
+                </p>
+              </div>
+
+              <div className="payment-detail-item">
+                <label>Created At</label>
+                <p>{formatDate(selectedPayment.createdAt)}</p>
+              </div>
+            </div>
+
+            <div className="payment-modal-footer">
+              <button type="button" onClick={() => setSelectedPayment(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        .payment-view-btn {
+          border: none;
+          background: #1d2d44;
+          color: #ffffff;
+          padding: 8px 16px;
+          border-radius: 10px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .payment-view-btn:hover {
+          background: #0f1c2e;
+        }
+
+        .payment-modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.45);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          padding: 20px;
+        }
+
+        .payment-modal {
+          width: 100%;
+          max-width: 560px;
+          background: #ffffff;
+          border-radius: 20px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+          overflow: hidden;
+        }
+
+        .payment-modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 20px 24px;
+          border-bottom: 1px solid #eee7e2;
+        }
+
+        .payment-modal-header h3 {
+          margin: 0;
+          color: #07182e;
+          font-size: 20px;
+          font-weight: 700;
+        }
+
+        .payment-modal-header button {
+          border: none;
+          background: transparent;
+          cursor: pointer;
+          color: #07182e;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .payment-modal-body {
+          padding: 24px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+
+        .payment-detail-item {
+          background: #f8f5f2;
+          padding: 14px;
+          border-radius: 14px;
+          min-width: 0;
+        }
+
+        .payment-detail-item label {
+          display: block;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: #6b7280;
+          margin-bottom: 6px;
+        }
+
+        .payment-detail-item p {
+          margin: 0;
+          color: #07182e;
+          font-size: 14px;
+          font-weight: 500;
+          word-break: break-word;
+        }
+
+        .payment-modal-footer {
+          padding: 16px 24px;
+          border-top: 1px solid #eee7e2;
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .payment-modal-footer button {
+          border: none;
+          background: #1d2d44;
+          color: #ffffff;
+          padding: 10px 22px;
+          border-radius: 10px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        @media (max-width: 640px) {
+          .payment-modal-body {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </div>
   );
 }

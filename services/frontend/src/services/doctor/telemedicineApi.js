@@ -15,6 +15,11 @@ const telemedicineApi = axios.create({
   },
 });
 
+export const getDoctorSessionsById = async (doctorId) => {
+  const response = await telemedicineApi.get(`/doctor/sessions/${doctorId}`);
+  return response.data;
+};
+
 export const getAllSessions = async () => {
   const response = await telemedicineApi.get("/");
   return response.data;

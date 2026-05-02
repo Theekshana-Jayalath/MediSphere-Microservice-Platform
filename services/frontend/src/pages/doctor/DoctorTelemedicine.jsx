@@ -1,9 +1,9 @@
 ﻿import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DoctorSidebar from "../../components/doctor/DoctorSidebar";
 import SessionCard from "../../components/doctor/SessionCard";
 import {
   getAllSessions,
-  getSessionSummary,
   startSession,
   completeSession,
 } from "../../services/doctor/telemedicineApi";
@@ -23,6 +23,7 @@ const DoctorTelemedicine = () => {
   const [activeFilter, setActiveFilter] = useState("all");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   const getLoggedInUser = () => {
     try {
@@ -31,14 +32,6 @@ const DoctorTelemedicine = () => {
       return null;
     }
   };
-
-  const user = getLoggedInUser();
-
-  const doctorId = String(
-    user?.doctorId || user?._id || user?.id || ""
-  ).trim();
-
-  const normalizeId = (value) => String(value || "").trim();
 
   const buildDoctorSummary = (doctorSessions) => ({
     total: doctorSessions.length,
@@ -54,7 +47,9 @@ const DoctorTelemedicine = () => {
       setError("");
       setMessage("");
 
-      if (!doctorId) {
+      const user = getLoggedInUser();
+
+      if (!user) {
         setSessions([]);
         setSummary({
           total: 0,
@@ -63,34 +58,38 @@ const DoctorTelemedicine = () => {
           completed: 0,
           cancelled: 0,
         });
-        setError("Doctor ID not found in localStorage user object.");
+        setError("Doctor user not found. Please login again.");
         return;
       }
 
-      const [sessionsRes, summaryRes] = await Promise.all([
-        getAllSessions(),
-        getSessionSummary(),
-      ]);
+      const data = await getAllSessions();
 
-      const allSessions = Array.isArray(sessionsRes?.sessions)
-        ? sessionsRes.sessions
-        : Array.isArray(sessionsRes?.data?.sessions)
-        ? sessionsRes.data.sessions
-        : Array.isArray(sessionsRes)
-        ? sessionsRes
+      const allSessions = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.sessions)
+        ? data.sessions
+        : Array.isArray(data?.data)
+        ? data.data
+        : Array.isArray(data?.data?.sessions)
+        ? data.data.sessions
         : [];
 
-      console.log("Logged in user:", user);
-      console.log("Doctor ID used for filtering:", doctorId);
-      console.log("All sessions from API:", allSessions);
-      console.log("Session summary response:", summaryRes);
-      console.log("Logged in user:", user);
-   
-      console.log("First session doctorId:", allSessions?.[0]?.doctorId);
+      const loggedDoctorMongoId = String(user.id || user._id || "").trim();
+      const loggedDoctorCode = String(user.doctorId || "").trim();
+      const loggedDoctorEmail = String(user.email || "").trim().toLowerCase();
 
-      const doctorSessions = allSessions;
+      const doctorSessions = allSessions.filter((session) => {
+        const sessionDoctorId = String(session?.doctorId || "").trim();
+        const sessionDoctorEmail = String(session?.doctorEmail || "")
+          .trim()
+          .toLowerCase();
 
-      console.log("Filtered doctor sessions:", doctorSessions);
+        return (
+          sessionDoctorId === loggedDoctorMongoId ||
+          sessionDoctorId === loggedDoctorCode ||
+          sessionDoctorEmail === loggedDoctorEmail
+        );
+      });
 
       setSessions(doctorSessions);
       setSummary(buildDoctorSummary(doctorSessions));
@@ -128,9 +127,10 @@ const DoctorTelemedicine = () => {
       setMessage("Session started successfully.");
       await fetchDoctorSessions();
     } catch (err) {
-      console.error("Failed to start session:", err);
       setError(
-        err?.response?.data?.message || err?.message || "Failed to start session."
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to start session."
       );
     } finally {
       setUpdatingId("");
@@ -146,8 +146,15 @@ const DoctorTelemedicine = () => {
       await completeSession(sessionId);
       setMessage("Session marked as completed successfully.");
       await fetchDoctorSessions();
+      // redirect to create prescription page for this session
+      try {
+        // find the session object we just completed to pass to prescription form
+        const completedSession = sessions.find((s) => s._id === sessionId) || null;
+        if (navigate) navigate(`/doctor/create-prescription`, { state: { session: completedSession } });
+      } catch (e) {
+        /* ignore navigation errors */
+      }
     } catch (err) {
-      console.error("Failed to complete session:", err);
       setError(
         err?.response?.data?.message ||
           err?.message ||
@@ -239,7 +246,9 @@ const DoctorTelemedicine = () => {
         </section>
 
         {loading ? (
-          <div className="doctor-telemedicine-empty-box">Loading sessions...</div>
+          <div className="doctor-telemedicine-empty-box">
+            Loading sessions...
+          </div>
         ) : filteredSessions.length === 0 ? (
           <div className="doctor-telemedicine-empty-box">
             No sessions found for this doctor.

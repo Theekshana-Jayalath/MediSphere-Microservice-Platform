@@ -88,21 +88,27 @@ const BookingPage = () => {
     try {
   const patientId = localStorage.getItem('patientId') || "temp_patient_" + Date.now();
 
+  // If the selected time is a range like "5:35 PM - 7:35 PM",
+  // use only the starting label for appointmentTime/startTime.
+  const startLabel = selectedTime?.split("-")[0]?.trim() || selectedTime || "";
+
       const payload = {
-        appointmentId: "APT_" + Date.now(),
-        patientId: patientId,
-        doctorId: doctor._id || doctor.id,
-        doctorName: doctor.fullName || doctor.name || "",
-        doctorSpecialty: doctor.specialization || doctor.specialty || "",
-        hospital: selectedHospital || doctor.baseHospital || doctor.hospital || "",
-        appointmentDate: selectedDate,
+    appointmentId: "APT_" + Date.now(),
+    patientId: patientId,
+    doctorId: doctor._id || doctor.id,
+    doctorName: doctor.fullName || doctor.name || "",
+    doctorSpecialty: doctor.specialization || doctor.specialty || "",
+    hospital: selectedHospital || doctor.baseHospital || doctor.hospital || "",
+    appointmentDate: selectedDate,
+        // appointmentTime keeps the full chosen label (start - end)
         appointmentTime: selectedTime,
-        startTime: selectedTime,
-        duration: selectedConsultation?.duration || 30,
+        // startTime stores only the start part (e.g. "5:35 PM")
+        startTime: startLabel,
+    duration: selectedConsultation?.duration || 120,
   consultationType: selectedConsultation?.id || selectedConsultation?.type || selectedConsultation?.name || (typeof selectedConsultation === 'string' ? selectedConsultation : "Consultation"),
-        amount: consultationFee,
-        status: "PENDING"
-      };
+    amount: consultationFee,
+    status: "PENDING"
+  };
 
   const API_GATEWAY = import.meta.env.VITE_API_GATEWAY_URL || "http://localhost:5015";
   const resp = await fetch(`${API_GATEWAY}/api/appointments`, {

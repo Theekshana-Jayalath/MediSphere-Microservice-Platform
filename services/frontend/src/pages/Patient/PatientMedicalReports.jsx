@@ -16,8 +16,7 @@ export default function PatientMedicalReports() {
 
   const patientName =
     patientProfile?.name || patientProfile?.fullName || user?.name || "Patient";
-  const patientId =
-    patientProfile?.patientId || user?.patientId || "------";
+  const patientId = patientProfile?.patientId || user?.patientId || "------";
 
   const lookupPatientId =
     patientProfile?.userId || user?.id || patientProfile?._id || "";
@@ -42,6 +41,15 @@ export default function PatientMedicalReports() {
   const [searchText, setSearchText] = useState("");
   const [editingReportId, setEditingReportId] = useState(null);
   const [doctorError, setDoctorError] = useState(null);
+  const [toast, setToast] = useState(null);
+  
+  // State for delete confirmation modal
+  const [deleteModal, setDeleteModal] = useState({ show: false, reportId: null, reportTitle: "" });
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const getAuthToken = () => {
     return (
@@ -51,6 +59,13 @@ export default function PatientMedicalReports() {
       localStorage.getItem("accessToken") ||
       ""
     );
+  };
+
+  const formatDoctorDisplayName = (doctor) => {
+    const rawName = doctor?.fullName || doctor?.name || doctor?.email || "Unknown";
+    const cleanedName = String(rawName).replace(/^dr\.?\s*/i, "").trim();
+    const specialization = doctor?.specialization ? ` - ${doctor.specialization}` : "";
+    return `Dr. ${cleanedName}${specialization}`;
   };
 
   const resetForm = () => {
@@ -120,7 +135,7 @@ export default function PatientMedicalReports() {
       setReports(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch reports:", error);
-      alert(error.message || "Failed to load reports");
+      showToast(error.message || "Failed to load reports", "error");
     } finally {
       setLoadingReports(false);
     }
@@ -232,17 +247,17 @@ export default function PatientMedicalReports() {
     e.preventDefault();
 
     if (!reportForm.title.trim()) {
-      alert("Report title is required");
+      showToast("Report title is required", "error");
       return;
     }
 
     if (!reportForm.doctorId) {
-      alert("Please select a doctor to associate with this report");
+      showToast("Please select a doctor to associate with this report", "error");
       return;
     }
 
     if (!editingReportId && !reportForm.file) {
-      alert("Please select a file");
+      showToast("Please select a file", "error");
       return;
     }
 
@@ -256,6 +271,17 @@ export default function PatientMedicalReports() {
       formData.append("description", reportForm.description);
       formData.append("reportType", reportForm.reportType);
       formData.append("doctorId", reportForm.doctorId);
+      
+      // Include patient ID for both create and update operations
+      const patientIdForOperation = patientProfile?.userId || 
+                                    user?.id || 
+                                    patientProfile?._id || 
+                                    lookupPatientId;
+      
+      if (patientIdForOperation) {
+        formData.append("patientId", patientIdForOperation);
+        console.log("Adding patientId:", patientIdForOperation);
+      }
 
       console.log("Submitting with doctorId:", reportForm.doctorId);
 
@@ -270,6 +296,7 @@ export default function PatientMedicalReports() {
 
       console.log("Submitting to API Gateway:", url);
       console.log("Auth token exists:", !!token);
+      console.log("Is update operation:", !!editingReportId);
 
       const response = await fetch(url, {
         method: editingReportId ? "PUT" : "POST",
@@ -298,30 +325,34 @@ export default function PatientMedicalReports() {
       resetForm();
       await fetchReports();
 
-      alert(
+      showToast(
         editingReportId
           ? "Report updated successfully"
-          : "Report uploaded successfully"
+          : "Report uploaded successfully",
+        "success"
       );
     } catch (error) {
       console.error("Failed to submit report:", error);
-      alert(
+      showToast(
         error.message ||
           (editingReportId
             ? "Failed to update report"
-            : "Failed to upload report")
+            : "Failed to upload report"),
+        "error"
       );
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDeleteReport = async (reportId) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this report?"
-    );
-    if (!confirmed) return;
+  // Updated delete handler that opens custom modal
+  const handleDeleteClick = (reportId, reportTitle) => {
+    setDeleteModal({ show: true, reportId, reportTitle });
+  };
 
+  const confirmDelete = async () => {
+    const { reportId } = deleteModal;
+    
     try {
       const token = getAuthToken();
 
@@ -343,11 +374,17 @@ export default function PatientMedicalReports() {
       }
 
       await fetchReports();
-      alert("Report deleted successfully");
+      showToast("Report deleted successfully", "success");
+      setDeleteModal({ show: false, reportId: null, reportTitle: "" });
     } catch (error) {
       console.error("Failed to delete report:", error);
-      alert(error.message || "Failed to delete report");
+      showToast(error.message || "Failed to delete report", "error");
+      setDeleteModal({ show: false, reportId: null, reportTitle: "" });
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteModal({ show: false, reportId: null, reportTitle: "" });
   };
 
   const formatFileSize = (bytes) => {
@@ -405,7 +442,7 @@ export default function PatientMedicalReports() {
     if (!doctorId) return "Not assigned";
     const doctor = doctors.find((d) => d._id === doctorId || d.id === doctorId);
     if (doctor) {
-      return `Dr. ${doctor.fullName || doctor.name || "Unknown"}`;
+      return formatDoctorDisplayName(doctor);
     }
     return "Unknown Doctor";
   };
@@ -451,6 +488,39 @@ export default function PatientMedicalReports() {
         activeItem="medicalReports"
         onLogout={handleLogout}
       />
+
+      {toast && (
+        <div className={`medical-report-toast ${toast.type}`}>
+          <span className="material-symbols-outlined">
+            {toast.type === "success" ? "check_circle" : "error"}
+          </span>
+          <p>{toast.message}</p>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.show && (
+        <div className="delete-modal-overlay" onClick={cancelDelete}>
+          <div className="delete-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="delete-modal-header">
+              <span className="material-symbols-outlined delete-warning-icon">warning</span>
+              <h3>Delete Report</h3>
+            </div>
+            <div className="delete-modal-body">
+              <p>Are you sure you want to delete <strong>"{deleteModal.reportTitle}"</strong>?</p>
+              <p className="delete-modal-warning">This action cannot be undone.</p>
+            </div>
+            <div className="delete-modal-footer">
+              <button className="delete-modal-cancel" onClick={cancelDelete}>
+                Cancel
+              </button>
+              <button className="delete-modal-confirm" onClick={confirmDelete}>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="reports-main">
         <header className="reports-topbar">
@@ -613,6 +683,13 @@ export default function PatientMedicalReports() {
                     value={reportForm.doctorId}
                     onChange={handleChange}
                     required
+                    style={{
+                      backgroundColor: "#ffffff",
+                      color: "#07182e",
+                      opacity: 1,
+                      position: "relative",
+                      zIndex: 10,
+                    }}
                   >
                     <option value="">-- Select a doctor --</option>
                     {loadingDoctors ? (
@@ -629,12 +706,7 @@ export default function PatientMedicalReports() {
                           key={doctor._id || doctor.id}
                           value={doctor._id || doctor.id}
                         >
-                          Dr.{" "}
-                          {doctor.fullName ||
-                            doctor.name ||
-                            doctor.email ||
-                            "Unknown"}{" "}
-                          - {doctor.specialization || ""}
+                          {formatDoctorDisplayName(doctor)}
                         </option>
                       ))
                     )}
@@ -691,7 +763,7 @@ export default function PatientMedicalReports() {
                       : "Saving..."
                     : editingReportId
                     ? "Update Report"
-                    : "Save To Vault"}
+                    : "Save"}
                 </button>
 
                 {editingReportId && (
@@ -834,7 +906,7 @@ export default function PatientMedicalReports() {
                                       "_blank"
                                     );
                                   } else {
-                                    alert("No file available");
+                                    showToast("No file available", "error");
                                   }
                                 }}
                               >
@@ -856,7 +928,7 @@ export default function PatientMedicalReports() {
                               <button
                                 type="button"
                                 title="Delete"
-                                onClick={() => handleDeleteReport(report._id)}
+                                onClick={() => handleDeleteClick(report._id, report.title)}
                               >
                                 <span className="material-symbols-outlined">
                                   delete
@@ -927,6 +999,197 @@ export default function PatientMedicalReports() {
           </section>
         </div>
       </main>
+
+      <style>{`
+        .medical-report-toast {
+          position: fixed;
+          top: 24px;
+          right: 24px;
+          z-index: 20000;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 280px;
+          max-width: 420px;
+          padding: 14px 18px;
+          border-radius: 14px;
+          background: #ffffff;
+          box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+          animation: reportToastSlideIn 0.25s ease;
+        }
+
+        .medical-report-toast.success {
+          border-left: 5px solid #16a34a;
+        }
+
+        .medical-report-toast.error {
+          border-left: 5px solid #dc2626;
+        }
+
+        .medical-report-toast span {
+          font-size: 24px;
+        }
+
+        .medical-report-toast.success span {
+          color: #16a34a;
+        }
+
+        .medical-report-toast.error span {
+          color: #dc2626;
+        }
+
+        .medical-report-toast p {
+          margin: 0;
+          color: #07182e;
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        /* Delete Modal Styles */
+        .delete-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(4px);
+          z-index: 10000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          animation: fadeIn 0.2s ease;
+        }
+
+        .delete-modal-content {
+          background: white;
+          border-radius: 24px;
+          width: 90%;
+          max-width: 420px;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          animation: slideUp 0.3s ease;
+          overflow: hidden;
+        }
+
+        .delete-modal-header {
+          padding: 24px 24px 16px 24px;
+          text-align: center;
+          border-bottom: 1px solid #eef2f6;
+        }
+
+        .delete-warning-icon {
+          font-size: 48px !important;
+          color: #dc2626;
+          background: #fef2f2;
+          padding: 12px;
+          border-radius: 60px;
+          margin-bottom: 12px;
+        }
+
+        .delete-modal-header h3 {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 600;
+          color: #07182e;
+        }
+
+        .delete-modal-body {
+          padding: 24px;
+          text-align: center;
+        }
+
+        .delete-modal-body p {
+          margin: 0 0 8px 0;
+          color: #334155;
+          font-size: 15px;
+          line-height: 1.5;
+        }
+
+        .delete-modal-warning {
+          color: #dc2626 !important;
+          font-size: 13px !important;
+          font-weight: 500;
+        }
+
+        .delete-modal-footer {
+          padding: 16px 24px 24px 24px;
+          display: flex;
+          gap: 12px;
+          border-top: 1px solid #eef2f6;
+        }
+
+        .delete-modal-cancel,
+        .delete-modal-confirm {
+          flex: 1;
+          padding: 12px 20px;
+          border-radius: 40px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border: none;
+        }
+
+        .delete-modal-cancel {
+          background: #f1f5f9;
+          color: #334155;
+        }
+
+        .delete-modal-cancel:hover {
+          background: #e2e8f0;
+        }
+
+        .delete-modal-confirm {
+          background: #dc2626;
+          color: white;
+        }
+
+        .delete-modal-confirm:hover {
+          background: #b91c1c;
+        }
+
+        .reports-form-group select {
+          background-color: #ffffff !important;
+          color: #07182e !important;
+          opacity: 1 !important;
+        }
+
+        .reports-form-group select option {
+          background-color: #ffffff !important;
+          color: #07182e !important;
+        }
+
+        @keyframes reportToastSlideIn {
+          from {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

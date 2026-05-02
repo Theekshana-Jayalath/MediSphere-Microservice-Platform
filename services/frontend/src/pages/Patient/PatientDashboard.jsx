@@ -25,6 +25,14 @@ export default function PatientDashboard() {
     glucose: "94",
   });
 
+  // State for custom toast notification
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
   useEffect(() => {
     const savedVitals = localStorage.getItem("patientVitals");
     if (savedVitals) {
@@ -75,7 +83,7 @@ export default function PatientDashboard() {
 
   const handleSaveVitals = () => {
     localStorage.setItem("patientVitals", JSON.stringify(vitals));
-    alert("Vitals saved successfully");
+    showToast("Vitals saved successfully", "success");
   };
 
   const handleLogout = () => {
@@ -218,6 +226,16 @@ export default function PatientDashboard() {
         onLogout={handleLogout}
       />
 
+      {/* Custom Toast Notification */}
+      {toast && (
+        <div className={`dashboard-toast ${toast.type}`}>
+          <span className="material-symbols-outlined">
+            {toast.type === "success" ? "check_circle" : "error"}
+          </span>
+          <p>{toast.message}</p>
+        </div>
+      )}
+
       <main className="patient-main">
         <header className="patient-topbar">
           <div className="patient-search-wrap">
@@ -252,25 +270,6 @@ export default function PatientDashboard() {
         </header>
 
         <div className="patient-content">
-          <section className="patient-hero-card">
-            <div className="patient-hero-overlay"></div>
-            <div className="patient-hero-content">
-              <span className="patient-hero-label">Next Consultation</span>
-              <h1>Dr. Sarah Vance</h1>
-              <p>Internal Medicine • Today at 14:30</p>
-
-              <div className="patient-hero-actions">
-                <button className="join-btn">
-                  <span className="material-symbols-outlined filled">
-                    videocam
-                  </span>
-                  Join Video Call
-                </button>
-                <button className="reschedule-btn">Reschedule</button>
-              </div>
-            </div>
-          </section>
-
           <section className="patient-vitals-section">
             <div className="patient-vitals-header">
               <div className="patient-vitals-title">
@@ -417,116 +416,65 @@ export default function PatientDashboard() {
               </button>
             </div>
           </section>
-
-          <section className="patient-bottom-grid">
-            <div className="left-column">
-              <div className="prescriptions-card">
-                <div className="section-row">
-                  <h3>Prescriptions</h3>
-                  <a href="#">View All</a>
-                </div>
-
-                <div className="prescription-item">
-                  <div className="prescription-left">
-                    <span className="material-symbols-outlined">pill</span>
-                    <div>
-                      <h4>Lisinopril 10mg</h4>
-                      <p>Once daily • Refills: 2</p>
-                    </div>
-                  </div>
-                  <button>
-                    <span className="material-symbols-outlined">download</span>
-                  </button>
-                </div>
-
-                <div className="prescription-item">
-                  <div className="prescription-left">
-                    <span className="material-symbols-outlined">pill</span>
-                    <div>
-                      <h4>Atorvastatin 20mg</h4>
-                      <p>At bedtime • Refills: 1</p>
-                    </div>
-                  </div>
-                  <button>
-                    <span className="material-symbols-outlined">download</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="ai-checker-card">
-                <h4>Feeling unwell?</h4>
-                <p>
-                  Our AI clinical engine can help assess your symptoms in
-                  seconds before speaking with a doctor.
-                </p>
-                <button>
-                  Start AI Checker
-                  <span className="material-symbols-outlined">
-                    arrow_forward
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            <div className="right-column">
-              <div className="insight-card">
-                <div className="insight-icon">
-                  <span className="material-symbols-outlined filled">
-                    lightbulb
-                  </span>
-                </div>
-                <div>
-                  <span className="insight-badge">AI Insight</span>
-                  <h3>Your recovery is trending upwards</h3>
-                  <p>
-                    Based on your last 7 days of heart rate data, your resting
-                    BPM has decreased by 4%. We recommend maintaining your
-                    current light activity level. Consider a 15-minute afternoon
-                    walk to stabilize circulation.
-                  </p>
-                </div>
-              </div>
-
-              <div className="timeline-card">
-                <h3>Medical History Timeline</h3>
-
-                <div className="timeline-item">
-                  <div className="timeline-icon">
-                    <span className="material-symbols-outlined">
-                      stethoscope
-                    </span>
-                  </div>
-                  <div className="timeline-content">
-                    <span>March 12, 2024</span>
-                    <h4>Annual Physical Examination</h4>
-                    <p>St. Mary Medical Center • Result: Healthy</p>
-                    <button>
-                      Download Summary
-                      <span className="material-symbols-outlined">
-                        open_in_new
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="timeline-item">
-                  <div className="timeline-icon">
-                    <span className="material-symbols-outlined">
-                      clinical_notes
-                    </span>
-                  </div>
-                  <div className="timeline-content">
-                    <span>January 15, 2024</span>
-                    <h4>Specialist Consultation</h4>
-                    <p>Cardiology Department • Dr. James Miller</p>
-                    <div className="timeline-tag">Follow-up Complete</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
         </div>
       </main>
+
+      <style>{`
+        .dashboard-toast {
+          position: fixed;
+          top: 24px;
+          right: 24px;
+          z-index: 20000;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 280px;
+          max-width: 420px;
+          padding: 14px 18px;
+          border-radius: 14px;
+          background: #ffffff;
+          box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+          animation: dashboardToastSlideIn 0.25s ease;
+        }
+
+        .dashboard-toast.success {
+          border-left: 5px solid #16a34a;
+        }
+
+        .dashboard-toast.error {
+          border-left: 5px solid #dc2626;
+        }
+
+        .dashboard-toast span {
+          font-size: 24px;
+        }
+
+        .dashboard-toast.success span {
+          color: #16a34a;
+        }
+
+        .dashboard-toast.error span {
+          color: #dc2626;
+        }
+
+        .dashboard-toast p {
+          margin: 0;
+          color: #07182e;
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        @keyframes dashboardToastSlideIn {
+          from {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,833 +1,540 @@
-.patient-appointments-page {
+/* =============================================
+   Patient Appointments - Clean Modern UI
+   Theme: #1d2d44 / #344966 / #c7d9e5 / #f5efeb / #fff
+   ============================================= */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+.apt-page {
   display: flex;
   min-height: 100vh;
-  background: linear-gradient(135deg, #fef8f4 0%, #f3ede9 100%);
+  background: #f5efeb;
   font-family: 'Inter', sans-serif;
 }
 
-.patient-appointments-main {
+/* Main */
+.apt-main {
   flex: 1;
   margin-left: 280px;
   min-height: 100vh;
 }
 
-/* Calendar Layout */
-.appointments-layout {
-  display: grid;
-  grid-template-columns: 380px 1fr;
-  gap: 24px;
-  margin-top: 24px;
+/* Top Bar */
+.apt-topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 20px; padding: 12px 28px;
+  background: rgba(255,255,255,0.9); backdrop-filter: blur(14px);
+  border-bottom: 1px solid #e8e0da;
+}
+.apt-search {
+  flex: 1; max-width: 380px; display: flex; align-items: center; gap: 8px;
+  background: #fff; border: 1px solid #ddd6d0; border-radius: 10px;
+  padding: 9px 14px; transition: 0.2s;
+}
+.apt-search:focus-within { border-color: #1d2d44; }
+.apt-search span { color: #8b9aab; font-size: 20px; }
+.apt-search input {
+  flex: 1; border: none; outline: none; font-size: 13px; color: #1d2d44; background: transparent;
+}
+.apt-search input::placeholder { color: #b0bcc8; }
+.apt-search-clear { background: none; border: none; cursor: pointer; padding: 2px; }
+.apt-search-clear span { font-size: 18px; color: #b0bcc8; }
+.apt-topbar-right { display: flex; align-items: center; gap: 14px; }
+.apt-icon-btn {
+  position: relative; background: #fff; border: 1px solid #ddd6d0;
+  border-radius: 10px; padding: 8px; cursor: pointer; display: flex; transition: 0.2s;
+}
+.apt-icon-btn:hover { background: #f5efeb; }
+.apt-icon-btn span { font-size: 22px; color: #344966; }
+.apt-badge {
+  position: absolute; top: 6px; right: 6px; width: 8px; height: 8px;
+  background: #c0392b; border-radius: 50%; border: 2px solid #fff;
+}
+.apt-user { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 4px 10px 4px 4px; border-radius: 12px; transition: 0.2s; }
+.apt-user:hover { background: #f5efeb; }
+.apt-avatar {
+  width: 38px; height: 38px; border-radius: 50%; background: #1d2d44;
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 15px;
+}
+.apt-user-meta { display: flex; flex-direction: column; }
+.apt-user-name { font-size: 13px; font-weight: 600; color: #1d2d44; }
+.apt-user-email { font-size: 11px; color: #8b9aab; }
+
+/* Content */
+.apt-content { padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 20px; }
+
+/* Stats */
+.apt-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.apt-stat {
+  background: #fff; border-radius: 14px; padding: 18px 20px;
+  display: flex; align-items: center; gap: 14px; border: 1px solid #e8e0da; transition: 0.2s;
+}
+.apt-stat:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(29,45,68,0.06); }
+.apt-stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+.apt-stat-icon span { font-size: 24px; }
+.apt-stat-icon.upcoming { background: rgba(29,45,68,0.07); color: #1d2d44; }
+.apt-stat-icon.done { background: rgba(46,125,50,0.08); color: #2e7d32; }
+.apt-stat-icon.wait { background: rgba(237,108,2,0.08); color: #ed6c02; }
+.apt-stat-icon.cancel { background: rgba(192,57,43,0.08); color: #c0392b; }
+.apt-stat h2 { font-size: 26px; font-weight: 700; color: #1d2d44; line-height: 1; }
+.apt-stat p { font-size: 12px; color: #8b9aab; margin-top: 3px; }
+
+/* Grid */
+.apt-grid { display: flex; gap: 20px; align-items: flex-start; }
+.apt-registry { flex: 1; min-width: 0; }
+
+/* Registry Card */
+.apt-registry-card {
+  background: #fff; border-radius: 16px; border: 1px solid #e8e0da; overflow: hidden;
+}
+.apt-registry-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 22px; border-bottom: 1px solid #f0ebe4;
+}
+.apt-registry-head h2 { font-size: 17px; font-weight: 700; color: #1d2d44; }
+
+.apt-btn-primary {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #1d2d44; color: #fff; border: none; border-radius: 9px;
+  padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s;
+}
+.apt-btn-primary:hover { background: #344966; }
+.apt-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.apt-btn-primary span { font-size: 17px; }
+
+/* Tabs */
+.apt-tabs { display: flex; gap: 4px; padding: 12px 22px; border-bottom: 1px solid #f0ebe4; background: #fdfbf9; }
+.apt-tab {
+  background: transparent; border: none; border-radius: 8px; padding: 7px 16px;
+  font-size: 12px; font-weight: 600; color: #6b7d8e; cursor: pointer; transition: 0.2s;
+}
+.apt-tab:hover { background: #f5efeb; color: #1d2d44; }
+.apt-tab.active { background: #1d2d44; color: #fff; }
+
+/* Table */
+.apt-table-wrap { overflow-x: auto; }
+.apt-table { width: 100%; border-collapse: collapse; }
+.apt-table thead th {
+  text-align: left; padding: 14px 22px; font-size: 10px; font-weight: 700;
+  color: #8b9aab; text-transform: uppercase; letter-spacing: 0.8px;
+  background: #fdfbf9; border-bottom: 1px solid #f0ebe4;
+}
+.apt-table tbody td { padding: 16px 22px; border-bottom: 1px solid #f8f4f0; vertical-align: middle; }
+.apt-table tbody tr { transition: 0.15s; cursor: pointer; }
+.apt-table tbody tr:hover { background: #fdfbf9; }
+.apt-table tbody tr.row-tracked {
+  background: rgba(29,45,68,0.03); border-left: 3px solid #1d2d44;
 }
 
-/* Calendar Section */
-.calendar-section {
-  background: white;
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(197, 198, 205, 0.2);
-  height: fit-content;
-  position: sticky;
-  top: 100px;
+/* Doctor */
+.apt-doc { display: flex; align-items: center; gap: 12px; }
+.apt-doc-av {
+  width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center;
+  justify-content: center; color: #fff; font-weight: 700; font-size: 14px; flex-shrink: 0;
 }
+.apt-doc-name { font-weight: 600; font-size: 13px; color: #1d2d44; }
+.apt-doc-sp { font-size: 11px; color: #8b9aab; margin-top: 1px; }
 
-.calendar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+/* Type Tag */
+.apt-type-tag {
+  display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
 }
+.apt-type-tag.online { background: rgba(29,45,68,0.06); color: #1d2d44; }
+.apt-type-tag.in-person { background: rgba(52,73,102,0.06); color: #344966; }
 
-.calendar-header button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-}
+/* Date & Time */
+.apt-dt { font-size: 13px; font-weight: 500; color: #1d2d44; }
+.apt-tm { display: block; font-size: 11px; color: #8b9aab; margin-top: 2px; }
 
-.calendar-header button:hover {
-  background: rgba(0, 0, 0, 0.05);
+/* Status */
+.apt-status {
+  display: inline-block; padding: 5px 14px; border-radius: 20px; font-size: 11px; font-weight: 600;
 }
+.apt-status.confirmed { background: rgba(46,125,50,0.08); color: #2e7d32; }
+.apt-status.pending-pay { background: rgba(237,108,2,0.08); color: #ed6c02; }
+.apt-status.completed { background: rgba(29,45,68,0.06); color: #1d2d44; }
+.apt-status.cancelled { background: rgba(192,57,43,0.08); color: #c0392b; }
 
-.calendar-header h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #07182e;
-  margin: 0;
+/* Actions */
+.apt-actions { display: flex; align-items: center; gap: 8px; }
+.apt-act-track {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #f5efeb; border: 1.5px dashed #c7d9e5; border-radius: 8px;
+  padding: 6px 14px; font-size: 11px; font-weight: 600; color: #1d2d44;
+  cursor: pointer; transition: 0.25s; white-space: nowrap;
 }
+.apt-act-track:hover { background: #1d2d44; color: #fff; border-color: #1d2d44; }
+.apt-act-track.active { background: #1d2d44; color: #fff; border-style: solid; border-color: #1d2d44; animation: trackPulse 2s infinite; }
+.apt-act-track .material-symbols-outlined { font-size: 18px; }
+@keyframes trackPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(29,45,68,0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(29,45,68,0); }
+}
+.apt-act-icons { display: flex; gap: 3px; }
+.apt-act-icon {
+  width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center;
+  justify-content: center; border: none; cursor: pointer; transition: 0.2s; background: #f5efeb;
+}
+.apt-act-icon span { font-size: 17px; }
+.apt-act-icon.join { color: #2e7d32; } .apt-act-icon.join:hover { background: #2e7d32; color: #fff; }
+.apt-act-icon.edit { color: #344966; } .apt-act-icon.edit:hover { background: #344966; color: #fff; }
+.apt-act-icon.del { color: #c0392b; } .apt-act-icon.del:hover { background: #c0392b; color: #fff; }
 
-.calendar-weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  margin-bottom: 12px;
-}
+/* Empty */
+.apt-empty { text-align: center; padding: 60px 20px; }
+.apt-empty span { font-size: 48px; color: #c7d9e5; display: block; margin-bottom: 12px; }
+.apt-empty p { font-size: 14px; color: #8b9aab; margin-bottom: 16px; }
+.apt-empty button { background: #1d2d44; color: #fff; border: none; border-radius: 9px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.apt-spin { animation: spin 1s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
 
-.weekday {
-  text-align: center;
-  font-size: 11px;
-  font-weight: 600;
-  color: #75777e;
-  padding: 8px 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+/* Sidebar */
+.apt-sidebar { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 78px; }
 
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+/* Calendar */
+.apt-cal-card { background: #fff; border-radius: 16px; padding: 16px; border: 1px solid #e8e0da; }
+.apt-cal-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.apt-cal-nav h3 { font-size: 14px; font-weight: 700; color: #1d2d44; }
+.apt-cal-nav button { background: #f5efeb; border: none; border-radius: 7px; padding: 5px; cursor: pointer; display: flex; transition: 0.2s; }
+.apt-cal-nav button:hover { background: #e8e0da; }
+.apt-cal-nav button span { font-size: 18px; color: #344966; }
+.apt-cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 10px; font-weight: 700; color: #b0bcc8; margin-bottom: 4px; }
+.apt-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-day {
+  aspect-ratio: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; border-radius: 8px; cursor: pointer; transition: 0.15s;
+  font-size: 12px; font-weight: 500; color: #1d2d44; position: relative;
 }
+.cal-day:hover { background: #fdfbf9; }
+.cal-day.empty { cursor: default; } .cal-day.empty:hover { background: transparent; }
+.cal-day.today { background: #1d2d44; color: #fff; font-weight: 700; }
+.cal-day.selected { background: #344966; color: #fff; }
+.cal-day.has-events .cal-day-num { font-weight: 700; }
+.cal-dot {
+  width: 5px; height: 5px; background: #1d2d44; border-radius: 50%;
+  position: absolute; bottom: 4px;
+}
+.cal-day.today .cal-dot, .cal-day.selected .cal-dot { background: #fff; }
+.apt-cal-selected {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0ebe4;
+  display: flex; align-items: center; gap: 6px; font-size: 12px; color: #344966;
+}
+.apt-cal-selected span:first-child { font-size: 16px; color: #1d2d44; }
+.apt-cal-selected button { margin-left: auto; background: none; border: none; color: #c0392b; font-size: 11px; font-weight: 600; cursor: pointer; }
 
-.calendar-day {
-  aspect-ratio: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  border-radius: 12px;
-  transition: all 0.2s;
-  position: relative;
-  background: white;
+/* Modal */
+.apt-modal-overlay {
+  position: fixed; inset: 0; background: rgba(29,45,68,0.5);
+  backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000;
 }
-
-.calendar-day:hover {
-  background: rgba(7, 24, 46, 0.05);
+.apt-modal { background: #fff; border-radius: 16px; width: 420px; max-width: 92vw; box-shadow: 0 20px 50px rgba(29,45,68,0.15); }
+.apt-modal-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 22px; border-bottom: 1px solid #f0ebe4;
 }
-
-.calendar-day.empty {
-  cursor: default;
-  background: transparent;
+.apt-modal-head h3 { font-size: 16px; font-weight: 700; color: #1d2d44; }
+.apt-modal-head button { background: none; border: none; cursor: pointer; }
+.apt-modal-head button span { font-size: 20px; color: #b0bcc8; }
+.apt-modal-body { padding: 20px 22px; }
+.apt-field { margin-bottom: 16px; }
+.apt-field label { display: block; font-size: 13px; font-weight: 600; color: #1d2d44; margin-bottom: 5px; }
+.apt-field input, .apt-field select {
+  width: 100%; padding: 9px 12px; border: 1px solid #ddd6d0; border-radius: 9px;
+  font-size: 13px; color: #1d2d44; outline: none; background: #fff; font-family: 'Inter', sans-serif;
 }
-
-.calendar-day.empty:hover {
-  background: transparent;
+.apt-field input:focus, .apt-field select:focus { border-color: #344966; }
+.apt-modal-foot {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 22px; border-top: 1px solid #f0ebe4;
 }
-
-.calendar-day.today {
-  background: rgba(7, 24, 46, 0.08);
+.apt-btn-ghost {
+  background: #fff; border: 1px solid #ddd6d0; border-radius: 9px;
+  padding: 8px 18px; font-size: 13px; font-weight: 500; color: #6b7d8e; cursor: pointer; transition: 0.2s;
 }
-
-.calendar-day.today .day-number {
-  font-weight: 700;
-  color: #07182e;
-}
-
-.calendar-day.selected {
-  background: #07182e;
-}
-
-.calendar-day.selected .day-number {
-  color: white;
-  font-weight: 600;
-}
-
-.day-number {
-  font-size: 14px;
-  font-weight: 500;
-  color: #1d1b19;
-}
-
-.appointment-indicator {
-  position: absolute;
-  bottom: 4px;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.appointment-indicator .dot {
-  width: 4px;
-  height: 4px;
-  background: #4b5f7e;
-  border-radius: 50%;
-}
-
-.appointment-indicator .count {
-  font-size: 8px;
-  color: #4b5f7e;
-  font-weight: 500;
-}
-
-.calendar-day.selected .appointment-indicator .dot,
-.calendar-day.selected .appointment-indicator .count {
-  background: white;
-  color: white;
-}
-
-.selected-date-info {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(197, 198, 205, 0.2);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 13px;
-  color: #07182e;
-}
-
-.selected-date-info span:first-child {
-  font-size: 18px;
-  color: #4b5f7e;
-}
-
-.selected-date-info button {
-  margin-left: auto;
-  background: none;
-  border: none;
-  color: #ba1a1a;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 6px;
-}
-
-.selected-date-info button:hover {
-  background: rgba(186, 26, 26, 0.1);
-}
-
-/* Appointments Table Section */
-.appointments-table-section {
-  background: white;
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(197, 198, 205, 0.2);
-}
-
-.appointments-table-wrapper {
-  overflow-x: auto;
-}
+.apt-btn-ghost:hover { background: #f5efeb; }
 
 /* Responsive */
 @media (max-width: 1200px) {
-  .appointments-layout {
-    grid-template-columns: 1fr;
-  }
-  
-  .calendar-section {
-    position: static;
-    margin-bottom: 20px;
-  }
+  .apt-sidebar { width: 280px; }
 }
-
-.patient-appointments-topbar {
-  position: fixed;
-  top: 0;
-  right: 0;
-  left: 280px;
-  height: 70px;
-  background: rgba(254, 248, 244, 0.8);
-  backdrop-filter: blur(20px);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 32px;
-  z-index: 40;
-  border-bottom: 1px solid rgba(197, 198, 205, 0.2);
-}
-
-.patient-search-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: white;
-  padding: 8px 16px;
-  border-radius: 12px;
-  width: 320px;
-  border: 1px solid rgba(197, 198, 205, 0.3);
-}
-
-.patient-search-wrap span {
-  color: #75777e;
-  font-size: 20px;
-}
-
-.patient-search-wrap input {
-  border: none;
-  outline: none;
-  background: transparent;
-  width: 100%;
-  font-size: 14px;
-}
-
-.patient-topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.patient-notification-btn {
-  position: relative;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-}
-
-.patient-notification-btn span {
-  font-size: 24px;
-  color: #4b5f7e;
-}
-
-.patient-notification-dot {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 8px;
-  height: 8px;
-  background: #ba1a1a;
-  border-radius: 50%;
-  border: 2px solid #fef8f4;
-}
-
-.patient-user-box {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 12px;
-  transition: background 0.2s;
-}
-
-.patient-user-box:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.patient-user-box img {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.patient-user-details {
-  display: flex;
-  flex-direction: column;
-}
-
-.patient-user-details span {
-  font-size: 14px;
-  font-weight: 600;
-  color: #07182e;
-}
-
-.patient-user-details small {
-  font-size: 12px;
-  color: #75777e;
-}
-
-.patient-appointments-content {
-  padding: 100px 32px 32px;
-}
-
-/* Stats Grid */
-.appointments-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
-  margin-bottom: 32px;
-}
-
-.stat-card {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(197, 198, 205, 0.2);
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.stat-icon span {
-  font-size: 28px;
-}
-
-.stat-icon.blue {
-  background: rgba(180, 200, 235, 0.2);
-  color: #4b5f7e;
-}
-
-.stat-icon.green {
-  background: rgba(76, 175, 80, 0.1);
-  color: #4caf50;
-}
-
-.stat-icon.amber {
-  background: rgba(255, 152, 0, 0.1);
-  color: #ff9800;
-}
-
-.stat-icon.red {
-  background: rgba(186, 26, 26, 0.1);
-  color: #ba1a1a;
-}
-
-.stat-info h3 {
-  font-size: 28px;
-  font-weight: 700;
-  color: #07182e;
-  margin: 0;
-}
-
-.stat-info p {
-  font-size: 14px;
-  color: #75777e;
-  margin: 4px 0 0;
-}
-
-/* Filter Tabs */
-.appointments-filter-tabs {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
-  border-bottom: 1px solid rgba(197, 198, 205, 0.3);
-  padding-bottom: 12px;
-}
-
-.appointments-filter-tabs button {
-  background: none;
-  border: none;
-  padding: 8px 20px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #75777e;
-  cursor: pointer;
-  border-radius: 20px;
-  transition: all 0.2s;
-}
-
-.appointments-filter-tabs button:hover {
-  background: rgba(0, 0, 0, 0.05);
-  color: #07182e;
-}
-
-.appointments-filter-tabs button.active {
-  background: #07182e;
-  color: white;
-}
-
-/* Table Container */
-.appointments-table-container {
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(197, 198, 205, 0.2);
-}
-
-.table-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid rgba(197, 198, 205, 0.2);
-}
-
-.table-header h3 {
-  font-size: 18px;
-  font-weight: 700;
-  color: #07182e;
-  margin: 0;
-}
-
-.book-new-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 20px;
-  background: #07182e;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.book-new-btn:hover {
-  background: #1d2d44;
-  transform: translateY(-1px);
-}
-
-.appointments-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.appointments-table thead tr {
-  background: #f8f2ee;
-  border-bottom: 1px solid rgba(197, 198, 205, 0.2);
-}
-
-.appointments-table th {
-  text-align: left;
-  padding: 16px 20px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #75777e;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.appointments-table td {
-  padding: 20px;
-  border-bottom: 1px solid rgba(197, 198, 205, 0.1);
-  vertical-align: middle;
-}
-
-.appointments-table tbody tr:hover {
-  background: rgba(0, 0, 0, 0.02);
-}
-
-.doctor-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.doctor-avatar {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #d5e3ff 0%, #b7c7e5 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  color: #07182e;
-}
-
-.doctor-name {
-  font-weight: 600;
-  color: #07182e;
-  font-size: 14px;
-}
-
-.hospital-name {
-  font-size: 12px;
-  color: #75777e;
-  margin-top: 2px;
-}
-
-.appointment-type {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.appointment-type.online {
-  background: rgba(180, 200, 235, 0.2);
-  color: #4b5f7e;
-}
-
-.appointment-type.in-person {
-  background: rgba(255, 152, 0, 0.1);
-  color: #ff9800;
-}
-
-.date-time {
-  font-size: 14px;
-  color: #07182e;
-}
-
-.date-time .time {
-  font-size: 12px;
-  color: #75777e;
-  margin-top: 2px;
-}
-
-.amount {
-  font-weight: 600;
-  color: #07182e;
-  font-size: 14px;
-}
-
-.payment-status {
-  font-size: 10px;
-  font-weight: 600;
-  margin-top: 4px;
-  text-transform: uppercase;
-}
-
-.payment-status.green {
-  color: #4caf50;
-}
-
-.payment-status.amber {
-  color: #ff9800;
+@media (max-width: 1024px) {
+  .apt-grid { flex-direction: column; }
+  .apt-sidebar { width: 100%; position: static; flex-direction: row; gap: 14px; }
+  .apt-cal-card { flex: 1; }
 }
-
-.status-badge {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.status-badge.green {
-  background: rgba(76, 175, 80, 0.1);
-  color: #4caf50;
-}
-
-.status-badge.amber {
-  background: rgba(255, 152, 0, 0.1);
-  color: #ff9800;
-}
-
-.status-badge.blue {
-  background: rgba(75, 95, 126, 0.1);
-  color: #4b5f7e;
-}
-
-.status-badge.red {
-  background: rgba(186, 26, 26, 0.1);
-  color: #ba1a1a;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.action-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.action-btn span {
-  font-size: 18px;
-}
-
-.action-btn.join {
-  background: rgba(76, 175, 80, 0.1);
-  color: #4caf50;
-}
-
-.action-btn.join:hover {
-  background: #4caf50;
-  color: white;
-}
-
-.action-btn.reschedule {
-  background: rgba(75, 95, 126, 0.1);
-  color: #4b5f7e;
-}
-
-.action-btn.reschedule:hover {
-  background: #4b5f7e;
-  color: white;
-}
-
-.action-btn.cancel {
-  background: rgba(186, 26, 26, 0.1);
-  color: #ba1a1a;
-}
-
-.action-btn.cancel:hover {
-  background: #ba1a1a;
-  color: white;
-}
-
-.loading-state, .empty-state {
-  text-align: center;
-  padding: 60px 20px;
-}
-
-.empty-state span {
-  font-size: 64px;
-  color: #75777e;
-  margin-bottom: 16px;
-  display: block;
-}
-
-.empty-state p {
-  font-size: 16px;
-  color: #75777e;
-  margin-bottom: 20px;
-}
-
-.empty-state button {
-  padding: 10px 24px;
-  background: #07182e;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
+@media (max-width: 768px) {
+  .apt-main { margin-left: 0; }
+  .apt-stats { grid-template-columns: repeat(2, 1fr); }
+  .apt-sidebar { flex-direction: column; }
 }
 
-/* Modal Styles */
-.modal-overlay {
+/* Refund Popup Styles */
+.refund-popup-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
 }
 
-.modal-content {
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.refund-popup-content {
   background: white;
   border-radius: 20px;
-  width: 90%;
   max-width: 500px;
+  width: 90%;
+  padding: 0;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease-out;
 }
 
-.modal-header {
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.refund-popup-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 20px 24px;
-  border-bottom: 1px solid rgba(197, 198, 205, 0.2);
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 20px 20px 0 0;
+  border-bottom: 1px solid #fbbf24;
 }
 
-.modal-header h3 {
+.refund-popup-header .material-symbols-outlined {
+  font-size: 32px;
+  color: #d97706;
+}
+
+.refund-popup-header h3 {
   margin: 0;
-  font-size: 20px;
-  color: #07182e;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #92400e;
 }
 
-.modal-header button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-}
-
-.modal-body {
+.refund-popup-body {
   padding: 24px;
 }
 
-.form-group {
+.refund-popup-body p {
+  margin: 0 0 20px 0;
+  color: #374151;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.refund-notice {
+  background: #fef9e7;
+  border-left: 4px solid #f59e0b;
+  padding: 16px;
+  border-radius: 12px;
+  display: flex;
+  gap: 12px;
   margin-bottom: 20px;
 }
 
-.form-group label {
+.refund-notice .material-symbols-outlined {
+  color: #f59e0b;
+  font-size: 24px;
+}
+
+.refund-notice-text {
+  flex: 1;
+}
+
+.refund-notice-text strong {
   display: block;
-  font-size: 14px;
-  font-weight: 500;
-  color: #07182e;
   margin-bottom: 8px;
+  color: #92400e;
+  font-size: 0.875rem;
 }
 
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid rgba(197, 198, 205, 0.5);
-  border-radius: 10px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
+.refund-notice-text ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #78350f;
+  font-size: 0.875rem;
 }
 
-.form-group input:focus,
-.form-group select:focus {
-  border-color: #07182e;
+.refund-notice-text li {
+  margin: 6px 0;
 }
 
-.modal-footer {
+.refund-confirm-question {
+  font-weight: 600;
+  color: #1f2937;
+  margin-top: 16px !important;
+  margin-bottom: 0 !important;
+}
+
+.refund-popup-footer {
+  padding: 20px 24px;
   display: flex;
-  justify-content: flex-end;
   gap: 12px;
-  padding: 16px 24px;
-  border-top: 1px solid rgba(197, 198, 205, 0.2);
+  justify-content: flex-end;
+  border-top: 1px solid #e5e7eb;
 }
 
-.modal-footer button {
+.refund-btn-cancel,
+.refund-btn-confirm {
   padding: 10px 20px;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-}
-
-.cancel-btn {
-  background: none;
-  border: 1px solid rgba(197, 198, 205, 0.5);
-  color: #75777e;
-}
-
-.cancel-btn:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.confirm-btn {
-  background: #07182e;
   border: none;
+}
+
+.refund-btn-cancel {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.refund-btn-cancel:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+.refund-btn-confirm {
+  background: #dc2626;
   color: white;
 }
 
-.confirm-btn:hover:not(:disabled) {
-  background: #1d2d44;
+.refund-btn-confirm:hover {
+  background: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
 }
 
-.confirm-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+/* Pending Appointment Popup Styles */
+.pending-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
 }
 
-/* Responsive */
-@media (max-width: 1200px) {
-  .appointments-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.pending-popup-content {
+  background: white;
+  border-radius: 20px;
+  max-width: 400px;
+  width: 90%;
+  padding: 0;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease-out;
 }
 
-@media (max-width: 768px) {
-  .patient-appointments-main {
-    margin-left: 0;
-  }
-  
-  .patient-appointments-topbar {
-    left: 0;
-  }
-  
-  .appointments-table {
-    font-size: 12px;
-  }
-  
-  .action-buttons {
-    flex-direction: column;
-  }
+.pending-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 20px 20px 0 0;
+  border-bottom: 1px solid #fbbf24;
+}
+
+.pending-popup-header .material-symbols-outlined {
+  font-size: 28px;
+  color: #d97706;
+}
+
+.pending-popup-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #92400e;
+}
+
+.pending-popup-body {
+  padding: 24px;
+}
+
+.pending-popup-body p {
+  margin: 0 0 12px 0;
+  color: #374151;
+  font-size: 1rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.pending-note {
+  font-size: 0.875rem !important;
+  color: #6b7280 !important;
+  font-style: italic;
+}
+
+.pending-popup-footer {
+  padding: 20px 24px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  border-top: 1px solid #e5e7eb;
+}
+
+.pending-btn-cancel,
+.pending-btn-confirm {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  min-width: 120px;
+}
+
+.pending-btn-cancel {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.pending-btn-cancel:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+.pending-btn-confirm {
+  background: #dc2626;
+  color: white;
+}
+
+.pending-btn-confirm:hover {
+  background: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
 }

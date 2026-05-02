@@ -11,6 +11,9 @@ export default function PatientProfile() {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // State for custom toast notification
+  const [toast, setToast] = useState(null);
 
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
@@ -51,6 +54,11 @@ export default function PatientProfile() {
     relationship: "",
     emergencyPhone: "",
   });
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -99,8 +107,9 @@ export default function PatientProfile() {
         );
       } catch (error) {
         console.error("Failed to fetch patient profile:", error);
-        alert(
-          error?.response?.data?.message || "Failed to load patient profile"
+        showToast(
+          error?.response?.data?.message || "Failed to load patient profile",
+          "error"
         );
       } finally {
         setLoading(false);
@@ -210,10 +219,10 @@ export default function PatientProfile() {
         })
       );
 
-      alert("Profile updated successfully");
+      showToast("Profile updated successfully", "success");
     } catch (error) {
       console.error("Failed to update profile:", error);
-      alert(error?.response?.data?.message || "Failed to update profile");
+      showToast(error?.response?.data?.message || "Failed to update profile", "error");
     }
   };
 
@@ -240,6 +249,16 @@ export default function PatientProfile() {
         activeItem="profile"
         onLogout={handleLogout}
       />
+
+      {/* Custom Toast Notification */}
+      {toast && (
+        <div className={`profile-toast ${toast.type}`}>
+          <span className="material-symbols-outlined">
+            {toast.type === "success" ? "check_circle" : "error"}
+          </span>
+          <p>{toast.message}</p>
+        </div>
+      )}
 
       <main className="patient-main">
         <header className="patient-topbar">
@@ -515,6 +534,63 @@ export default function PatientProfile() {
           </div>
         </div>
       </main>
+
+      <style>{`
+        .profile-toast {
+          position: fixed;
+          top: 24px;
+          right: 24px;
+          z-index: 20000;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 280px;
+          max-width: 420px;
+          padding: 14px 18px;
+          border-radius: 14px;
+          background: #ffffff;
+          box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+          animation: profileToastSlideIn 0.25s ease;
+        }
+
+        .profile-toast.success {
+          border-left: 5px solid #16a34a;
+        }
+
+        .profile-toast.error {
+          border-left: 5px solid #dc2626;
+        }
+
+        .profile-toast span {
+          font-size: 24px;
+        }
+
+        .profile-toast.success span {
+          color: #16a34a;
+        }
+
+        .profile-toast.error span {
+          color: #dc2626;
+        }
+
+        .profile-toast p {
+          margin: 0;
+          color: #07182e;
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        @keyframes profileToastSlideIn {
+          from {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }
