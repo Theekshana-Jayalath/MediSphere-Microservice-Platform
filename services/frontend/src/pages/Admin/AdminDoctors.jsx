@@ -11,8 +11,14 @@ export default function AdminDoctors() {
   const [searchText, setSearchText] = useState("");
   const [specialtyFilter, setSpecialtyFilter] = useState("All Specialties");
   const [statusFilter, setStatusFilter] = useState("All Status");
+  const [toast, setToast] = useState(null);
 
   const API_BASE_URL = "http://localhost:5015/api/admin/doctors";
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const getAuthToken = () => {
     return (
@@ -81,7 +87,7 @@ export default function AdminDoctors() {
       setDoctors(doctorList);
     } catch (error) {
       console.error("Failed to fetch doctors:", error);
-      alert(error.message || "Failed to fetch doctors");
+      showToast(error.message || "Failed to fetch doctors", "error");
     } finally {
       setLoading(false);
     }
@@ -178,10 +184,10 @@ export default function AdminDoctors() {
 
       setDoctorToDelete(null);
       await fetchDoctors();
-      alert("Doctor deleted successfully");
+      showToast("Doctor deleted successfully", "success");
     } catch (error) {
       console.error("Failed to delete doctor:", error);
-      alert(error.message || "Failed to delete doctor");
+      showToast(error.message || "Failed to delete doctor", "error");
     } finally {
       setDeleting(false);
     }
@@ -271,6 +277,15 @@ export default function AdminDoctors() {
       />
 
       <AdminSidebar />
+
+      {toast && (
+        <div className={`admin-doctors-toast ${toast.type}`}>
+          <span className="material-symbols-outlined">
+            {toast.type === "success" ? "check_circle" : "error"}
+          </span>
+          <p>{toast.message}</p>
+        </div>
+      )}
 
       <div className="admin-doctors-main">
         <header className="admin-doctors-topbar">
@@ -522,9 +537,7 @@ export default function AdminDoctors() {
                 alt={selectedDoctor.fullName || selectedDoctor.name}
               />
               <div>
-                <h3>
-                  {selectedDoctor.fullName || selectedDoctor.name || "--"}
-                </h3>
+                <h3>{selectedDoctor.fullName || selectedDoctor.name || "--"}</h3>
                 <p>{selectedDoctor.email || "--"}</p>
               </div>
             </div>
@@ -661,6 +674,63 @@ export default function AdminDoctors() {
           </div>
         </div>
       )}
+
+      <style>{`
+        .admin-doctors-toast {
+          position: fixed;
+          top: 24px;
+          right: 24px;
+          z-index: 20000;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 280px;
+          max-width: 420px;
+          padding: 14px 18px;
+          border-radius: 14px;
+          background: #ffffff;
+          box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+          animation: adminDoctorsToastSlideIn 0.25s ease;
+        }
+
+        .admin-doctors-toast.success {
+          border-left: 5px solid #16a34a;
+        }
+
+        .admin-doctors-toast.error {
+          border-left: 5px solid #dc2626;
+        }
+
+        .admin-doctors-toast span {
+          font-size: 24px;
+        }
+
+        .admin-doctors-toast.success span {
+          color: #16a34a;
+        }
+
+        .admin-doctors-toast.error span {
+          color: #dc2626;
+        }
+
+        .admin-doctors-toast p {
+          margin: 0;
+          color: #1D2D44;
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        @keyframes adminDoctorsToastSlideIn {
+          from {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

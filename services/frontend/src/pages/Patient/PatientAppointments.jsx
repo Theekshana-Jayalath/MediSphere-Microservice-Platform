@@ -1,39 +1,38 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PatientSidebar from "../../components/Patient/PatientSidebar";
+import AppointmentTracker from "../../components/Patient/AppointmentTracker";
 import "../../styles/Patient/PatientAppointments.css";
+import "../../styles/Patient/AppointmentTracker.css";
 
 export default function PatientAppointments() {
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
-  const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedTime, setSelectedTime] = useState("");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
+  const [trackingAppointment, setTrackingAppointment] = useState(null);
+  const [showTracker, setShowTracker] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showRefundPopup, setShowRefundPopup] = useState(false);
+  const [showPendingPopup, setShowPendingPopup] = useState(false);
+  const [pendingCancelAppointment, setPendingCancelAppointment] = useState(null);
 
   const APPOINTMENT_BASE_URL =
     import.meta.env.VITE_API_GATEWAY_URL
       ? `${import.meta.env.VITE_API_GATEWAY_URL}/api/appointments`
-  : `${import.meta.env.VITE_API_GATEWAY_URL || "http://localhost:5015"}/api/appointments`;
+      : `${import.meta.env.VITE_API_GATEWAY_URL || "http://localhost:5015"}/api/appointments`;
 
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
 
   const storedPatientProfile = localStorage.getItem("patientProfile");
-  const patientProfile = storedPatientProfile
-    ? JSON.parse(storedPatientProfile)
-    : null;
+  const patientProfile = storedPatientProfile ? JSON.parse(storedPatientProfile) : null;
 
-  const patientName =
-    patientProfile?.name || patientProfile?.fullName || user?.name || "Patient";
+  const patientName = patientProfile?.name || patientProfile?.fullName || user?.name || "Patient";
   const patientId = patientProfile?.patientId || user?.patientId || "------";
   const patientEmail = patientProfile?.email || user?.email || "No email";
-
-  // For backend lookup if appointments collection stores auth/user id
   const appointmentPatientId = patientProfile?.userId || user?.id || patientId;
 
   useEffect(() => {
@@ -42,29 +41,16 @@ export default function PatientAppointments() {
 
   const fetchAppointments = async () => {
     try {
-      const token =
-        localStorage.getItem("token") ||
-        localStorage.getItem("authToken") ||
-        localStorage.getItem("accessToken") ||
-        "";
-
+      const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("accessToken") || "";
       if (!token || !appointmentPatientId) {
         setAppointments([]);
         setLoading(false);
         return;
       }
-
-      const response = await fetch(
-        `${APPOINTMENT_BASE_URL}/patient/${appointmentPatientId}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
+      const response = await fetch(`${APPOINTMENT_BASE_URL}/patient/${appointmentPatientId}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      });
       if (response.ok) {
         const data = await response.json();
         setAppointments(Array.isArray(data) ? data : []);
@@ -79,73 +65,80 @@ export default function PatientAppointments() {
     }
   };
 
-  const handleReschedule = async (appointmentId, newDate, newTime) => {
+  const handleCancelClick = (appointmentId) => {
+    const appointment = appointments.find(apt => apt._id === appointmentId);
+    
+    console.log("Cancelling appointment with status:", appointment?.status); // Debug log
+    
+    // Show refund popup for CONFIRMED appointments
+    if (appointment?.status === "CONFIRMED") {
+      setPendingCancelAppointment(appointmentId);
+      setShowRefundPopup(true);
+    } 
+    // Show simple confirmation popup for PENDING or PENDING_PAYMENT appointments
+    else if (appointment?.status === "PENDING" || appointment?.status === "PENDING_PAYMENT") {
+      setPendingCancelAppointment(appointmentId);
+      setShowPendingPopup(true);
+    }
+    // For other statuses, show regular browser confirmation
+    else {
+      if (window.confirm("Are you sure you want to cancel this appointment?")) {
+        cancelAppointment(appointmentId);
+      }
+    }
+  };
+
+  const cancelAppointment = async (appointmentId) => {
     try {
-      const token =
-        localStorage.getItem("token") ||
-        localStorage.getItem("authToken") ||
-        localStorage.getItem("accessToken") ||
-        "";
-
-      const response = await fetch(
-        `${APPOINTMENT_BASE_URL}/${appointmentId}/reschedule`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            appointmentDate: newDate,
-            startTime: newTime,
-          }),
-        }
-      );
-
+      const token = localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("accessToken") || "";
+      const response = await fetch(`${APPOINTMENT_BASE_URL}/${appointmentId}/cancel`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      });
       if (response.ok) {
         await fetchAppointments();
-        setShowRescheduleModal(false);
-        alert("Appointment rescheduled successfully");
+        if (trackingAppointment?._id === appointmentId) {
+          setTrackingAppointment((prev) => (prev ? { ...prev, status: "CANCELLED" } : null));
+        }
+        alert("Appointment cancelled successfully");
+      } else {
+        alert("Failed to cancel appointment. Please try again.");
       }
     } catch (error) {
-      console.error("Failed to reschedule:", error);
+      console.error("Failed to cancel:", error);
+      alert("An error occurred while cancelling the appointment.");
     }
   };
 
-  const handleCancel = async (appointmentId) => {
-    if (window.confirm("Are you sure you want to cancel this appointment?")) {
-      try {
-        const token =
-          localStorage.getItem("token") ||
-          localStorage.getItem("authToken") ||
-          localStorage.getItem("accessToken") ||
-          "";
-
-        const response = await fetch(
-          `${APPOINTMENT_BASE_URL}/${appointmentId}/cancel`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.ok) {
-          await fetchAppointments();
-          alert("Appointment cancelled successfully");
-        }
-      } catch (error) {
-        console.error("Failed to cancel:", error);
-      }
+  const handleRefundConfirm = () => {
+    if (pendingCancelAppointment) {
+      cancelAppointment(pendingCancelAppointment);
+      setShowRefundPopup(false);
+      setPendingCancelAppointment(null);
     }
   };
 
-  const handleJoinCall = (appointment) => {
-    if (appointment.appointmentType === "ONLINE") {
-      navigate(`/telemedicine/${appointment._id}`);
+  const handleRefundCancel = () => {
+    setShowRefundPopup(false);
+    setPendingCancelAppointment(null);
+  };
+
+  const handlePendingConfirm = () => {
+    if (pendingCancelAppointment) {
+      cancelAppointment(pendingCancelAppointment);
+      setShowPendingPopup(false);
+      setPendingCancelAppointment(null);
     }
+  };
+
+  const handlePendingCancel = () => {
+    setShowPendingPopup(false);
+    setPendingCancelAppointment(null);
+  };
+
+  const handleTrackAppointment = (appointment) => {
+    setTrackingAppointment(appointment);
+    setShowTracker(true);
   };
 
   const getDaysInMonth = (date) => {
@@ -153,10 +146,7 @@ export default function PatientAppointments() {
     const month = date.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-
-    return { daysInMonth, startingDayOfWeek };
+    return { daysInMonth: lastDay.getDate(), startingDayOfWeek: firstDay.getDay() };
   };
 
   const getLocalDateString = (date) => {
@@ -168,147 +158,114 @@ export default function PatientAppointments() {
 
   const getAppointmentsForDate = (date) => {
     const dateStr = getLocalDateString(date);
-    return appointments.filter(
-      (apt) =>
-        apt.appointmentDate?.split("T")[0] === dateStr &&
-        apt.status !== "CANCELLED"
-    );
+    return appointments.filter((apt) => apt.appointmentDate?.split("T")[0] === dateStr && apt.status !== "CANCELLED");
   };
 
   const renderCalendar = () => {
     const { daysInMonth, startingDayOfWeek } = getDaysInMonth(currentMonth);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
     const calendarDays = [];
 
     for (let i = 0; i < startingDayOfWeek; i++) {
-      calendarDays.push(
-        <div key={`empty-${i}`} className="calendar-day empty"></div>
-      );
+      calendarDays.push(<div key={`empty-${i}`} className="cal-day empty"></div>);
     }
 
     for (let day = 1; day <= daysInMonth; day++) {
-      const currentDate = new Date(
-        currentMonth.getFullYear(),
-        currentMonth.getMonth(),
-        day
-      );
-      const dateStr = getLocalDateString(currentDate);
+      const currentDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
       const dayAppointments = getAppointmentsForDate(currentDate);
       const isToday = currentDate.toDateString() === today.toDateString();
-      const isSelected =
-        selectedCalendarDate &&
-        currentDate.toDateString() === selectedCalendarDate.toDateString();
+      const isSelected = selectedCalendarDate && currentDate.toDateString() === selectedCalendarDate.toDateString();
+      const hasApps = dayAppointments.length > 0;
 
       calendarDays.push(
         <div
           key={day}
-          className={`calendar-day ${isToday ? "today" : ""} ${
-            isSelected ? "selected" : ""
-          } ${dayAppointments.length > 0 ? "has-appointments" : ""}`}
+          className={`cal-day ${isToday ? "today" : ""} ${isSelected ? "selected" : ""} ${hasApps ? "has-events" : ""}`}
           onClick={() => {
             setSelectedCalendarDate(currentDate);
-            const filtered = appointments.filter(
-              (apt) => apt.appointmentDate?.split("T")[0] === dateStr
-            );
+            if (hasApps) {
+              setTrackingAppointment(dayAppointments[0]);
+              setShowTracker(true);
+            }
           }}
         >
-          <span className="day-number">{day}</span>
-          {dayAppointments.length > 0 && (
-            <div className="appointment-indicator">
-              <span className="dot"></span>
-              <span className="count">{dayAppointments.length}</span>
-            </div>
-          )}
+          <span className="cal-day-num">{day}</span>
+          {hasApps && <span className="cal-dot"></span>}
         </div>
       );
     }
-
     return calendarDays;
   };
 
   const changeMonth = (increment) => {
-    setCurrentMonth(
-      new Date(
-        currentMonth.getFullYear(),
-        currentMonth.getMonth() + increment,
-        1
-      )
-    );
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + increment, 1));
   };
 
-  const getStatusColor = (status) => {
+  const getStatusClass = (status) => {
     switch (status) {
-      case "CONFIRMED":
-        return "green";
-      case "PENDING_PAYMENT":
-        return "amber";
-      case "COMPLETED":
-        return "blue";
-      case "CANCELLED":
-        return "red";
-      default:
-        return "gray";
+      case "CONFIRMED": return "confirmed";
+      case "PENDING": 
+      case "PENDING_PAYMENT": return "pending-pay";
+      case "COMPLETED": return "completed";
+      case "CANCELLED": return "cancelled";
+      default: return "";
     }
   };
 
-  const getStatusText = (status) => {
+  const getStatusLabel = (status) => {
     switch (status) {
-      case "CONFIRMED":
-        return "Confirmed";
-      case "PENDING_PAYMENT":
-        return "Pending Payment";
-      case "COMPLETED":
-        return "Completed";
-      case "CANCELLED":
-        return "Cancelled";
-      default:
-        return status;
+      case "CONFIRMED": return "Confirmed";
+      case "PENDING": 
+      case "PENDING_PAYMENT": return "Pending";
+      case "COMPLETED": return "Completed";
+      case "CANCELLED": return "Cancelled";
+      default: return status;
     }
-  };
-
-  const getPaymentStatusColor = (status) => {
-    return status === "PAID" ? "green" : "amber";
   };
 
   const filterAppointments = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    let filtered = appointments;
 
     if (selectedCalendarDate) {
       const selectedDateStr = getLocalDateString(selectedCalendarDate);
-      return appointments.filter(
-        (apt) => apt.appointmentDate?.split("T")[0] === selectedDateStr
-      );
+      filtered = filtered.filter((apt) => apt.appointmentDate?.split("T")[0] === selectedDateStr);
     }
 
     switch (filter) {
       case "upcoming":
-        return appointments.filter(
-          (apt) =>
-            new Date(apt.appointmentDate) >= today &&
-            apt.status !== "CANCELLED"
-        );
+        filtered = filtered.filter((apt) => new Date(apt.appointmentDate) >= today && apt.status !== "CANCELLED");
+        break;
       case "past":
-        return appointments.filter(
-          (apt) => new Date(apt.appointmentDate) < today
-        );
+        filtered = filtered.filter((apt) => new Date(apt.appointmentDate) < today);
+        break;
       case "cancelled":
-        return appointments.filter((apt) => apt.status === "CANCELLED");
-      default:
-        return appointments;
+        filtered = filtered.filter((apt) => apt.status === "CANCELLED");
+        break;
+      default: break;
     }
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (apt) =>
+          apt.doctorName?.toLowerCase().includes(term) ||
+          apt.specialization?.toLowerCase().includes(term) ||
+          apt.hospital?.toLowerCase().includes(term)
+      );
+    }
+
+    return filtered;
   };
 
   const getStats = () => {
     const today = new Date();
     return {
-      upcoming: appointments.filter(
-        (a) => new Date(a.appointmentDate) >= today && a.status !== "CANCELLED"
-      ).length,
+      upcoming: appointments.filter((a) => new Date(a.appointmentDate) >= today && a.status !== "CANCELLED").length,
       completed: appointments.filter((a) => a.status === "COMPLETED").length,
-      pending: appointments.filter((a) => a.status === "PENDING_PAYMENT").length,
+      pending: appointments.filter((a) => a.status === "PENDING" || a.status === "PENDING_PAYMENT").length,
       cancelled: appointments.filter((a) => a.status === "CANCELLED").length,
     };
   };
@@ -325,346 +282,261 @@ export default function PatientAppointments() {
   };
 
   const weekDays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  const filteredAppointments = filterAppointments();
 
   return (
-    <div className="patient-appointments-page">
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-      />
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-      />
+    <div className="apt-page">
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" />
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
 
-      <PatientSidebar
-        patientName={patientName}
-        patientId={patientId}
-        activeItem="appointments"
-        onLogout={handleLogout}
-      />
+      <PatientSidebar patientName={patientName} patientId={patientId} activeItem="appointments" onLogout={handleLogout} />
 
-      <main className="patient-appointments-main">
-        <header className="patient-appointments-topbar">
-          <div className="patient-search-wrap">
+      <main className="apt-main">
+        {/* Top Bar */}
+        <header className="apt-topbar">
+          <div className="apt-search">
             <span className="material-symbols-outlined">search</span>
-            <input type="text" placeholder="Search appointments..." />
+            <input type="text" placeholder="Search appointments..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            {searchTerm && (
+              <button className="apt-search-clear" onClick={() => setSearchTerm("")}>
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            )}
           </div>
-
-          <div className="patient-topbar-right">
-            <button className="patient-notification-btn">
+          <div className="apt-topbar-right">
+            <button className="apt-icon-btn">
               <span className="material-symbols-outlined">notifications</span>
-              <span className="patient-notification-dot"></span>
+              <span className="apt-badge"></span>
             </button>
-
-            <div className="patient-user-box">
-              <img
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrN1LqW-RHmFFNnzzLRJ7P6x0ftJXxcbutPSdcT4NSDdd-JsFNhpz1lczyA_SdmmLQAYJHFDBpRNrfbaB5GdldP2carSUNQ_h8-OqHXyZpC7K1nYi-qhcqbD-GQNMrOwwIEMjnJBl05VTjLVFEafQwmKaPyTNwIcUbWnfrjDnrqG1RLo1zXLDvAbibBvRr-s38ws1atQOvuYZWvzOCEzle4TjBAfYooLOqzy8AdZ5JCG5uAlXzKNnbzVln4WxnXNpRbJhqj-LpgBo"
-                alt="patient"
-              />
-              <div className="patient-user-details">
-                <span>{patientName}</span>
-                <small>{patientEmail}</small>
+            <div className="apt-user">
+              <div className="apt-avatar">{patientName?.charAt(0) || "P"}</div>
+              <div className="apt-user-meta">
+                <span className="apt-user-name">{patientName}</span>
+                <span className="apt-user-email">{patientEmail}</span>
               </div>
             </div>
           </div>
         </header>
 
-        <div className="patient-appointments-content">
-          <div className="appointments-stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon blue">
-                <span className="material-symbols-outlined">event_upcoming</span>
-              </div>
-              <div className="stat-info">
-                <h3>{stats.upcoming}</h3>
-                <p>Upcoming</p>
-              </div>
+        {/* Content */}
+        <div className="apt-content">
+          {/* Stats */}
+          <div className="apt-stats">
+            <div className="apt-stat">
+              <div className="apt-stat-icon upcoming"><span className="material-symbols-outlined">event_upcoming</span></div>
+              <div><h2>{stats.upcoming}</h2><p>Upcoming</p></div>
             </div>
-            <div className="stat-card">
-              <div className="stat-icon green">
-                <span className="material-symbols-outlined">check_circle</span>
-              </div>
-              <div className="stat-info">
-                <h3>{stats.completed}</h3>
-                <p>Completed</p>
-              </div>
+            <div className="apt-stat">
+              <div className="apt-stat-icon done"><span className="material-symbols-outlined">check_circle</span></div>
+              <div><h2>{stats.completed}</h2><p>Completed</p></div>
             </div>
-            <div className="stat-card">
-              <div className="stat-icon amber">
-                <span className="material-symbols-outlined">pending</span>
-              </div>
-              <div className="stat-info">
-                <h3>{stats.pending}</h3>
-                <p>Pending</p>
-              </div>
+            <div className="apt-stat">
+              <div className="apt-stat-icon wait"><span className="material-symbols-outlined">pending</span></div>
+              <div><h2>{stats.pending}</h2><p>Pending</p></div>
             </div>
-            <div className="stat-card">
-              <div className="stat-icon red">
-                <span className="material-symbols-outlined">cancel</span>
-              </div>
-              <div className="stat-info">
-                <h3>{stats.cancelled}</h3>
-                <p>Cancelled</p>
-              </div>
+            <div className="apt-stat">
+              <div className="apt-stat-icon cancel"><span className="material-symbols-outlined">cancel</span></div>
+              <div><h2>{stats.cancelled}</h2><p>Cancelled</p></div>
             </div>
           </div>
 
-          <div className="appointments-layout">
-            <div className="calendar-section">
-              <div className="calendar-header">
-                <button onClick={() => changeMonth(-1)}>
-                  <span className="material-symbols-outlined">chevron_left</span>
-                </button>
-                <h3>
-                  {currentMonth.toLocaleString("default", { month: "long" })}{" "}
-                  {currentMonth.getFullYear()}
-                </h3>
-                <button onClick={() => changeMonth(1)}>
-                  <span className="material-symbols-outlined">chevron_right</span>
-                </button>
-              </div>
-
-              <div className="calendar-weekdays">
-                {weekDays.map((day) => (
-                  <div key={day} className="weekday">
-                    {day}
-                  </div>
-                ))}
-              </div>
-
-              <div className="calendar-grid">{renderCalendar()}</div>
-
-              {selectedCalendarDate && (
-                <div className="selected-date-info">
-                  <span className="material-symbols-outlined">event</span>
-                  <span>
-                    {selectedCalendarDate.toLocaleDateString("default", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </span>
-                  <button onClick={() => setSelectedCalendarDate(null)}>
-                    Clear
+          {/* Main Grid */}
+          <div className="apt-grid">
+            {/* LEFT: Registry */}
+            <div className="apt-registry">
+              <div className="apt-registry-card">
+                <div className="apt-registry-head">
+                  <h2>Appointment Registry</h2>
+                  <button className="apt-btn-primary" onClick={() => navigate("/appointment")}>
+                    <span className="material-symbols-outlined">add</span>Book New
                   </button>
                 </div>
+
+                {!selectedCalendarDate && (
+                  <div className="apt-tabs">
+                    {["all", "upcoming", "past", "cancelled"].map((tab) => (
+                      <button key={tab} className={`apt-tab ${filter === tab ? "active" : ""}`} onClick={() => setFilter(tab)}>
+                        {tab === "all" ? "All Appointments" : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="apt-table-wrap">
+                  {loading ? (
+                    <div className="apt-empty">
+                      <span className="material-symbols-outlined apt-spin">sync</span>
+                      <p>Loading appointments...</p>
+                    </div>
+                  ) : filteredAppointments.length === 0 ? (
+                    <div className="apt-empty">
+                      <span className="material-symbols-outlined">calendar_month</span>
+                      <p>No appointments found</p>
+                      {!searchTerm && <button onClick={() => navigate("/appointment")}>Book Your First Appointment</button>}
+                    </div>
+                  ) : (
+                    <table className="apt-table">
+                      <thead>
+                        <tr>
+                          <th>DOCTOR</th>
+                          <th>TYPE</th>
+                          <th>DATE & TIME</th>
+                          <th>STATUS</th>
+                          <th>ACTIONS</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredAppointments.map((apt) => {
+                          const isTracked = trackingAppointment?._id === apt._id;
+                          return (
+                            <tr key={apt._id} className={`${isTracked ? "row-tracked" : ""}`}>
+                              <td>
+                                <div className="apt-doc">
+                                  <div className="apt-doc-av" style={{ background: getAvatarColor(apt.doctorName) }}>
+                                    {apt.doctorName?.charAt(0) || "D"}
+                                  </div>
+                                  <div>
+                                    <div className="apt-doc-name">{apt.doctorName}</div>
+                                    <div className="apt-doc-sp">{apt.specialization}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                <span className={`apt-type-tag ${apt.consultationType?.toLowerCase()}`}>
+                                  {apt.consultationType === "online" ? "Online" : "In-Person"}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="apt-dt">
+                                  {new Date(apt.appointmentDate).toLocaleDateString("default", { month: "short", day: "numeric", year: "numeric" })}
+                                  <span className="apt-tm">{apt.startTime}</span>
+                                </div>
+                              </td>
+                              <td>
+                                <span className={`apt-status ${getStatusClass(apt.status)}`}>{getStatusLabel(apt.status)}</span>
+                              </td>
+                              <td>
+                                <div className="apt-actions">
+                                  <button
+                                    className={`apt-act-track ${isTracked ? "active" : ""}`}
+                                    onClick={() => handleTrackAppointment(apt)}
+                                    title={isTracked ? "Currently Tracking" : "Track Appointment"}
+                                  >
+                                    <span className="material-symbols-outlined">{isTracked ? "visibility" : "visibility"}</span>
+                                    {isTracked ? "Tracking" : "Track"}
+                                  </button>
+                                  <div className="apt-act-icons">
+                                    <button 
+                                      className="apt-act-icon del" 
+                                      onClick={() => handleCancelClick(apt._id)} 
+                                      title={apt.status === "CANCELLED" || apt.status === "COMPLETED" ? "Cannot cancel" : "Cancel"}
+                                      disabled={apt.status === "CANCELLED" || apt.status === "COMPLETED"}
+                                      style={{
+                                        opacity: apt.status === "CANCELLED" || apt.status === "COMPLETED" ? 0.5 : 1,
+                                        cursor: apt.status === "CANCELLED" || apt.status === "COMPLETED" ? "not-allowed" : "pointer"
+                                      }}
+                                    >
+                                      <span className="material-symbols-outlined">cancel</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT: Calendar + Tracker */}
+            <div className="apt-sidebar">
+              <div className="apt-cal-card">
+                <div className="apt-cal-nav">
+                  <button onClick={() => changeMonth(-1)}><span className="material-symbols-outlined">chevron_left</span></button>
+                  <h3>{currentMonth.toLocaleString("default", { month: "long" })} {currentMonth.getFullYear()}</h3>
+                  <button onClick={() => changeMonth(1)}><span className="material-symbols-outlined">chevron_right</span></button>
+                </div>
+                <div className="apt-cal-weekdays">
+                  {weekDays.map((d) => <div key={d}>{d}</div>)}
+                </div>
+                <div className="apt-cal-grid">{renderCalendar()}</div>
+                {selectedCalendarDate && (
+                  <div className="apt-cal-selected">
+                    <span className="material-symbols-outlined">event</span>
+                    <span>{selectedCalendarDate.toLocaleDateString("default", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</span>
+                    <button onClick={() => setSelectedCalendarDate(null)}>Clear</button>
+                  </div>
+                )}
+              </div>
+
+              {showTracker && trackingAppointment && (
+                <AppointmentTracker
+                  status={trackingAppointment.status}
+                  appointment={trackingAppointment}
+                  onClose={() => { setShowTracker(false); setTrackingAppointment(null); }}
+                />
               )}
             </div>
-          </div>
-
-          <div className="appointments-table-section">
-            <div className="table-header">
-              <h3>Appointment Registry</h3>
-              <button
-                className="book-new-btn"
-                onClick={() => navigate("/appointment")}
-              >
-                <span className="material-symbols-outlined">add</span>
-                Book New
-              </button>
-            </div>
-
-            {!selectedCalendarDate && (
-              <div className="appointments-filter-tabs">
-                <button
-                  className={filter === "all" ? "active" : ""}
-                  onClick={() => setFilter("all")}
-                >
-                  All Appointments
-                </button>
-                <button
-                  className={filter === "upcoming" ? "active" : ""}
-                  onClick={() => setFilter("upcoming")}
-                >
-                  Upcoming
-                </button>
-                <button
-                  className={filter === "past" ? "active" : ""}
-                  onClick={() => setFilter("past")}
-                >
-                  Past
-                </button>
-                <button
-                  className={filter === "cancelled" ? "active" : ""}
-                  onClick={() => setFilter("cancelled")}
-                >
-                  Cancelled
-                </button>
-              </div>
-            )}
-
-            {loading ? (
-              <div className="loading-state">Loading appointments...</div>
-            ) : filterAppointments().length === 0 ? (
-              <div className="empty-state">
-                <span className="material-symbols-outlined">calendar_month</span>
-                <p>No appointments found</p>
-                <button onClick={() => navigate("/appointment")}>
-                  Book Your First Appointment
-                </button>
-              </div>
-            ) : (
-              <div className="appointments-table-wrapper">
-                <table className="appointments-table">
-                  <thead>
-                    <tr>
-                      <th>Doctor</th>
-                      <th>Specialization</th>
-                      <th>Type</th>
-                      <th>Date & Time</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filterAppointments().map((apt) => (
-                      <tr key={apt._id}>
-                        <td>
-                          <div className="doctor-info">
-                            <div className="doctor-avatar">
-                              {apt.doctorName?.charAt(0) || "D"}
-                            </div>
-                            <div>
-                              <div className="doctor-name">{apt.doctorName}</div>
-                              <div className="hospital-name">{apt.hospital}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td>{apt.specialization}</td>
-                        <td>
-                          <span
-                            className={`appointment-type ${apt.appointmentType?.toLowerCase()}`}
-                          >
-                            {apt.appointmentType === "ONLINE"
-                              ? "Online"
-                              : "In-Person"}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="date-time">
-                            <div>
-                              {new Date(apt.appointmentDate).toLocaleDateString()}
-                            </div>
-                            <div className="time">{apt.startTime}</div>
-                          </div>
-                        </td>
-                        <td>
-                          <span
-                            className={`status-badge ${getStatusColor(
-                              apt.status
-                            )}`}
-                          >
-                            {getStatusText(apt.status)}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="action-buttons">
-                            {apt.status === "CONFIRMED" &&
-                              apt.appointmentType === "ONLINE" && (
-                                <button
-                                  className="action-btn join"
-                                  onClick={() => handleJoinCall(apt)}
-                                >
-                                  <span className="material-symbols-outlined">
-                                    videocam
-                                  </span>
-                                </button>
-                              )}
-                            {apt.status === "CONFIRMED" && (
-                              <button
-                                className="action-btn reschedule"
-                                onClick={() => {
-                                  setSelectedAppointment(apt);
-                                  setShowRescheduleModal(true);
-                                }}
-                              >
-                                <span className="material-symbols-outlined">
-                                  edit_calendar
-                                </span>
-                              </button>
-                            )}
-                            {apt.status !== "CANCELLED" &&
-                              apt.status !== "COMPLETED" && (
-                                <button
-                                  className="action-btn cancel"
-                                  onClick={() => handleCancel(apt._id)}
-                                >
-                                  <span className="material-symbols-outlined">
-                                    cancel
-                                  </span>
-                                </button>
-                              )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </div>
         </div>
       </main>
 
-      {showRescheduleModal && selectedAppointment && (
-        <div
-          className="modal-overlay"
-          onClick={() => setShowRescheduleModal(false)}
-        >
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Reschedule Appointment</h3>
-              <button onClick={() => setShowRescheduleModal(false)}>
-                <span className="material-symbols-outlined">close</span>
+      {/* Refund Popup Modal - For CONFIRMED appointments */}
+      {showRefundPopup && (
+        <div className="refund-popup-overlay" onClick={handleRefundCancel}>
+          <div className="refund-popup-content" onClick={(e) => e.stopPropagation()}>
+            <div className="refund-popup-header">
+              <span className="material-symbols-outlined">refund</span>
+              <h3>Cancel Appointment & Request Refund</h3>
+            </div>
+            <div className="refund-popup-body">
+              <p>Are you sure you want to cancel this confirmed appointment?</p>
+              <div className="refund-notice">
+                <span className="material-symbols-outlined">info</span>
+                <div className="refund-notice-text">
+                  <strong>Refund Policy:</strong>
+                  <ul>
+                    <li>✓ Full refund if cancelled at least 24 hours before appointment</li>
+                    <li>✗ No refund for cancellations within 24 hours of appointment time</li>
+                    <li>💰 Refund will be processed to your original payment method within 5-7 business days</li>
+                  </ul>
+                </div>
+              </div>
+              <p className="refund-confirm-question">Do you wish to proceed with cancellation?</p>
+            </div>
+            <div className="refund-popup-footer">
+              <button className="refund-btn-cancel" onClick={handleRefundCancel}>
+                No, Keep Appointment
+              </button>
+              <button className="refund-btn-confirm" onClick={handleRefundConfirm}>
+                Yes, Cancel & Request Refund
               </button>
             </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Select New Date</label>
-                <input
-                  type="date"
-                  value={selectedDate.toISOString().split("T")[0]}
-                  onChange={(e) => setSelectedDate(new Date(e.target.value))}
-                  min={new Date().toISOString().split("T")[0]}
-                />
-              </div>
-              <div className="form-group">
-                <label>Select New Time</label>
-                <select
-                  value={selectedTime}
-                  onChange={(e) => setSelectedTime(e.target.value)}
-                >
-                  <option value="">Select time</option>
-                  <option value="09:00">09:00 AM</option>
-                  <option value="10:00">10:00 AM</option>
-                  <option value="11:00">11:00 AM</option>
-                  <option value="14:00">02:00 PM</option>
-                  <option value="15:00">03:00 PM</option>
-                  <option value="16:00">04:00 PM</option>
-                </select>
-              </div>
+          </div>
+        </div>
+      )}
+
+      {/* Simple Confirmation Popup - For PENDING appointments */}
+      {showPendingPopup && (
+        <div className="pending-popup-overlay" onClick={handlePendingCancel}>
+          <div className="pending-popup-content" onClick={(e) => e.stopPropagation()}>
+            <div className="pending-popup-header">
+              <span className="material-symbols-outlined">warning</span>
+              <h3>Cancel Appointment</h3>
             </div>
-            <div className="modal-footer">
-              <button
-                className="cancel-btn"
-                onClick={() => setShowRescheduleModal(false)}
-              >
-                Cancel
+            <div className="pending-popup-body">
+              <p>Are you sure you want to cancel this pending appointment?</p>
+              <p className="pending-note">This action cannot be undone.</p>
+            </div>
+            <div className="pending-popup-footer">
+              <button className="pending-btn-cancel" onClick={handlePendingCancel}>
+                No, Go Back
               </button>
-              <button
-                className="confirm-btn"
-                onClick={() =>
-                  handleReschedule(
-                    selectedAppointment._id,
-                    selectedDate,
-                    selectedTime
-                  )
-                }
-                disabled={!selectedTime}
-              >
-                Confirm Reschedule
+              <button className="pending-btn-confirm" onClick={handlePendingConfirm}>
+                Yes, Cancel Appointment
               </button>
             </div>
           </div>
@@ -672,4 +544,11 @@ export default function PatientAppointments() {
       )}
     </div>
   );
+}
+
+function getAvatarColor(name) {
+  const colors = ["#1d2d44", "#344966", "#3a5a7c", "#2e4a6e", "#1a3650", "#2d4a5e", "#4a6b8a"];
+  let hash = 0;
+  for (let i = 0; i < (name || "").length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
 }

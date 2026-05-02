@@ -1,7 +1,16 @@
 .patient-sessions-page {
   min-height: 100vh;
-  padding: 32px;
+  padding: 0; /* reset - main will provide padding */
   background: linear-gradient(135deg, #f8fbff 0%, #eef7ff 100%);
+}
+
+/* Main content area placed to the right of the fixed sidebar */
+.patient-sessions-main {
+  margin-left: 280px; /* match .patient-sidebar width */
+  min-height: 100vh;
+  padding: 32px;
+  box-sizing: border-box;
+  overflow-y: auto;
 }
 
 .patient-sessions-header {
@@ -217,6 +226,11 @@
 
 @media (max-width: 768px) {
   .patient-sessions-page {
+    padding: 0;
+  }
+
+  .patient-sessions-main {
+    margin-left: 0;
     padding: 20px;
   }
 

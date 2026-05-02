@@ -1,11 +1,14 @@
-payment-service:
-  build: ./services/payment-service
-  ports:
-    - "5004:5004"  # Changed from "5004:5003" for consistency
-  environment:
-    - NODE_ENV=production
-    - MONGODB_URI=mongodb://mongo:27017/medisphere
-    - API_GATEWAY_URL=http://api-gateway:5015
-  restart: unless-stopped
-  depends_on:
-    - mongo
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm ci --omit=dev
+
+COPY . .
+
+ENV NODE_ENV=production
+EXPOSE 5003
+
+CMD ["npm", "start"]

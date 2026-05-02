@@ -13,12 +13,25 @@ export default function PatientPrescriptions() {
 
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
-  
+
   const storedPatientProfile = localStorage.getItem("patientProfile");
   const patientProfile = storedPatientProfile ? JSON.parse(storedPatientProfile) : null;
-  
-  const patientName = patientProfile?.name || patientProfile?.fullName || user?.name || "Patient";
-  const patientId = patientProfile?.patientId || user?.patientId || "PAT0004";
+
+  const patientName =
+    patientProfile?.name || patientProfile?.fullName || user?.name || "Patient";
+
+  const patientMongoId =
+    user?.id ||
+    user?._id ||
+    patientProfile?._id ||
+    patientProfile?.id ||
+    "";
+
+  const patientDisplayId =
+    patientProfile?.patientId || user?.patientId || "";
+
+  const patientId = patientDisplayId || patientMongoId || "PAT0004";
+
   const patientEmail = patientProfile?.email || user?.email || "No email";
 
   const PRESCRIPTIONS_BASE_URL = import.meta.env.VITE_DOCTOR_SERVICE_URL
@@ -70,29 +83,61 @@ export default function PatientPrescriptions() {
         localStorage.getItem("accessToken") ||
         "";
 
-      const response = await fetch(
-        `${PRESCRIPTIONS_BASE_URL}/patient/${patientId}`,
-        {
-          method: "GET",
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        }
-      );
+      const idsToTry = [patientMongoId, patientDisplayId].filter(Boolean);
 
-      const data = await parseResponseData(response);
+      console.log("Logged-in patient Mongo ID:", patientMongoId);
+      console.log("Logged-in patient Display ID:", patientDisplayId);
+      console.log("Fetching prescriptions for:", idsToTry);
 
-      if (!response.ok) {
-        throw new Error(data?.message || "Failed to fetch prescriptions");
+      if (idsToTry.length === 0) {
+        setPrescriptions([]);
+        return;
       }
 
-      const prescriptionList = Array.isArray(data)
-        ? data
-        : Array.isArray(data?.data)
-        ? data.data
-        : [];
+      const responses = await Promise.all(
+        idsToTry.map(async (id) => {
+          try {
+            const response = await fetch(
+              `${PRESCRIPTIONS_BASE_URL}/patient/${id}`,
+              {
+                method: "GET",
+                headers: {
+                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+              }
+            );
 
-      setPrescriptions(prescriptionList.map(mapPrescriptionForUI));
+            const data = await parseResponseData(response);
+
+            if (!response.ok) {
+              return [];
+            }
+
+            return Array.isArray(data)
+              ? data
+              : Array.isArray(data?.data)
+              ? data.data
+              : [];
+          } catch (error) {
+            console.error(`Failed to fetch prescriptions for ID ${id}:`, error);
+            return [];
+          }
+        })
+      );
+
+      const mergedPrescriptions = responses.flat();
+
+      const uniquePrescriptions = Array.from(
+        new Map(
+          mergedPrescriptions.map((prescription) => [
+            prescription._id ||
+              `${prescription.appointmentId}-${prescription.patientId}-${prescription.createdAt}`,
+            prescription,
+          ])
+        ).values()
+      );
+
+      setPrescriptions(uniquePrescriptions.map(mapPrescriptionForUI));
     } catch (error) {
       console.error("Failed to fetch prescriptions:", error);
       setPrescriptions([]);
@@ -108,6 +153,44 @@ export default function PatientPrescriptions() {
   const handleViewDetails = (prescription) => {
     setSelectedPrescription(prescription);
     setShowDetailsModal(true);
+  };
+
+  const handleDownloadPrescription = (prescription) => {
+    // Create a formatted prescription text
+    const prescriptionText = `
+PRESCRIPTION DETAILS
+====================
+
+APPOINTMENT ID: ${prescription.appointmentId}
+PATIENT NAME: ${patientName}
+PATIENT ID: ${patientId}
+
+MEDICATION INFORMATION:
+----------------------
+Medication: ${prescription.medicineName}
+Category: ${prescription.category}
+Dosage: ${prescription.dosage}
+Frequency: ${prescription.frequency}
+Instructions: ${prescription.instructions}
+
+PRESCRIBING PHYSICIAN: ${prescription.prescribedBy}
+ISSUED DATE: ${prescription.issuedDate ? new Date(prescription.issuedDate).toLocaleDateString() : "--"}
+
+${prescription.medicines.length > 1 ? "\nALL MEDICATIONS:\n----------------" + prescription.medicines.map(med => `\n- ${med.medicineName}\n  Dosage: ${med.dosage}\n  Frequency: ${med.frequency}\n  Duration: ${med.duration}`).join("\n") : ""}
+
+This is a computer-generated prescription. Please consult your physician for any concerns.
+    `;
+
+    // Create a blob and download
+    const blob = new Blob([prescriptionText], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `prescription_${prescription.appointmentId || "download"}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleTalkToSpecialist = () => {
@@ -154,7 +237,6 @@ export default function PatientPrescriptions() {
             </div>
           </div>
 
-          {/* Stats Cards - Only Active Meds remains */}
           <div className="stats-grid">
             <div className="stat-card">
               <p>Active Prescriptions</p>
@@ -162,7 +244,6 @@ export default function PatientPrescriptions() {
             </div>
           </div>
 
-          {/* Search and Filter Bar */}
           <div className="action-bar">
             <div className="search-wrapper">
               <span className="material-symbols-outlined">search</span>
@@ -189,10 +270,9 @@ export default function PatientPrescriptions() {
             </div>
           </div>
 
-          {/* Active Prescriptions Table */}
           <div className="prescriptions-table-container">
             <h2>Active Prescriptions</h2>
-            
+
             {loading ? (
               <div className="empty-state">
                 <span className="material-symbols-outlined">medication</span>
@@ -220,26 +300,36 @@ export default function PatientPrescriptions() {
                       <tr key={prescription._id}>
                         <td className="appointment-cell">
                           <div className="appointment-id">{prescription.appointmentId}</div>
-                         </td>
+                        </td>
                         <td>
                           <div className="medication-name">{prescription.medicineName}</div>
                           <div className="medication-category">{prescription.category}</div>
-                         </td>
+                        </td>
                         <td>
                           <div>{prescription.dosage} {prescription.dosageForm}</div>
                           <div className="frequency">{prescription.frequency}</div>
-                         </td>
+                        </td>
                         <td>{prescription.prescribedBy}</td>
                         <td>
-                          <button 
-                            className="view-details-btn"
-                            onClick={() => handleViewDetails(prescription)}
-                          >
-                            View Details
-                            <span className="material-symbols-outlined">chevron_right</span>
-                          </button>
-                         </td>
-                       </tr>
+                          <div className="action-buttons-group">
+                            <button
+                              className="view-details-btn"
+                              onClick={() => handleViewDetails(prescription)}
+                            >
+                              View Details
+                              <span className="material-symbols-outlined">chevron_right</span>
+                            </button>
+                            <button
+                              className="download-btn"
+                              onClick={() => handleDownloadPrescription(prescription)}
+                              title="Download Prescription"
+                            >
+                              <span className="material-symbols-outlined">download</span>
+                              Download
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
                     ))}
                   </tbody>
                 </table>
@@ -249,7 +339,6 @@ export default function PatientPrescriptions() {
         </div>
       </main>
 
-      {/* View Details Modal - No Request Refill button */}
       {showDetailsModal && selectedPrescription && (
         <div className="modal-overlay" onClick={() => setShowDetailsModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -264,17 +353,17 @@ export default function PatientPrescriptions() {
                 <label>APPOINTMENT ID</label>
                 <p>{selectedPrescription.appointmentId}</p>
               </div>
-              
+
               <div className="detail-section">
                 <label>MEDICATION NAME</label>
                 <p>{selectedPrescription.medicineName}</p>
               </div>
-              
+
               <div className="detail-section">
                 <label>CATEGORY</label>
                 <p>{selectedPrescription.category}</p>
               </div>
-              
+
               <div className="detail-row-group">
                 <div className="detail-section half">
                   <label>DOSAGE</label>
@@ -285,12 +374,12 @@ export default function PatientPrescriptions() {
                   <p>{selectedPrescription.frequency}</p>
                 </div>
               </div>
-              
+
               <div className="detail-section">
                 <label>PRESCRIBED BY</label>
                 <p>{selectedPrescription.prescribedBy}</p>
               </div>
-              
+
               <div className="detail-section">
                 <label>INSTRUCTIONS</label>
                 <p className="instructions-text">{selectedPrescription.instructions}</p>
@@ -328,7 +417,7 @@ export default function PatientPrescriptions() {
                   </div>
                 </div>
               )}
-              
+
               <div className="detail-section">
                 <label>ISSUED DATE</label>
                 <p>
@@ -339,6 +428,13 @@ export default function PatientPrescriptions() {
               </div>
             </div>
             <div className="modal-footer">
+              <button
+                className="download-modal-btn"
+                onClick={() => handleDownloadPrescription(selectedPrescription)}
+              >
+                <span className="material-symbols-outlined">download</span>
+                Download Prescription
+              </button>
               <button className="close-modal-btn" onClick={() => setShowDetailsModal(false)}>
                 Close
               </button>
@@ -361,7 +457,7 @@ export default function PatientPrescriptions() {
           justify-content: center;
           z-index: 1000;
         }
-        
+
         .modal-content {
           background: white;
           border-radius: 20px;
@@ -371,7 +467,7 @@ export default function PatientPrescriptions() {
           overflow-y: auto;
           box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
         }
-        
+
         .modal-header {
           display: flex;
           justify-content: space-between;
@@ -383,14 +479,14 @@ export default function PatientPrescriptions() {
           background: white;
           z-index: 1;
         }
-        
+
         .modal-header h3 {
           font-size: 20px;
           font-weight: 700;
           color: #07182e;
           margin: 0;
         }
-        
+
         .modal-header button {
           background: none;
           border: none;
@@ -401,19 +497,19 @@ export default function PatientPrescriptions() {
           justify-content: center;
           border-radius: 8px;
         }
-        
+
         .modal-header button:hover {
           background: #f8f2ee;
         }
-        
+
         .modal-body {
           padding: 24px;
         }
-        
+
         .detail-section {
           margin-bottom: 20px;
         }
-        
+
         .detail-section label {
           display: block;
           font-size: 11px;
@@ -423,38 +519,39 @@ export default function PatientPrescriptions() {
           color: #75777e;
           margin-bottom: 6px;
         }
-        
+
         .detail-section p {
           font-size: 15px;
           color: #1d1b19;
           margin: 0;
         }
-        
+
         .detail-row-group {
           display: flex;
           gap: 20px;
           margin-bottom: 20px;
         }
-        
+
         .detail-section.half {
           flex: 1;
           margin-bottom: 0;
         }
-        
+
         .instructions-text {
           line-height: 1.5;
         }
-        
+
         .modal-footer {
           display: flex;
           justify-content: flex-end;
+          gap: 12px;
           padding: 16px 24px;
           border-top: 1px solid #ede7e3;
           position: sticky;
           bottom: 0;
           background: white;
         }
-        
+
         .close-modal-btn {
           padding: 10px 24px;
           background: #07182e;
@@ -465,9 +562,57 @@ export default function PatientPrescriptions() {
           color: white;
           cursor: pointer;
         }
-        
+
         .close-modal-btn:hover {
           background: #1d2d44;
+        }
+
+        .download-modal-btn {
+          padding: 10px 24px;
+          background: #16a34a;
+          border: none;
+          border-radius: 10px;
+          font-size: 13px;
+          font-weight: 600;
+          color: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .download-modal-btn:hover {
+          background: #15803d;
+        }
+
+        .action-buttons-group {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .download-btn {
+          background: #16a34a;
+          border: none;
+          border-radius: 8px;
+          padding: 8px 12px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          font-weight: 500;
+          color: white;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .download-btn:hover {
+          background: #15803d;
+          transform: translateY(-1px);
+        }
+
+        .download-btn .material-symbols-outlined {
+          font-size: 16px;
         }
       `}</style>
     </div>

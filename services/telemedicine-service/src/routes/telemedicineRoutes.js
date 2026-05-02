@@ -1,6 +1,7 @@
 import express from "express";
 import {
   createSessionFromConfirmedAppointment,
+  getDoctorSessionsById,
   getAllSessions,
   getSessionById,
   updateSession,
@@ -8,48 +9,56 @@ import {
   completeSession,
   deleteSession,
   getSessionSummary,
+  getRecentSessionsDebug,
 } from "../controllers/telemedicineController.js";
+import mongoose from "mongoose";
 
 const router = express.Router();
 
-/**
- * CREATE SESSION (Triggered after doctor confirms appointment)
- */
 router.post("/", createSessionFromConfirmedAppointment);
 
-/**
- * GET ALL SESSIONS
- */
+// ✅ No middleware: get sessions by doctorId
+router.get("/doctor/sessions/:doctorId", getDoctorSessionsById);
+
 router.get("/", getAllSessions);
-
-/**
- * GET SUMMARY (dashboard / analytics)
- */
 router.get("/summary", getSessionSummary);
+// Debug route for quick diagnostics (place before param routes)
+router.get("/debug", (req, res) => {
+  try {
+    const state = mongoose.connection.readyState;
+    res.json({
+      success: true,
+      mongoReadyState: state,
+      MONGO_URI_present: !!process.env.MONGO_URI,
+      NOTIFICATION_SERVICE_URL: process.env.NOTIFICATION_SERVICE_URL || null,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
 
-/**
- * GET SINGLE SESSION
- */
+// Recent sessions debug
+router.get("/debug/sessions", getRecentSessionsDebug);
+
 router.get("/:id", getSessionById);
-
-/**
- * UPDATE SESSION
- */
 router.put("/:id", updateSession);
-
-/**
- * START SESSION
- */
 router.patch("/:id/start", startSession);
-
-/**
- * COMPLETE SESSION
- */
 router.patch("/:id/complete", completeSession);
-
-/**
- * DELETE SESSION
- */
 router.delete("/:id", deleteSession);
+
+// Debug route for quick diagnostics
+router.get("/debug", (req, res) => {
+  try {
+    const state = mongoose.connection.readyState;
+    res.json({
+      success: true,
+      mongoReadyState: state,
+      MONGO_URI_present: !!process.env.MONGO_URI,
+      NOTIFICATION_SERVICE_URL: process.env.NOTIFICATION_SERVICE_URL || null,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: String(err) });
+  }
+});
 
 export default router;

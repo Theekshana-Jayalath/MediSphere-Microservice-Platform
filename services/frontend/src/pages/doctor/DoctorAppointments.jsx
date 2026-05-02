@@ -171,13 +171,30 @@ const DoctorAppointments = () => {
       setIsUpdating(true);
       setMessage("");
       setError("");
-
       await updateAppointmentStatus(appointmentId, "cancelled");
       await fetchAppointments();
       setMessage("Appointment rejected successfully.");
     } catch (err) {
       setError(
         err.response?.data?.message || "Failed to reject appointment."
+      );
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleCompleteAppointment = async (appointmentId) => {
+    try {
+      setIsUpdating(true);
+      setMessage("");
+      setError("");
+
+      await updateAppointmentStatus(appointmentId, "completed");
+      await fetchAppointments();
+      setMessage("Appointment marked as completed.");
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Failed to mark appointment as completed."
       );
     } finally {
       setIsUpdating(false);
@@ -351,6 +368,28 @@ const DoctorAppointments = () => {
                               </button>
                             </>
                           )}
+
+                          {normalizedStatus === "Confirmed" && (
+                            <>
+                              <button
+                                type="button"
+                                className="accept-btn"
+                                onClick={() => handleCompleteAppointment(appointmentId)}
+                                disabled={isUpdating}
+                              >
+                                Complete
+                              </button>
+
+                              <button
+                                type="button"
+                                className="reject-btn"
+                                onClick={() => handleReject(appointmentId)}
+                                disabled={isUpdating}
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     );
@@ -440,6 +479,28 @@ const DoctorAppointments = () => {
                       disabled={isUpdating}
                     >
                       Accept Appointment
+                    </button>
+
+                    <button
+                      type="button"
+                      className="reject-btn"
+                      onClick={() => handleReject(getAppointmentId(selectedAppointment))}
+                      disabled={isUpdating}
+                    >
+                      Reject Appointment
+                    </button>
+                  </div>
+                )}
+
+                {normalizeStatus(selectedAppointment.status) === "Confirmed" && (
+                  <div className="patient-detail-actions">
+                    <button
+                      type="button"
+                      className="accept-btn"
+                      onClick={() => handleCompleteAppointment(getAppointmentId(selectedAppointment))}
+                      disabled={isUpdating}
+                    >
+                      Mark as Completed
                     </button>
 
                     <button

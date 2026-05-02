@@ -10,6 +10,14 @@ export default function AdminPatients() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientToDelete, setPatientToDelete] = useState(null);
+  const [deletingPatient, setDeletingPatient] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -178,18 +186,16 @@ export default function AdminPatients() {
     setSelectedPatient(null);
   };
 
-  const handleDeletePatient = async (patient) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${getPatientName(patient)}?`
-    );
-
-    if (!confirmed) return;
+  const handleDeletePatient = async () => {
+    if (!patientToDelete) return;
 
     try {
+      setDeletingPatient(true);
+
       const token = localStorage.getItem("token");
 
       const response = await fetch(
-        `http://localhost:5015/api/admin/patients/${patient._id}`,
+        `http://localhost:5015/api/admin/patients/${patientToDelete._id}`,
         {
           method: "DELETE",
           headers: {
@@ -202,20 +208,25 @@ export default function AdminPatients() {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Failed to delete patient");
+        showToast(data.message || "Failed to delete patient", "error");
         return;
       }
 
-      setPatients((prev) => prev.filter((item) => item._id !== patient._id));
+      setPatients((prev) =>
+        prev.filter((item) => item._id !== patientToDelete._id)
+      );
 
-      if (selectedPatient && selectedPatient._id === patient._id) {
+      if (selectedPatient && selectedPatient._id === patientToDelete._id) {
         setSelectedPatient(null);
       }
 
-      alert("Patient deleted successfully");
+      setPatientToDelete(null);
+      showToast("Patient deleted successfully", "success");
     } catch (err) {
       console.error("Delete patient error:", err);
-      alert("Something went wrong while deleting patient");
+      showToast("Something went wrong while deleting patient", "error");
+    } finally {
+      setDeletingPatient(false);
     }
   };
 
@@ -231,6 +242,15 @@ export default function AdminPatients() {
       />
 
       <AdminSidebar />
+
+      {toast && (
+        <div className={`admin-patient-toast ${toast.type}`}>
+          <span className="material-symbols-outlined">
+            {toast.type === "success" ? "check_circle" : "error"}
+          </span>
+          <p>{toast.message}</p>
+        </div>
+      )}
 
       <div className="admin-patients-main">
         <header className="admin-patients-topbar">
@@ -426,7 +446,7 @@ export default function AdminPatients() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleDeletePatient(patient)}
+                                onClick={() => setPatientToDelete(patient)}
                                 title="Delete"
                               >
                                 <span className="material-symbols-outlined">
@@ -600,6 +620,154 @@ export default function AdminPatients() {
           </div>
         </div>
       )}
+
+      {patientToDelete && (
+        <div className="patient-delete-overlay">
+          <div className="patient-delete-modal">
+            <div className="patient-delete-icon">
+              <span className="material-symbols-outlined">warning</span>
+            </div>
+
+            <h2>Delete Patient</h2>
+            <p>
+              Are you sure you want to delete{" "}
+              <strong>{getPatientName(patientToDelete)}</strong>?
+            </p>
+            <p className="patient-delete-subtext">
+              This action cannot be undone.
+            </p>
+
+            <div className="patient-delete-actions">
+              <button
+                type="button"
+                className="cancel-delete-btn"
+                onClick={() => setPatientToDelete(null)}
+                disabled={deletingPatient}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="confirm-delete-btn"
+                onClick={handleDeletePatient}
+                disabled={deletingPatient}
+              >
+                {deletingPatient ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        .admin-patient-toast {
+          position: fixed;
+          top: 24px;
+          right: 24px;
+          z-index: 20000;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 280px;
+          padding: 14px 18px;
+          border-radius: 14px;
+          background: #ffffff;
+          box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+        }
+
+        .admin-patient-toast.success {
+          border-left: 5px solid #16a34a;
+        }
+
+        .admin-patient-toast.error {
+          border-left: 5px solid #dc2626;
+        }
+
+        .admin-patient-toast p {
+          margin: 0;
+          color: #0b2341;
+          font-weight: 600;
+        }
+
+        .patient-delete-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.45);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 20001;
+          padding: 20px;
+        }
+
+        .patient-delete-modal {
+          width: 100%;
+          max-width: 430px;
+          background: #ffffff;
+          border-radius: 20px;
+          padding: 28px;
+          text-align: center;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+        }
+
+        .patient-delete-icon {
+          width: 58px;
+          height: 58px;
+          border-radius: 50%;
+          background: #fee2e2;
+          color: #dc2626;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 16px;
+        }
+
+        .patient-delete-modal h2 {
+          margin: 0 0 10px;
+          color: #0b2341;
+        }
+
+        .patient-delete-modal p {
+          margin: 0 0 8px;
+          color: #4b5563;
+        }
+
+        .patient-delete-subtext {
+          font-size: 13px;
+          color: #9ca3af !important;
+        }
+
+        .patient-delete-actions {
+          display: flex;
+          justify-content: center;
+          gap: 12px;
+          margin-top: 22px;
+        }
+
+        .patient-delete-actions button {
+          border: none;
+          padding: 11px 20px;
+          border-radius: 12px;
+          cursor: pointer;
+          font-weight: 700;
+        }
+
+        .cancel-delete-btn {
+          background: #f3f4f6;
+          color: #0b2341;
+        }
+
+        .confirm-delete-btn {
+          background: #dc2626;
+          color: #ffffff;
+        }
+
+        .patient-delete-actions button:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+      `}</style>
     </div>
   );
 }

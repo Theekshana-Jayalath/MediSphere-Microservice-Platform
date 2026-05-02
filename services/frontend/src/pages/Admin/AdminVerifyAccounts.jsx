@@ -10,7 +10,16 @@ export default function AdminVerifyAccounts() {
   const [statusFilter, setStatusFilter] = useState("Status: Pending");
   const [actionLoadingId, setActionLoadingId] = useState(null);
 
+  const [toast, setToast] = useState(null);
+  const [rejectModalDoctor, setRejectModalDoctor] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+
   const API_BASE_URL = "http://localhost:5015/api/admin/doctors";
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const getToken = () => {
     return (
@@ -107,7 +116,7 @@ export default function AdminVerifyAccounts() {
       setDoctors(doctorList);
     } catch (error) {
       console.error("Failed to fetch doctors:", error);
-      alert(error.message || "Failed to load doctor applications");
+      showToast(error.message || "Failed to load doctor applications", "error");
       setDoctors([]);
     } finally {
       setLoading(false);
@@ -156,7 +165,7 @@ export default function AdminVerifyAccounts() {
     try {
       const doctorId = getDoctorId(doctor);
       if (!doctorId) {
-        alert("Doctor id not found");
+        showToast("Doctor id not found", "error");
         return;
       }
 
@@ -180,33 +189,40 @@ export default function AdminVerifyAccounts() {
         );
       }
 
-      alert(`Accepted ${getDoctorName(doctor)}`);
+      showToast(`Accepted ${getDoctorName(doctor)}`, "success");
+
       if (selectedDoctor && getDoctorId(selectedDoctor) === doctorId) {
         setSelectedDoctor(null);
       }
+
       await fetchDoctors();
     } catch (error) {
       console.error("Approve doctor failed:", error);
-      alert(error.message || "Failed to approve doctor");
+      showToast(error.message || "Failed to approve doctor", "error");
     } finally {
       setActionLoadingId(null);
     }
   };
 
-  const handleDecline = async (doctor) => {
+  const openDeclineModal = (doctor) => {
+    setRejectModalDoctor(doctor);
+    setRejectReason("");
+  };
+
+  const closeDeclineModal = () => {
+    setRejectModalDoctor(null);
+    setRejectReason("");
+  };
+
+  const submitDecline = async () => {
+    const doctor = rejectModalDoctor;
+
     try {
       const doctorId = getDoctorId(doctor);
       if (!doctorId) {
-        alert("Doctor id not found");
+        showToast("Doctor id not found", "error");
         return;
       }
-
-      const reason = window.prompt(
-        `Enter rejection reason for ${getDoctorName(doctor)}:`,
-        ""
-      );
-
-      if (reason === null) return;
 
       setActionLoadingId(doctorId);
 
@@ -218,7 +234,7 @@ export default function AdminVerifyAccounts() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          rejectionReason: reason,
+          rejectionReason: rejectReason,
         }),
       });
 
@@ -230,17 +246,24 @@ export default function AdminVerifyAccounts() {
         );
       }
 
-      alert(`Declined ${getDoctorName(doctor)}`);
+      showToast(`Declined ${getDoctorName(doctor)}`, "success");
+
       if (selectedDoctor && getDoctorId(selectedDoctor) === doctorId) {
         setSelectedDoctor(null);
       }
+
+      closeDeclineModal();
       await fetchDoctors();
     } catch (error) {
       console.error("Reject doctor failed:", error);
-      alert(error.message || "Failed to reject doctor");
+      showToast(error.message || "Failed to reject doctor", "error");
     } finally {
       setActionLoadingId(null);
     }
+  };
+
+  const handleDecline = async (doctor) => {
+    openDeclineModal(doctor);
   };
 
   const handleView = (doctor) => {
@@ -263,6 +286,15 @@ export default function AdminVerifyAccounts() {
       />
 
       <AdminSidebar />
+
+      {toast && (
+        <div className={`custom-toast ${toast.type}`}>
+          <span className="material-symbols-outlined">
+            {toast.type === "success" ? "check_circle" : "error"}
+          </span>
+          <p>{toast.message}</p>
+        </div>
+      )}
 
       <div className="admin-verify-main">
         <header className="admin-verify-topbar">
@@ -304,17 +336,6 @@ export default function AdminVerifyAccounts() {
               </div>
               <h2>0</h2>
               <p>Verified this Month</p>
-            </div>
-
-            <div className="verify-stat-card">
-              <div className="verify-stat-top">
-                <div className="verify-stat-icon blue">
-                  <span className="material-symbols-outlined">schedule</span>
-                </div>
-                <span className="verify-chip">Estimated</span>
-              </div>
-              <h2>18.5h</h2>
-              <p>Average Review Time</p>
             </div>
           </section>
 
@@ -569,107 +590,43 @@ export default function AdminVerifyAccounts() {
                 gap: "16px",
               }}
             >
-              <div
-                style={{
-                  background: "#f8f5f2",
-                  padding: "16px",
-                  borderRadius: "14px",
-                }}
-              >
-                <strong style={{ display: "block", marginBottom: "6px" }}>
-                  Full Name
-                </strong>
+              <div style={{ background: "#f8f5f2", padding: "16px", borderRadius: "14px" }}>
+                <strong style={{ display: "block", marginBottom: "6px" }}>Full Name</strong>
                 <span>{getDoctorName(selectedDoctor)}</span>
               </div>
 
-              <div
-                style={{
-                  background: "#f8f5f2",
-                  padding: "16px",
-                  borderRadius: "14px",
-                }}
-              >
-                <strong style={{ display: "block", marginBottom: "6px" }}>
-                  Email
-                </strong>
+              <div style={{ background: "#f8f5f2", padding: "16px", borderRadius: "14px" }}>
+                <strong style={{ display: "block", marginBottom: "6px" }}>Email</strong>
                 <span>{getDoctorEmail(selectedDoctor)}</span>
               </div>
 
-              <div
-                style={{
-                  background: "#f8f5f2",
-                  padding: "16px",
-                  borderRadius: "14px",
-                }}
-              >
-                <strong style={{ display: "block", marginBottom: "6px" }}>
-                  Phone
-                </strong>
+              <div style={{ background: "#f8f5f2", padding: "16px", borderRadius: "14px" }}>
+                <strong style={{ display: "block", marginBottom: "6px" }}>Phone</strong>
                 <span>{selectedDoctor?.phone || "N/A"}</span>
               </div>
 
-              <div
-                style={{
-                  background: "#f8f5f2",
-                  padding: "16px",
-                  borderRadius: "14px",
-                }}
-              >
-                <strong style={{ display: "block", marginBottom: "6px" }}>
-                  Specialty
-                </strong>
+              <div style={{ background: "#f8f5f2", padding: "16px", borderRadius: "14px" }}>
+                <strong style={{ display: "block", marginBottom: "6px" }}>Specialty</strong>
                 <span>{getDoctorSpecialty(selectedDoctor)}</span>
               </div>
 
-              <div
-                style={{
-                  background: "#f8f5f2",
-                  padding: "16px",
-                  borderRadius: "14px",
-                }}
-              >
-                <strong style={{ display: "block", marginBottom: "6px" }}>
-                  License Number
-                </strong>
+              <div style={{ background: "#f8f5f2", padding: "16px", borderRadius: "14px" }}>
+                <strong style={{ display: "block", marginBottom: "6px" }}>License Number</strong>
                 <span>{getDoctorLicenseNumber(selectedDoctor)}</span>
               </div>
 
-              <div
-                style={{
-                  background: "#f8f5f2",
-                  padding: "16px",
-                  borderRadius: "14px",
-                }}
-              >
-                <strong style={{ display: "block", marginBottom: "6px" }}>
-                  Experience Years
-                </strong>
+              <div style={{ background: "#f8f5f2", padding: "16px", borderRadius: "14px" }}>
+                <strong style={{ display: "block", marginBottom: "6px" }}>Experience Years</strong>
                 <span>{selectedDoctor?.experienceYears ?? "N/A"}</span>
               </div>
 
-              <div
-                style={{
-                  background: "#f8f5f2",
-                  padding: "16px",
-                  borderRadius: "14px",
-                }}
-              >
-                <strong style={{ display: "block", marginBottom: "6px" }}>
-                  Base Hospital
-                </strong>
+              <div style={{ background: "#f8f5f2", padding: "16px", borderRadius: "14px" }}>
+                <strong style={{ display: "block", marginBottom: "6px" }}>Base Hospital</strong>
                 <span>{selectedDoctor?.baseHospital || "N/A"}</span>
               </div>
 
-              <div
-                style={{
-                  background: "#f8f5f2",
-                  padding: "16px",
-                  borderRadius: "14px",
-                }}
-              >
-                <strong style={{ display: "block", marginBottom: "6px" }}>
-                  Consultation Fee
-                </strong>
+              <div style={{ background: "#f8f5f2", padding: "16px", borderRadius: "14px" }}>
+                <strong style={{ display: "block", marginBottom: "6px" }}>Consultation Fee</strong>
                 <span>
                   {selectedDoctor?.consultationFee !== undefined &&
                   selectedDoctor?.consultationFee !== null
@@ -678,55 +635,23 @@ export default function AdminVerifyAccounts() {
                 </span>
               </div>
 
-              <div
-                style={{
-                  background: "#f8f5f2",
-                  padding: "16px",
-                  borderRadius: "14px",
-                }}
-              >
-                <strong style={{ display: "block", marginBottom: "6px" }}>
-                  Application Date
-                </strong>
+              <div style={{ background: "#f8f5f2", padding: "16px", borderRadius: "14px" }}>
+                <strong style={{ display: "block", marginBottom: "6px" }}>Application Date</strong>
                 <span>{formatDate(selectedDoctor?.createdAt)}</span>
               </div>
 
-              <div
-                style={{
-                  background: "#f8f5f2",
-                  padding: "16px",
-                  borderRadius: "14px",
-                }}
-              >
-                <strong style={{ display: "block", marginBottom: "6px" }}>
-                  Application Time
-                </strong>
+              <div style={{ background: "#f8f5f2", padding: "16px", borderRadius: "14px" }}>
+                <strong style={{ display: "block", marginBottom: "6px" }}>Application Time</strong>
                 <span>{formatTime(selectedDoctor?.createdAt)}</span>
               </div>
 
-              <div
-                style={{
-                  background: "#f8f5f2",
-                  padding: "16px",
-                  borderRadius: "14px",
-                }}
-              >
-                <strong style={{ display: "block", marginBottom: "6px" }}>
-                  Approval Status
-                </strong>
+              <div style={{ background: "#f8f5f2", padding: "16px", borderRadius: "14px" }}>
+                <strong style={{ display: "block", marginBottom: "6px" }}>Approval Status</strong>
                 <span>{getDoctorStatus(selectedDoctor)}</span>
               </div>
 
-              <div
-                style={{
-                  background: "#f8f5f2",
-                  padding: "16px",
-                  borderRadius: "14px",
-                }}
-              >
-                <strong style={{ display: "block", marginBottom: "6px" }}>
-                  Role
-                </strong>
+              <div style={{ background: "#f8f5f2", padding: "16px", borderRadius: "14px" }}>
+                <strong style={{ display: "block", marginBottom: "6px" }}>Role</strong>
                 <span>{selectedDoctor?.role || "doctor"}</span>
               </div>
             </div>
@@ -793,6 +718,175 @@ export default function AdminVerifyAccounts() {
           </div>
         </div>
       )}
+
+      {rejectModalDoctor && (
+        <div className="reject-modal-overlay" onClick={closeDeclineModal}>
+          <div className="reject-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Decline Doctor Application</h3>
+            <p>
+              Enter rejection reason for{" "}
+              <strong>{getDoctorName(rejectModalDoctor)}</strong>
+            </p>
+
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Type rejection reason..."
+              rows="4"
+            />
+
+            <div className="reject-modal-actions">
+              <button type="button" onClick={closeDeclineModal}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="confirm-decline-btn"
+                onClick={submitDecline}
+                disabled={actionLoadingId === getDoctorId(rejectModalDoctor)}
+              >
+                {actionLoadingId === getDoctorId(rejectModalDoctor)
+                  ? "Please wait..."
+                  : "Decline"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        .custom-toast {
+          position: fixed;
+          top: 24px;
+          right: 24px;
+          z-index: 20000;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 280px;
+          max-width: 420px;
+          padding: 14px 18px;
+          border-radius: 14px;
+          background: #ffffff;
+          box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+          animation: toastSlideIn 0.25s ease;
+        }
+
+        .custom-toast.success {
+          border-left: 5px solid #16a34a;
+        }
+
+        .custom-toast.error {
+          border-left: 5px solid #dc2626;
+        }
+
+        .custom-toast span {
+          font-size: 24px;
+        }
+
+        .custom-toast.success span {
+          color: #16a34a;
+        }
+
+        .custom-toast.error span {
+          color: #dc2626;
+        }
+
+        .custom-toast p {
+          margin: 0;
+          color: #1D2D44;
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        @keyframes toastSlideIn {
+          from {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        .reject-modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.4);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 20001;
+          padding: 20px;
+        }
+
+        .reject-modal {
+          width: 100%;
+          max-width: 460px;
+          background: #ffffff;
+          border-radius: 20px;
+          padding: 24px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+        }
+
+        .reject-modal h3 {
+          margin: 0 0 8px 0;
+          color: #1D2D44;
+          font-size: 20px;
+        }
+
+        .reject-modal p {
+          margin: 0 0 16px 0;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        .reject-modal textarea {
+          width: 100%;
+          resize: vertical;
+          border: 1px solid #d1d5db;
+          border-radius: 12px;
+          padding: 12px;
+          font-family: inherit;
+          font-size: 14px;
+          outline: none;
+        }
+
+        .reject-modal textarea:focus {
+          border-color: #1D2D44;
+        }
+
+        .reject-modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 12px;
+          margin-top: 18px;
+        }
+
+        .reject-modal-actions button {
+          border: none;
+          padding: 10px 18px;
+          border-radius: 10px;
+          cursor: pointer;
+          font-weight: 600;
+        }
+
+        .reject-modal-actions button:first-child {
+          background: #f3f4f6;
+          color: #1D2D44;
+        }
+
+        .confirm-decline-btn {
+          background: #dc2626;
+          color: #ffffff;
+        }
+
+        .confirm-decline-btn:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+      `}</style>
     </div>
   );
 }
