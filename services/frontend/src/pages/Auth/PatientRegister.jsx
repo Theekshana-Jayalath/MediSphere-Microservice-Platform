@@ -28,6 +28,12 @@ export default function PatientRegister() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -41,17 +47,17 @@ export default function PatientRegister() {
     e.preventDefault();
 
     if (!formData.fullName || !formData.email || !formData.password) {
-      alert("Full name, email and password are required");
+      showToast("Full name, email and password are required", "error");
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      showToast("Passwords do not match", "error");
       return;
     }
 
     if (!formData.terms) {
-      alert("Please accept the terms and privacy policy");
+      showToast("Please accept the terms and privacy policy", "error");
       return;
     }
 
@@ -74,14 +80,14 @@ export default function PatientRegister() {
       const authData = await authResponse.json();
 
       if (!authResponse.ok) {
-        alert(authData.message || "Auth registration failed");
+        showToast(authData.message || "Auth registration failed", "error");
         return;
       }
 
       const userId = authData?.user?.id;
 
       if (!userId) {
-        alert("User created, but user ID was not returned");
+        showToast("User created, but user ID was not returned", "error");
         return;
       }
 
@@ -119,15 +125,17 @@ export default function PatientRegister() {
       const patientData = await patientResponse.json();
 
       if (!patientResponse.ok) {
-        alert(patientData.message || "Patient profile creation failed");
+        showToast(patientData.message || "Patient profile creation failed", "error");
         return;
       }
 
-      alert("Registration successful. Please login to continue.");
-      navigate("/login");
+      showToast("Registration successful. Please login to continue.", "success");
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
     } catch (error) {
       console.error("Registration error:", error);
-      alert("Something went wrong during registration");
+      showToast("Something went wrong during registration", "error");
     } finally {
       setLoading(false);
     }
@@ -143,6 +151,16 @@ export default function PatientRegister() {
         rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
       />
+
+      {/* Custom Toast Notification */}
+      {toast && (
+        <div className={`register-toast ${toast.type}`}>
+          <span className="material-symbols-outlined">
+            {toast.type === "success" ? "check_circle" : "error"}
+          </span>
+          <p>{toast.message}</p>
+        </div>
+      )}
 
       <main className="patient-register-main">
         <section className="patient-left">
@@ -582,6 +600,63 @@ export default function PatientRegister() {
           </div>
         </section>
       </main>
+
+      <style>{`
+        .register-toast {
+          position: fixed;
+          top: 24px;
+          right: 24px;
+          z-index: 20000;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 280px;
+          max-width: 420px;
+          padding: 14px 18px;
+          border-radius: 14px;
+          background: #ffffff;
+          box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+          animation: registerToastSlideIn 0.25s ease;
+        }
+
+        .register-toast.success {
+          border-left: 5px solid #16a34a;
+        }
+
+        .register-toast.error {
+          border-left: 5px solid #dc2626;
+        }
+
+        .register-toast span {
+          font-size: 24px;
+        }
+
+        .register-toast.success span {
+          color: #16a34a;
+        }
+
+        .register-toast.error span {
+          color: #dc2626;
+        }
+
+        .register-toast p {
+          margin: 0;
+          color: #07182e;
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        @keyframes registerToastSlideIn {
+          from {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

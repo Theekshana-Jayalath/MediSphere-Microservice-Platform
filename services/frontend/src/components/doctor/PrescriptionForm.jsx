@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
+import telemedicineApi from "../../services/doctor/telemedicineApi";
 import { createPrescription } from "../../services/doctor/prescriptionApi";
 import { getAppointmentsByDoctorId } from "../../services/doctor/appointmentApi";
 import "../../styles/Doctor/prescriptionForm.css";
@@ -127,6 +129,59 @@ const PrescriptionForm = () => {
   const [isResolvingDoctor, setIsResolvingDoctor] = useState(true);
   const [appointments, setAppointments] = useState([]);
   const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
+
+  const location = useLocation();
+
+  // If navigate() passed a session in state or a query param sessionId is present,
+  // fetch the telemedicine session and prefill patient details from it.
+  useEffect(() => {
+    let isMounted = true;
+
+    const prefillFromSession = async () => {
+      try {
+        // Check location state first
+        const sessionFromState = location?.state?.session;
+        if (sessionFromState && isMounted) {
+          setFormData((prev) => ({
+            ...prev,
+            appointmentId: sessionFromState.appointmentId || prev.appointmentId,
+            patientId: sessionFromState.patientId || prev.patientId,
+            patientName: sessionFromState.patientName || prev.patientName,
+          }));
+          return;
+        }
+
+        // Then check query param ?sessionId=...
+        const params = new URLSearchParams(location?.search || "");
+        const sessionId = params.get("sessionId");
+        if (!sessionId) return;
+
+        const resp = await telemedicineApi.get(`/${sessionId}`);
+        const payload = resp?.data || {};
+        const session = payload?.data || payload;
+
+        if (!isMounted || !session) return;
+
+        setFormData((prev) => ({
+          ...prev,
+          appointmentId: session.appointmentId || prev.appointmentId,
+          patientId:
+            (typeof session.patientId === "object" && session.patientId !== null
+              ? session.patientId._id || session.patientId.patientId || ""
+              : session.patientId) || prev.patientId,
+          patientName: session.patientName || session.patient || session.patient?.name || prev.patientName,
+        }));
+      } catch (e) {
+        // ignore prefill errors
+      }
+    };
+
+    prefillFromSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [location]);
 
   useEffect(() => {
     let isMounted = true;
@@ -454,11 +509,19 @@ const PrescriptionForm = () => {
                 </p>
               </div>
 
+              {/* Patient summary when prefilled */}
+              {(formData.patientId || formData.patientName || formData.appointmentId) && (
+                <div className="rx-patient-summary">
+                  <h3>Patient</h3>
+                  <p><strong>Name:</strong> {formData.patientName || 'N/A'}</p>
+                  <p><strong>Patient ID:</strong> {formData.patientId || 'N/A'}</p>
+                  <p><strong>Appointment:</strong> {formData.appointmentId || 'N/A'}</p>
+                </div>
+              )}
+
               <div className="rx-grid two-col">
                 <div className="rx-field">
-                  <label>
-                    Doctor ID
-                  </label>
+                  <label>Doctor ID</label>
                   <input
                     type="text"
                     name="doctorId"
@@ -481,7 +544,7 @@ const PrescriptionForm = () => {
                   />
                 </div>
 
-                <div className="rx-field full-span">
+                {/* <div className="rx-field full-span">
                   <label>Appointment</label>
                   <select
                     name="selectedAppointment"
@@ -508,7 +571,7 @@ const PrescriptionForm = () => {
                       );
                     })}
                   </select>
-                </div>
+                </div> */}
 
                 <div className="rx-field">
                   <label>

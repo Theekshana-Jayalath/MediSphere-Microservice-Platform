@@ -21,7 +21,6 @@ const formatSriLankaPhoneNumber = (phoneNumber) => {
   const cleaned = String(phoneNumber || "").replace(/\s+/g, "").trim();
 
   if (!cleaned) return "";
-
   if (cleaned.startsWith("+94")) return cleaned;
   if (cleaned.startsWith("94")) return `+${cleaned}`;
   if (cleaned.startsWith("0")) return `+94${cleaned.substring(1)}`;
@@ -36,6 +35,7 @@ export const createSessionFromConfirmedAppointment = async (req, res) => {
       doctorId,
       doctorName,
       doctorEmail,
+      doctorPhone,
       patientId,
       patientName,
       patientEmail,
@@ -63,11 +63,55 @@ export const createSessionFromConfirmedAppointment = async (req, res) => {
       });
     }
 
-    if (String(appointmentStatus || "").toLowerCase() !== "confirmed") {
+    const normStatus = String(appointmentStatus || "").toLowerCase();
+
+    if (normStatus !== "confirmed" && normStatus !== "completed") {
       return res.status(400).json({
         success: false,
-        message: "Session can only be created for a confirmed appointment",
+        message:
+          "Session can only be created for a confirmed or completed appointment",
       });
+    }
+
+    let resolvedDoctorId = doctorId;
+    let resolvedDoctorName = doctorName;
+    let resolvedDoctorEmail = doctorEmail;
+    let resolvedDoctorPhone = doctorPhone;
+
+    try {
+      const gatewayBase = process.env.API_GATEWAY_URL || "http://localhost:5015";
+
+      if (doctorId) {
+        const dresp = await axios.get(`${gatewayBase}/api/doctors/${doctorId}`, {
+          timeout: 4000,
+        });
+
+        const d = dresp.data?.data || dresp.data || {};
+
+        if (d?._id) {
+          resolvedDoctorId = String(d._id);
+        }
+
+        resolvedDoctorName =
+          resolvedDoctorName ||
+          d.fullName ||
+          d.name ||
+          d.displayName ||
+          "";
+
+        resolvedDoctorEmail =
+          resolvedDoctorEmail || d.email || d.doctorEmail || "";
+
+        resolvedDoctorPhone =
+          resolvedDoctorPhone ||
+          d.phone ||
+          d.phoneNumber ||
+          d.mobile ||
+          d.contactNumber ||
+          "";
+      }
+    } catch (err) {
+      console.warn("Doctor resolve skipped:", err.message);
     }
 
     const existingSession = await Session.findOne({ appointmentId });
@@ -84,9 +128,10 @@ export const createSessionFromConfirmedAppointment = async (req, res) => {
 
     const session = await Session.create({
       appointmentId,
-      doctorId,
-      doctorName,
-      doctorEmail: doctorEmail || "",
+      doctorId: resolvedDoctorId || doctorId,
+      doctorName: resolvedDoctorName || "",
+      doctorEmail: resolvedDoctorEmail || "",
+      doctorPhone: resolvedDoctorPhone || "",
       patientId,
       patientName,
       patientEmail,
@@ -101,29 +146,33 @@ export const createSessionFromConfirmedAppointment = async (req, res) => {
     });
 
     try {
-      if (!process.env.NOTIFICATION_SERVICE_URL) {
-        console.warn("NOTIFICATION_SERVICE_URL is not set in .env");
-      } else {
-        const payload = {
-          appointmentId: session.appointmentId,
-          patientEmail: session.patientEmail,
-          patientPhone: formatSriLankaPhoneNumber(session.patientPhone),
-          patientName: session.patientName,
-          doctorName: session.doctorName,
-          doctorEmail: session.doctorEmail,
-          specialty: session.specialty,
-          scheduledTime: session.scheduledTime,
-          meetingLink: session.meetingLink,
-          status: "Scheduled",
-        };
+      const notificationBaseUrl =
+        process.env.NOTIFICATION_SERVICE_URL || "http://localhost:6002";
 
-        const response = await axios.post(
-          `${process.env.NOTIFICATION_SERVICE_URL}/api/notifications/telemedicine-confirmation`,
-          payload
-        );
+      const payload = {
+        appointmentId: session.appointmentId,
 
-        console.log("Notification sent successfully:", response.data);
-      }
+        patientEmail: session.patientEmail,
+        patientPhone: formatSriLankaPhoneNumber(session.patientPhone),
+        patientName: session.patientName,
+
+        doctorName: session.doctorName,
+        doctorEmail: session.doctorEmail,
+        doctorPhone: formatSriLankaPhoneNumber(session.doctorPhone),
+
+        specialty: session.specialty,
+        scheduledTime: session.scheduledTime,
+        meetingLink: session.meetingLink,
+        status: "scheduled",
+      };
+
+      const response = await axios.post(
+        `${notificationBaseUrl}/api/notifications/telemedicine-confirmation`,
+        payload,
+        { timeout: 10000 }
+      );
+
+      console.log("Notification response:", response.data);
     } catch (notifyError) {
       console.error(
         "Failed to send notification:",
@@ -140,6 +189,57 @@ export const createSessionFromConfirmedAppointment = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to create session from confirmed appointment",
+      error: error.message,
+    });
+  }
+};
+
+export const getDoctorSessionsById = async (req, res) => {
+  try {
+    const doctorId = String(req.params.doctorId || "").trim();
+
+    if (!doctorId) {
+      return res.status(400).json({
+        success: false,
+        message: "Doctor ID is required",
+      });
+    }
+
+    let sessions = await Session.find({ doctorId }).sort({ createdAt: -1 });
+
+    if ((!sessions || sessions.length === 0) && doctorId) {
+      try {
+        const gatewayBase = process.env.API_GATEWAY_URL || "http://localhost:5015";
+
+        const dresp = await axios.get(`${gatewayBase}/api/doctors/${doctorId}`, {
+          timeout: 4000,
+        });
+
+        const doctor = dresp.data?.data || dresp.data || {};
+        const canonicalId = doctor?._id ? String(doctor._id) : null;
+
+        if (canonicalId && canonicalId !== doctorId) {
+          sessions = await Session.find({ doctorId: canonicalId }).sort({
+            createdAt: -1,
+          });
+        }
+      } catch (err) {
+        console.warn("Doctor session resolve skipped:", err.message);
+      }
+    }
+
+    const counts = calculateSessionCounts(sessions);
+
+    return res.status(200).json({
+      success: true,
+      message: "Doctor sessions fetched successfully",
+      counts,
+      sessions,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch doctor sessions",
       error: error.message,
     });
   }
@@ -202,10 +302,12 @@ export const getSessionById = async (req, res) => {
 export const updateSession = async (req, res) => {
   try {
     const id = getCleanObjectId(req.params.id);
+
     const {
       doctorId,
       doctorName,
       doctorEmail,
+      doctorPhone,
       patientId,
       patientName,
       patientEmail,
@@ -236,6 +338,7 @@ export const updateSession = async (req, res) => {
     if (doctorId !== undefined) session.doctorId = doctorId;
     if (doctorName !== undefined) session.doctorName = doctorName;
     if (doctorEmail !== undefined) session.doctorEmail = doctorEmail;
+    if (doctorPhone !== undefined) session.doctorPhone = doctorPhone;
     if (patientId !== undefined) session.patientId = patientId;
     if (patientName !== undefined) session.patientName = patientName;
     if (patientEmail !== undefined) session.patientEmail = patientEmail;
@@ -431,6 +534,31 @@ export const getSessionSummary = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch session summary",
+      error: error.message,
+    });
+  }
+};
+
+export const getRecentSessionsDebug = async (req, res) => {
+  try {
+    const limit = Number(req.query.limit || 50);
+
+    const sessions = await Session.find()
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .select(
+        "_id appointmentId doctorId doctorName patientId patientName status createdAt meetingLink"
+      );
+
+    return res.status(200).json({
+      success: true,
+      count: sessions.length,
+      sessions,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch recent sessions",
       error: error.message,
     });
   }

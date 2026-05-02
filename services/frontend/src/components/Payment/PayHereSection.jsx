@@ -236,47 +236,6 @@ const PayHereSection = ({
         </div>
       </div>
 
-      {/* <div className="payment-methods">
-        <p className="methods-title">Available Payment Modes</p>
-        <div className="methods-icons">
-          {paymentMethods.map((method) => (
-            <button
-              key={method.id}
-              type="button"
-              onClick={() => onSelectMethod(method.id)}
-              className={`method-btn ${selectedMethod === method.id ? 'active' : ''}`}
-              disabled={isProcessing}
-            >
-              <img src={method.img} alt={method.name} />
-            </button>
-          ))}
-        </div>
-
-       
-        {(selectedMethod === 'visa' || selectedMethod === 'master') && (
-          <CardForm variant={selectedMethod} onDataChange={handlePaymentDataChange} />
-        )}
-
-        
-        {(selectedMethod === 'frimi' || selectedMethod === 'genie') && (
-          <WalletForm 
-            type={selectedMethod === 'frimi' ? 'FriMi' : 'Genie'} 
-            onDataChange={handlePaymentDataChange}
-          />
-        )}
-      </div> */}
-{/* 
-      <div className="quick-pay">
-        <div 
-          className={`toggle-switch ${quickPay ? 'active' : ''}`} 
-          onClick={() => !isProcessing && setQuickPay(!quickPay)}
-        >
-          <div className="toggle-slider"></div>
-        </div>
-        <span>Remember me for Quick Pay</span>
-        <span className="lightning-icon">⚡</span>
-      </div> */}
-
       <button 
         onClick={onProcessPayment} 
         className="pay-now-button"

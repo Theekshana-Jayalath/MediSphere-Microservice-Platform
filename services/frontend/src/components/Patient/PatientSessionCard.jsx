@@ -54,7 +54,7 @@ const PatientSessionCard = ({ session }) => {
 
       <div className="patient-session-link-box">
         <span className="patient-session-link-label">Meeting Link</span>
-        {session?.meetingLink ? (
+        {session?.meetingLink && status !== "completed" ? (
           <a
             href={session.meetingLink}
             target="_blank"
@@ -63,6 +63,8 @@ const PatientSessionCard = ({ session }) => {
           >
             Join Session
           </a>
+        ) : status === "completed" ? (
+          <span className="patient-session-no-link">Session completed</span>
         ) : (
           <span className="patient-session-no-link">Link not available</span>
         )}

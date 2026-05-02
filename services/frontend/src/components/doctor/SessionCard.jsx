@@ -57,14 +57,20 @@ const SessionCard = ({
 
       <div className="doctor-session-link-box">
         <span className="doctor-session-link-label">Meeting Link</span>
-        <a
-          href={session?.meetingLink}
-          target="_blank"
-          rel="noreferrer"
-          className="doctor-session-link"
-        >
-          Join Video Consultation
-        </a>
+        {session?.meetingLink && status !== "completed" ? (
+          <a
+            href={session?.meetingLink}
+            target="_blank"
+            rel="noreferrer"
+            className="doctor-session-link"
+          >
+            Join Video Consultation
+          </a>
+        ) : status === "completed" ? (
+          <span className="doctor-session-no-link">Session completed</span>
+        ) : (
+          <span className="doctor-session-no-link">Link not available</span>
+        )}
       </div>
 
       {session?.notes && (

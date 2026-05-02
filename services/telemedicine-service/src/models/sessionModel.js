@@ -27,6 +27,11 @@ const sessionSchema = new mongoose.Schema(
       lowercase: true,
       default: "",
     },
+    doctorPhone: {
+      type: String,
+      trim: true,
+      default: "",
+    },
 
     // 🧑‍⚕️ Patient details
     patientId: {
